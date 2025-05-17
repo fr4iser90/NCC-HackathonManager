@@ -1,0 +1,29 @@
+{
+    "env": {
+      "browser": true,
+      "es2021": true,
+      "jquery": true // Wichtig, da jQuery verwendet wird
+    },
+    "extends": [
+      "eslint:recommended"
+      // Wir fügen hier gleich noch die "standard" Regeln hinzu,
+      // aber dazu müssen wir erst die `package.json` haben und die
+      // Pakete installiert sein (via Docker oder lokal für IDE).
+      // Vorerst nur die Basis:
+    ],
+    "parserOptions": {
+      "ecmaVersion": 12,
+      "sourceType": "module"
+    },
+    "rules": {
+      // Hier können wir später spezifische Regeln anpassen, z.B.:
+      "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }], // Ungenutzte Vars nur warnen
+      "no-console": "warn", // Konsolen-Logs nur warnen
+      "eqeqeq": ["error", "always"] // Immer === statt == verwenden
+      // Weitere Regeln nach Bedarf
+    },
+    "globals": {
+      // Globale Variablen definieren, die ESLint nicht kennt (falls nötig)
+      // z.B. "gridStack": "readonly"
+    }
+  }
