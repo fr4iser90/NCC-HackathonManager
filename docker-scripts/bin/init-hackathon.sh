@@ -21,9 +21,9 @@ fi
 source "${DOCKER_SCRIPTS_DIR}/lib/core/imports.sh"
 
 # Start with header and credential preference
-print_header "Homelab Setup"
+print_header "Hackathon Setup"
 get_user_info
-get_homelab_domain
+get_hackathon_domain
 ask_credential_preference
 
 # Prevent running as root
@@ -82,4 +82,4 @@ fi
 
 # Final success message
 print_header "Setup Complete"
-print_status "Homelab initialization completed successfully!" "success"
+print_status "Hackathon initialization completed successfully!" "success"

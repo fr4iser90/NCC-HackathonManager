@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Credentials Storage File
-CREDS_FILE="$HOME/homelab_tmp_credentials.txt"
-FINAL_CREDS_FILE="$HOME/homelab_credentials.txt"
+CREDS_FILE="$HOME/hackathon_tmp_credentials.txt"
+FINAL_CREDS_FILE="$HOME/hackathon_credentials.txt"
 
 # Initialize credentials file (only if it doesn't exist)
 init_credentials_file() {
     if [ ! -f "$CREDS_FILE" ]; then
-        echo "=== Homelab Service Credentials ===" > "$CREDS_FILE"
+        echo "=== Hackathon Service Credentials ===" > "$CREDS_FILE"
         echo "Generated: $(date)" >> "$CREDS_FILE"
         echo "=================================" >> "$CREDS_FILE"
         echo >> "$CREDS_FILE"

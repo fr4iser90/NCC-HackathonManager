@@ -8,17 +8,8 @@ _CONTAINERS_LOADED=1
 
 # Container Kategorien
 declare -gA MANAGEMENT_CATEGORIES=(
-    ["url-management"]="yourls"
-    ["honeypot-management"]="tarpit"
-    ["media-management"]="plex jellyfin"
-    ["dashboard-management"]="organizr"
-    ["adblocker-management"]="pihole"
-    ["storage-management"]="owncloud"
-    ["gateway-management"]="traefik-crowdsec ddns-updater"  # Ohne companions
-    ["companion-management"]="cloudflare"        
-    ["password-management"]="bitwarden"
-    ["vpn-management"]="wireguard"
-    ["system-management"]="portainer watchtower"
+    ["gateway-management"]="traefik-crowdsec ddns-updater"
+    ["system-management"]="portainer"
 )
 
 # Get container category

@@ -23,8 +23,8 @@ get_user_info() {
     return 0
 }
 
-# Get homelab domain information
-get_homelab_domain() {
+# Get hackathon domain information
+get_hackathon_domain() {
     # Check if DOMAIN is already set
     if [ -z "${DOMAIN}" ]; then
         # Try to get domain from system config
