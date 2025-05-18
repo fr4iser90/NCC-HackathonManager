@@ -54,6 +54,11 @@ pkgs.mkShell {
   buildInputs = [
     pythonEnv
     pkgs.tree
+    pkgs.nodejs_20    # Add Node.js
+    pkgs.nodePackages.npm    # Add npm
+    pkgs.docker    # Add Docker
+    pkgs.docker-compose    # Add Docker Compose
+    pkgs.curl    # Add curl for health checks
   ];
   
   shellHook = ''
@@ -81,30 +86,135 @@ pkgs.mkShell {
       return $exit_code
     }
 
-    # --- Original Helper Functions (Keep for reference or other scripts if needed) ---
-    # Database upgrade alias
-    alias db_upgrade='docker exec -it foundrycord-bot /bin/sh -c "alembic -c /app/shared/infrastructure/database/migrations/alembic/alembic.ini upgrade head"'
-
-    # --- Function to update a single tree file ---
-    _update_tree_file() {
-      local target_dir="$1"
-      local output_file="$2"
-      # Exclude common irrelevant directories/files
-      local exclude_pattern='__pycache__|.git|.idea|.vscode|.cursor|node_modules|.pytest_cache' 
-
-      echo "Updating tree in $output_file for directory $target_dir..."
-      # Overwrite file with header
-      echo '```tree' > "$output_file"
-      # Append tree output, excluding patterns
-      tree -I "$exclude_pattern" "$target_dir" >> "$output_file"
-      # Append footer
-      echo '```' >> "$output_file"
-      echo "Done updating $output_file."
+    # Check if Docker is running
+    check_docker() {
+      if ! docker info > /dev/null 2>&1; then
+        echo "Docker is not running. Please start Docker and try again."
+        return 1
+      fi
+      return 0
     }
 
-    # --- Alias to update all structure files ---
-    alias update-trees='_update_tree_file app/web docs/3_developer_guides/02_architecture/web_structure.md && _update_tree_file app/tests docs/3_developer_guides/02_architecture/tests_structure.md && _update_tree_file app/shared docs/3_developer_guides/02_architecture/shared_structure.md && _update_tree_file app/bot docs/3_developer_guides/02_architecture/bot_structure.md'
-    
+    # Check if node_modules exists in frontend
+    check_frontend_deps() {
+      if [ ! -d "docker/platform-management/hackathon/frontend/node_modules" ]; then
+        echo "Frontend dependencies not found. Installing..."
+        install-npm
+      fi
+    }
+
+    # Check if backend is healthy
+    check_backend_health() {
+      local max_attempts=30
+      local attempt=1
+      local wait_time=2
+
+      echo "Checking backend health..."
+      while [ $attempt -le $max_attempts ]; do
+        if curl -s http://localhost:8000/health > /dev/null; then
+          echo "Backend is healthy!"
+          return 0
+        fi
+        echo "Attempt $attempt/$max_attempts: Backend not ready yet, waiting $wait_time seconds..."
+        sleep $wait_time
+        attempt=$((attempt + 1))
+      done
+      echo "Backend health check failed after $max_attempts attempts"
+      return 1
+    }
+
+    # Check if Docker containers are built and running
+    check_docker_containers() {
+      if ! docker compose -f docker/platform-management/hackathon/docker-compose.yml ps --services --filter "status=running" | grep -q "api"; then
+        echo "Docker containers not running. Building and starting..."
+        if ! start-backend; then
+          echo "Failed to start backend properly. Please check the logs."
+          return 1
+        fi
+        # Wait for backend to be healthy
+        if ! check_backend_health; then
+          echo "Failed to start backend properly. Please check the logs."
+          return 1
+        fi
+      fi
+      return 0
+    }
+
+    quick-install() {
+      echo "Starting quick installation process..."
+      
+      # Check and install frontend dependencies
+      check_frontend_deps
+      
+      # Check Docker and build containers
+      if check_docker; then
+        echo "Building Docker containers..."
+        cd docker/platform-management/hackathon/
+        docker compose build
+        cd -
+      fi
+      
+      echo "Quick installation complete!"
+    }
+
+    quick-startup() {
+      echo "Starting quick startup process..."
+      
+      # Check Docker is running
+      if ! check_docker; then
+        return 1
+      fi
+      
+      # Check and install frontend dependencies if needed
+      check_frontend_deps
+      
+      # Start backend if not running and wait for it to be healthy
+      if ! check_docker_containers; then
+        echo "Failed to start backend properly. Aborting startup."
+        return 1
+      fi
+      
+      # Start frontend in a new terminal
+      echo "Starting frontend development server..."
+      start-frontend-dev
+      
+      echo "Quick startup complete! All services should be running."
+      echo "Frontend: http://localhost:3000"
+      echo "Backend: http://localhost:8000"
+    }
+
+    install-npm() {
+      echo "Installing npm dependencies for frontend..."
+      cd docker/platform-management/hackathon/frontend
+      npm install
+      cd -
+      echo "npm dependencies installation complete."
+    }
+
+    start-frontend-dev() {
+      echo "Starting frontend development server..."
+      cd docker/platform-management/hackathon/frontend
+      npm run dev
+      cd -
+    }
+
+    start-backend() {
+      echo "Starting backend server..."
+      cd docker/platform-management/hackathon/
+      # Run in detached mode
+      docker compose up --build -d
+      # Wait a moment for containers to start
+      sleep 5
+      # Check if containers are actually running
+      if ! docker compose ps --services --filter "status=running" | grep -q "api"; then
+        echo "Failed to start containers. Check logs with: docker compose logs api"
+        cd -
+        return 1
+      fi
+      echo "Backend containers started successfully"
+      cd -
+    }
+
     echo "Python development environment activated"
     echo "PYTHONPATH set to: $PYTHONPATH"
     echo "Available commands:"
@@ -112,5 +222,10 @@ pkgs.mkShell {
     echo "  clean-caches        - Manually clean host __pycache__ and .pytest_cache directories"
     echo "  db_upgrade          - Apply database migrations using Alembic inside the bot container"
     echo "  update-trees        - Update structure markdown files (web, tests, shared, bot)"
+    echo "  install-npm         - Install npm dependencies for the frontend"
+    echo "  start-frontend-dev  - Start the frontend development server"
+    echo "  start-backend       - Start the backend server using Docker"
+    echo "  quick-install       - Install all dependencies and build Docker containers"
+    echo "  quick-startup       - Start all services with automatic dependency checks"
   '';
 } 
