@@ -187,7 +187,7 @@ export default function TeamsPage() {
       await axiosInstance.post(`/teams/${teamId}/request-join`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setRequestFeedback((prev) => ({ ...prev, [teamId]: 'Request sent.' }));
+      setRequestFeedback((prev) => ({ ...prev, [teamId]: 'Revoke Request.' }));
       await reloadMyJoinRequests();
     } catch (err: any) {
       setRequestFeedback((prev) => ({ ...prev, [teamId]: err?.response?.data?.detail || 'Error sending request.' }));
