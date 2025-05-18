@@ -33,11 +33,11 @@
 - [x] Build navigation/sidebar for dashboard (responsive, role-based, links to Profile, Teams, Projects, Admin, Judging)
 
 ## Team Management
-- [ ] Build team creation form
-- [ ] Form validation, API call
-- [ ] Acceptance: User can create team, errors handled
-- [x] Build team join/leave UI (teilweise)
-- [x] List teams, join/leave buttons (Logik vorhanden, UI noch ausbaufähig)
+- [x] Build team creation form (UI & API integration)
+- [x] Form validation, API call, error handling
+- [x] Acceptance: User can create team, errors handled
+- [x] Build team join/leave UI
+- [x] List teams, join/leave buttons
 - [x] Acceptance: User can join/leave teams, state updates
 - [x] Show team members and roles
 - [x] Fetch from API, display
@@ -66,16 +66,11 @@
 - [x] Acceptance: Templates selectable, assignment works
 
 ## Judging System
-- [ ] Build judging dashboard for judges
-- [ ] List assigned projects
-- [ ] Acceptance: Judges see only their assignments
-- [ ] Build criteria scoring UI
-- [ ] Form for each criterion, validation
-- [ ] Acceptance: Scores submitted, errors handled
-- [ ] Build feedback form for judges
-- [ ] Acceptance: Feedback submitted, errors handled
-- [ ] Show results and feedback to participants
-- [ ] Acceptance: Results/feedback visible to correct users
+- [ ] Build judging dashboard for judges (UI vorhanden, aber noch nicht voll funktionsfähig)
+- [ ] List assigned projects (Grundstruktur vorhanden)
+- [ ] Build criteria scoring UI (noch nicht umgesetzt)
+- [ ] Build feedback form for judges (noch nicht umgesetzt)
+- [ ] Show results and feedback to participants (noch nicht umgesetzt)
 
 ## Admin UI
 - [x] Build admin dashboard
@@ -86,23 +81,19 @@
 - [x] Acceptance: CRUD works, errors handled
 - [x] Manage projects (list, edit, delete)
 - [x] Acceptance: CRUD works, errors handled
-- [ ] Manage judges and assignments
-- [ ] Acceptance: CRUD works, errors handled
+- [ ] Manage judges and assignments (UI fehlt)
 
 ## Integration
 - [x] Connect all pages to backend API
-- [x] Use React Query for data fetching/caching (offen)
+- [ ] Use React Query for all data fetching/caching (teilweise umgesetzt)
 - [x] Handle API errors and loading states
 - [x] Acceptance: All data loads, errors shown
-- [ ] Use React Query for data fetching/caching
-- [ ] Acceptance: All data loads, errors shown
-- [ ] Use Zod for form validation
-- [ ] Acceptance: Invalid input blocked, errors shown
+- [ ] Use Zod for form validation (teilweise umgesetzt)
 - [x] API contract review with backend
 - [x] Acceptance: All endpoints match, no contract errors
 
 ## Testing & Quality
-- [x] Write unit tests for alle Komponenten (Startseite)
+- [x] Write unit tests for Startseite
 - [ ] Write integration tests for main flows
 - [ ] Write E2E tests (Playwright/Cypress)
 - [ ] Ensure 80%+ test coverage
