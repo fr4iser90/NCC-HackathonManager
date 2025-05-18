@@ -27,17 +27,23 @@ type Project = {
 };
 
 async function fetchHackathons(): Promise<Hackathon[]> {
-  const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/hackathons", {
+  const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/hackathons/", {
     cache: "no-store",
   });
   if (!res.ok) return [];
-  return res.json();
+  const data = await res.json();
+  const plain = JSON.parse(JSON.stringify(data));
+  console.log("Hackathons API response:", plain);
+  return plain;
 }
 
 async function fetchFeaturedProject(): Promise<Project | null> {
-  const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/projects/featured", { cache: "no-store" });
+  const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/projects/featured/", { cache: "no-store" });
   if (!res.ok) return null;
-  return res.json();
+  const data = await res.json();
+  const plain = JSON.parse(JSON.stringify(data));
+  console.log("Featured Project API response:", plain);
+  return plain;
 }
 
 export default async function HomePage() {

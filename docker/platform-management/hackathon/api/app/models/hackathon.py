@@ -3,7 +3,7 @@ import enum
 from datetime import datetime, timezone
 from typing import Optional, List
 
-from sqlalchemy import Column, String, DateTime, ForeignKey, Enum as SQLEnum, ARRAY, JSON
+from sqlalchemy import Column, String, DateTime, ForeignKey, Enum as SQLEnum, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
@@ -29,9 +29,9 @@ class Hackathon(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     mode: Mapped[str] = mapped_column(String(32), nullable=False, default="TEAM_RECOMMENDED")
-    requirements: Mapped[List[str]] = mapped_column(ARRAY(String), default=list)
+    requirements: Mapped[List[str]] = mapped_column(JSON, default=list)
     category: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    tags: Mapped[Optional[list[str]]] = mapped_column(ARRAY(String), default=list)
+    tags: Mapped[Optional[List[str]]] = mapped_column(JSON, default=list)
     max_team_size: Mapped[Optional[int]] = mapped_column(nullable=True)
     min_team_size: Mapped[Optional[int]] = mapped_column(nullable=True)
     registration_deadline: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

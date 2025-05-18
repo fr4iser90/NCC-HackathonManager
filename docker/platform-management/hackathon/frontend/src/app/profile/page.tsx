@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect, FormEvent, useRef } from 'react';
+import { useState, useEffect, FormEvent, useRef, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { z } from 'zod';
 
 // Utility: Entfernt leere Felder aus dem Payload
 function cleanPayload(obj: Record<string, any>) {
@@ -10,6 +12,15 @@ function cleanPayload(obj: Record<string, any>) {
     Object.entries(obj).filter(([_, v]) => v !== '' && v !== undefined && v !== null)
   );
 }
+
+// Zod-Schema für das Profilformular
+const profileSchema = z.object({
+  username: z.string().min(3, 'Username must be at least 3 characters'),
+  full_name: z.string().optional(),
+  new_password: z.string().min(8, 'Password must be at least 8 characters').optional().or(z.literal('')),
+  confirm_new_password: z.string().optional().or(z.literal('')),
+  current_password: z.string().optional().or(z.literal('')),
+});
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -30,12 +41,10 @@ export default function ProfilePage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [teams, setTeams] = useState<any[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [loadingTeams, setLoadingTeams] = useState(true);
-  const [loadingProjects, setLoadingProjects] = useState(true);
-  const [teamsError, setTeamsError] = useState<string | null>(null);
-  const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const userRole = (session?.user as any)?.role;
+  const userId = (session?.user as any)?.id as string | undefined;
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -72,51 +81,69 @@ export default function ProfilePage() {
     }
   }, [status, session]);
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      const fetchTeams = async () => {
-        setLoadingTeams(true);
-        setTeamsError(null);
-        try {
-          const token = (session?.user as any)?.accessToken;
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/me/teams`, {
-            headers: { 'Authorization': `Bearer ${token}` },
-          });
-          if (!res.ok) throw new Error('Failed to load teams');
-          const data = await res.json();
-          setTeams(data);
-        } catch (err: any) {
-          setTeamsError(err.message || 'Failed to load teams');
-        } finally {
-          setLoadingTeams(false);
-        }
-      };
-      fetchTeams();
-    }
-  }, [status, session]);
+  // Teams Query
+  const {
+    data: teams = [] as any[],
+    isLoading: loadingTeams,
+    error: teamsError,
+  } = useQuery({
+    queryKey: ['teams', userId],
+    queryFn: async () => {
+      const token = (session?.user as any)?.accessToken;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/me/teams`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to load teams');
+      return res.json();
+    },
+    enabled: status === 'authenticated',
+  });
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      const fetchProjects = async () => {
-        setLoadingProjects(true);
-        setProjectsError(null);
-        try {
-          const token = (session?.user as any)?.accessToken;
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/me/projects`, {
-            headers: { 'Authorization': `Bearer ${token}` },
-          });
-          if (!res.ok) throw new Error('Failed to load projects');
-          const data = await res.json();
-          setProjects(data);
-        } catch (err: any) {
-          setProjectsError(err.message || 'Failed to load projects');
-        } finally {
-          setLoadingProjects(false);
-        }
-      };
-      fetchProjects();
+  // Projects Query
+  const {
+    data: projects = [] as any[],
+    isLoading: loadingProjects,
+    error: projectsError,
+  } = useQuery({
+    queryKey: ['projects', userId],
+    queryFn: async () => {
+      const token = (session?.user as any)?.accessToken;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/me/projects`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to load projects');
+      return res.json();
+    },
+    enabled: status === 'authenticated',
+  });
+
+  // Judging Scores Query (nur für Judges)
+  const {
+    data: judgingScores = [] as any[],
+    isLoading: loadingJudgingScores,
+    error: judgingScoresError,
+  } = useQuery({
+    queryKey: ['judging-scores', userId],
+    queryFn: async () => {
+      const token = (session?.user as any)?.accessToken;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/judging/scores/judge/${userId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to load judging scores');
+      return res.json();
+    },
+    enabled: status === 'authenticated' && userRole === 'judge',
+  });
+
+  // Gruppiere Scores nach Project
+  const scoresByProject = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    for (const score of judgingScores) {
+      if (!map[score.project_id]) map[score.project_id] = [];
+      map[score.project_id].push(score);
     }
-  }, [status, session]);
+    return map;
+  }, [judgingScores]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -146,17 +173,28 @@ export default function ProfilePage() {
     setIsSaving(true);
     setError(null);
     setSuccess(false);
+    setFormErrors({});
+    // Zod-Validierung
+    const result = profileSchema.safeParse(formData);
+    const errors: Record<string, string> = {};
+    if (!result.success) {
+      for (const issue of result.error.issues) {
+        errors[issue.path[0] as string] = issue.message;
+      }
+    }
+    // Custom-Validierung für Passwort-Bestätigung
     if (formData.new_password) {
       if (!formData.current_password) {
-        setError('Bitte aktuelles Passwort eingeben.');
-        setIsSaving(false);
-        return;
+        errors.current_password = 'Bitte aktuelles Passwort eingeben.';
       }
       if (formData.new_password !== formData.confirm_new_password) {
-        setError('Die neuen Passwörter stimmen nicht überein.');
-        setIsSaving(false);
-        return;
+        errors.confirm_new_password = 'Die neuen Passwörter stimmen nicht überein.';
       }
+    }
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setIsSaving(false);
+      return;
     }
     try {
       const token = (session?.user as any)?.accessToken;
@@ -247,7 +285,7 @@ export default function ProfilePage() {
       {success && (
         <div className="mb-4 p-3 text-green-700 bg-green-100 border border-green-400 rounded">Profile updated successfully!</div>
       )}
-      <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 shadow-md rounded-lg">
+      <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 shadow-md rounded-lg" aria-label="Edit Profile Form">
         <div className="flex flex-col items-center mb-6">
           <div className="relative w-24 h-24 mb-2">
             <img
@@ -301,6 +339,7 @@ export default function ProfilePage() {
             required
             className="mt-1 block w-full"
           />
+          {formErrors.username && <div className="text-red-500 text-xs mt-1">{formErrors.username}</div>}
         </div>
         <div>
           <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">Full Name</label>
@@ -312,6 +351,7 @@ export default function ProfilePage() {
             onChange={handleChange}
             className="mt-1 block w-full"
           />
+          {formErrors.full_name && <div className="text-red-500 text-xs mt-1">{formErrors.full_name}</div>}
         </div>
         <div>
           <label htmlFor="new_password" className="block text-sm font-medium text-gray-700">Neues Passwort</label>
@@ -324,6 +364,7 @@ export default function ProfilePage() {
             className="mt-1 block w-full"
             autoComplete="new-password"
           />
+          {formErrors.new_password && <div className="text-red-500 text-xs mt-1">{formErrors.new_password}</div>}
         </div>
         {formData.new_password && (
           <>
@@ -338,6 +379,7 @@ export default function ProfilePage() {
                 className="mt-1 block w-full"
                 autoComplete="new-password"
               />
+              {formErrors.confirm_new_password && <div className="text-red-500 text-xs mt-1">{formErrors.confirm_new_password}</div>}
             </div>
             <div>
               <label htmlFor="current_password" className="block text-sm font-medium text-gray-700">Aktuelles Passwort</label>
@@ -351,6 +393,7 @@ export default function ProfilePage() {
                 autoComplete="current-password"
                 required={!!formData.new_password}
               />
+              {formErrors.current_password && <div className="text-red-500 text-xs mt-1">{formErrors.current_password}</div>}
             </div>
           </>
         )}
@@ -364,61 +407,85 @@ export default function ProfilePage() {
           </button>
         </div>
       </form>
-      <div className="mt-10">
+      <section aria-label="My Teams" className="mt-10">
         <h2 className="text-xl font-semibold mb-2">My Teams</h2>
         {loadingTeams ? (
           <div>Loading teams...</div>
         ) : teamsError ? (
-          <div className="text-red-500">{teamsError}</div>
+          <div className="text-red-500">{teamsError.message}</div>
         ) : teams.length === 0 ? (
           <div>No teams found.</div>
         ) : (
-          <section>
-            <h2 className="text-lg font-semibold mb-2">My Teams</h2>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {teams.map((team) => (
-                <div key={team.id} className="bg-white border rounded-lg shadow p-4 flex flex-col gap-2">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 text-2xl font-bold">
-                      <span role="img" aria-label="Team">👥</span>
-                    </div>
-                    <div>
-                      <div className="font-semibold text-lg">{team.name}</div>
-                      <div className="text-xs text-gray-500">{team.role || 'Member'}</div>
-                    </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" role="list" aria-label="Team List">
+            {teams.map((team: any) => (
+              <div key={team.id} className="bg-white border rounded-lg shadow p-4 flex flex-col gap-2" tabIndex={0} aria-label={`Team ${team.name}`} role="listitem">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 text-2xl font-bold" aria-hidden="true">
+                    <span role="img" aria-label="Team">{team.name?.[0]?.toUpperCase() || '👥'}</span>
                   </div>
-                  <div className="flex gap-4 text-sm text-gray-700">
-                    <div><span className="font-bold">{team.member_count ?? '—'}</span> Members</div>
-                    <div><span className="font-bold">{team.project_count ?? '—'}</span> Projects</div>
-                  </div>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-500">
-                    <div>Wins: <span className="font-bold">—</span></div>
-                    <div>Avg. Score: <span className="font-bold">—</span></div>
-                    <div>Submissions: <span className="font-bold">—</span></div>
-                    <div>Last Activity: <span className="font-bold">—</span></div>
+                  <div>
+                    <div className="font-semibold text-lg">{team.name}</div>
+                    <div className="text-xs text-gray-500">{team.role || 'Member'}</div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </section>
+                <div className="flex gap-4 text-sm text-gray-700">
+                  <div><span className="font-bold">{team.member_count ?? '—'}</span> Members</div>
+                  <div><span className="font-bold">{team.project_count ?? '—'}</span> Projects</div>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-500">
+                  <div>Wins: <span className="font-bold">—</span></div>
+                  <div>Avg. Score: <span className="font-bold">—</span></div>
+                  <div>Submissions: <span className="font-bold">—</span></div>
+                  <div>Last Activity: <span className="font-bold">—</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
-      </div>
-      <div className="mt-6">
+      </section>
+      <div className="mt-6" aria-label="My Projects">
         <h2 className="text-xl font-semibold mb-2">My Projects</h2>
         {loadingProjects ? (
           <div>Loading projects...</div>
         ) : projectsError ? (
-          <div className="text-red-500">{projectsError}</div>
+          <div className="text-red-500">{projectsError.message}</div>
         ) : projects.length === 0 ? (
           <div>No projects found.</div>
         ) : (
-          <ul className="list-disc pl-5">
-            {projects.map((project) => (
-              <li key={project.id} className="mb-1">{project.name}</li>
+          <ul className="list-disc pl-5" role="list" aria-label="Project List">
+            {projects.map((project: any) => (
+              <li key={project.id} className="mb-1" role="listitem">{project.name}</li>
             ))}
           </ul>
         )}
       </div>
+      {userRole === 'judge' && (
+        <div className="mt-6" aria-label="My Judging Scores">
+          <h2 className="text-xl font-semibold mb-2">My Judging Scores</h2>
+          {loadingJudgingScores ? (
+            <div>Loading judging scores...</div>
+          ) : judgingScoresError ? (
+            <div className="text-red-500">{judgingScoresError.message}</div>
+          ) : judgingScores.length === 0 ? (
+            <div>No judging scores found.</div>
+          ) : (
+            <ul className="list-disc pl-5" role="list" aria-label="Judged Projects">
+              {Object.entries(scoresByProject).map(([projectId, scores]: [string, any[]]) => (
+                <li key={projectId} className="mb-2" role="listitem">
+                  <span className="font-bold">Project:</span> {projectId.substring(0, 8)}
+                  <ul className="ml-4 text-sm text-gray-700" role="list" aria-label="Criteria Scores">
+                    {scores.map((score: any) => (
+                      <li key={score.id} role="listitem">
+                        Criterion: {score.criteria_id.substring(0, 8)}, Score: {score.score}, Comment: {score.comment || '—'}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       {/* User-Statistiken (Platzhalter) */}
       <section className="mb-8">
         <h2 className="text-lg font-semibold mb-2">Your Hackathon Stats</h2>

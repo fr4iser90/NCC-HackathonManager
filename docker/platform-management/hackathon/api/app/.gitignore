@@ -1,0 +1,36 @@
+# === Python / Backend ===
+
+# Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtuelle Umgebungen
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Installer-/Build-Dateien
+*.egg
+*.egg-info/
+dist/
+build/
+*.spec
+
+# IDEs und Editoren
+.vscode/
+.idea/
+
+# Mypy / Pyright
+.mypy_cache/
+.dmypy.json
+.pyre/
+
+# Sonstiges
+.pytest_cache/
+.coverage
+.tox/
+.cache/

@@ -145,7 +145,7 @@ def main():
                     mode=h.get("mode", "TEAM_RECOMMENDED"),
                     requirements=h.get("requirements", []),
                     category=h.get("category"),
-                    tags=h.get("tags"),
+                    tags=h.get("tags", []),
                     max_team_size=h.get("max_team_size"),
                     min_team_size=h.get("min_team_size"),
                     registration_deadline=h.get("registration_deadline"),
