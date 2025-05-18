@@ -15,6 +15,7 @@ class TeamMemberRole(str, enum.Enum):
 class TeamBase(BaseModel):
     name: str
     description: Optional[str] = None
+    is_open: bool = True
 
 class TeamCreate(TeamBase):
     pass
@@ -22,6 +23,7 @@ class TeamCreate(TeamBase):
 class TeamUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
+    is_open: Optional[bool] = None
 
 class TeamMemberRead(BaseModel):
     user_id: uuid.UUID # Should this be id (PK of TeamMember) or user_id?
@@ -32,10 +34,36 @@ class TeamMemberRead(BaseModel):
 
     model_config = {"from_attributes": True}
 
+class JoinRequestStatus(str, enum.Enum):
+    pending = "pending"
+    accepted = "accepted"
+    rejected = "rejected"
+
+class TeamInviteStatus(str, enum.Enum):
+    pending = "pending"
+    accepted = "accepted"
+    rejected = "rejected"
+
+class JoinRequestRead(BaseModel):
+    team_id: uuid.UUID
+    user_id: uuid.UUID
+    status: JoinRequestStatus
+    created_at: datetime
+    # Optional: user details
+    model_config = {"from_attributes": True}
+
+class TeamInviteRead(BaseModel):
+    team_id: uuid.UUID
+    email: str
+    status: TeamInviteStatus
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
 class TeamRead(TeamBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
     members: List[TeamMemberRead] = []
-
+    join_requests: Optional[List[JoinRequestRead]] = None
+    invites: Optional[List[TeamInviteRead]] = None
     model_config = {"from_attributes": True} 

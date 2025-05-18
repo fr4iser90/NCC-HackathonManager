@@ -32,7 +32,8 @@ CREATE TABLE teams.teams (
     name VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_open BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE teams.members (
@@ -124,3 +125,24 @@ CREATE TRIGGER update_scores_updated_at
     BEFORE UPDATE ON judging.scores
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at();
+
+-- New tables
+CREATE TABLE IF NOT EXISTS teams.join_requests (
+    team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (team_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS teams.invites (
+    team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
+    email VARCHAR(255) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    token VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (team_id, email)
+);
+
+CREATE INDEX IF NOT EXISTS idx_join_requests_team ON teams.join_requests(team_id);
+CREATE INDEX IF NOT EXISTS idx_invites_team ON teams.invites(team_id);

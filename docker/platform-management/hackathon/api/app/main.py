@@ -32,7 +32,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="/app/static"), name="static")
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.isdir(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+else:
+    import warnings
+    warnings.warn(f"Static directory {static_dir} does not exist. Static files will not be served.")
 
 # Router einbinden
 app.include_router(users_router, prefix="/users", tags=["users"])

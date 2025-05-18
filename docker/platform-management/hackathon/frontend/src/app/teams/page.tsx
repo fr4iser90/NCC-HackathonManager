@@ -15,6 +15,13 @@ interface Team {
   join_requests?: { user_id: string; status: string }[];
 }
 
+interface JoinRequest {
+  user_id: string;
+  status: string;
+  created_at: string;
+  // Optional: user?: { email?: string; username?: string }
+}
+
 export default function TeamsPage() {
   const { data: session, status } = useSession();
   const [teams, setTeams] = useState<Team[]>([]);
@@ -28,6 +35,11 @@ export default function TeamsPage() {
   const [requesting, setRequesting] = useState<string | null>(null);
   const [inviting, setInviting] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [joinRequests, setJoinRequests] = useState<Record<string, JoinRequest[]>>({});
+  const [requestFeedback, setRequestFeedback] = useState<Record<string, string>>({});
+  const [revoking, setRevoking] = useState<string | null>(null);
+
+  const userId = (session?.user as any)?.id;
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -48,7 +60,22 @@ export default function TeamsPage() {
     if (status === "authenticated") fetchTeams();
   }, [status, session]);
 
-  const userId = (session?.user as any)?.id;
+  useEffect(() => {
+    if (status === "authenticated" && teams.length > 0) {
+      teams.forEach(async (team) => {
+        const isOwner = team.members?.find((m) => m.user_id === userId)?.role === 'owner';
+        if (isOwner) {
+          try {
+            const token = (session?.user as any)?.accessToken;
+            const res = await axiosInstance.get(`/teams/${team.id}/join-requests`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            setJoinRequests((prev) => ({ ...prev, [team.id]: res.data }));
+          } catch {}
+        }
+      });
+    }
+  }, [status, session, teams, userId]);
 
   const handleJoin = async (teamId: string) => {
     setJoining(teamId);
@@ -103,7 +130,8 @@ export default function TeamsPage() {
     setCreating(true);
     try {
       const token = (session?.user as any)?.accessToken;
-      const res = await axiosInstance.post('/teams/', newTeam, {
+      const payload = { ...newTeam, is_open: newTeam.is_open };
+      const res = await axiosInstance.post('/teams/', payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTeams((prev) => [res.data, ...prev]);
@@ -116,18 +144,49 @@ export default function TeamsPage() {
     }
   };
 
+  const myPendingRequest = (team: Team) => joinRequests[team.id]?.find(r => r.user_id === userId && r.status === 'pending');
+
+  const fetchJoinRequests = async (teamId: string) => {
+    try {
+      const token = (session?.user as any)?.accessToken;
+      const res = await axiosInstance.get(`/teams/${teamId}/join-requests`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setJoinRequests((prev) => ({ ...prev, [teamId]: res.data }));
+    } catch {}
+  };
+
   const handleRequestJoin = async (teamId: string) => {
     setRequesting(teamId);
+    setRequestFeedback((prev) => ({ ...prev, [teamId]: '' }));
     try {
       const token = (session?.user as any)?.accessToken;
       await axiosInstance.post(`/teams/${teamId}/request-join`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // Optional: UI-Feedback für gesendete Anfrage
-    } catch (err) {
-      // Fehlerbehandlung optional
+      setRequestFeedback((prev) => ({ ...prev, [teamId]: 'Request sent.' }));
+      await fetchJoinRequests(teamId);
+    } catch (err: any) {
+      setRequestFeedback((prev) => ({ ...prev, [teamId]: err?.response?.data?.detail || 'Error sending request.' }));
     } finally {
       setRequesting(null);
+    }
+  };
+
+  const handleRevokeRequest = async (teamId: string) => {
+    setRevoking(teamId);
+    setRequestFeedback((prev) => ({ ...prev, [teamId]: '' }));
+    try {
+      const token = (session?.user as any)?.accessToken;
+      await axiosInstance.delete(`/teams/${teamId}/join-requests/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setRequestFeedback((prev) => ({ ...prev, [teamId]: 'Request revoked.' }));
+      await fetchJoinRequests(teamId);
+    } catch (err: any) {
+      setRequestFeedback((prev) => ({ ...prev, [teamId]: err?.response?.data?.detail || 'Error revoking request.' }));
+    } finally {
+      setRevoking(null);
     }
   };
 
@@ -145,6 +204,32 @@ export default function TeamsPage() {
     } finally {
       setInviting(null);
     }
+  };
+
+  const handleAcceptJoin = async (teamId: string, userIdToAccept: string) => {
+    try {
+      const token = (session?.user as any)?.accessToken;
+      await axiosInstance.post(`/teams/${teamId}/join-requests/${userIdToAccept}/accept`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setJoinRequests((prev) => ({
+        ...prev,
+        [teamId]: prev[teamId]?.filter((r) => r.user_id !== userIdToAccept) || [],
+      }));
+    } catch {}
+  };
+
+  const handleRejectJoin = async (teamId: string, userIdToReject: string) => {
+    try {
+      const token = (session?.user as any)?.accessToken;
+      await axiosInstance.post(`/teams/${teamId}/join-requests/${userIdToReject}/reject`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setJoinRequests((prev) => ({
+        ...prev,
+        [teamId]: prev[teamId]?.filter((r) => r.user_id !== userIdToReject) || [],
+      }));
+    } catch {}
   };
 
   return (
@@ -224,20 +309,46 @@ export default function TeamsPage() {
                   <div>Last Activity: <span className="font-bold">—</span></div>
                 </div>
                 <div className="mt-3 flex flex-col gap-2">
-                  {!isMember && team.is_open && (
+                  {!isMember && (team.is_open ?? true) === true && !myPendingRequest(team) && (
                     <button
                       className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm"
                       onClick={() => handleRequestJoin(team.id)}
                       disabled={requesting === team.id}
                     >
-                      {requesting === team.id ? "Requesting..." : "Request to Join"}
+                      {requesting === team.id ? "Requesting..." : requestFeedback[team.id] || "Request to Join"}
                     </button>
+                  )}
+                  {!isMember && myPendingRequest(team) && (
+                    <button
+                      className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm"
+                      onClick={() => handleRevokeRequest(team.id)}
+                      disabled={revoking === team.id}
+                    >
+                      {revoking === team.id ? "Revoking..." : requestFeedback[team.id] || "Revoke Request"}
+                    </button>
+                  )}
+                  {requestFeedback[team.id] && (
+                    <div className="text-xs text-blue-600 mt-1">{requestFeedback[team.id]}</div>
                   )}
                   {isOwner && !team.is_open && (
                     <form onSubmit={e => { e.preventDefault(); handleInvite(team.id); }} className="flex gap-2">
                       <input type="email" required placeholder="Invite by email" className="border rounded p-1 flex-1" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} />
                       <button type="submit" className="px-2 py-1 bg-green-600 text-white rounded" disabled={inviting === team.id}>{inviting === team.id ? 'Inviting...' : 'Invite'}</button>
                     </form>
+                  )}
+                  {isOwner && joinRequests[team.id] && joinRequests[team.id].length > 0 && (
+                    <div className="mt-2 bg-slate-50 border rounded p-2">
+                      <div className="font-bold text-xs mb-1">Join Requests:</div>
+                      <ul className="space-y-1">
+                        {joinRequests[team.id].map((req) => (
+                          <li key={req.user_id} className="flex items-center gap-2 text-xs">
+                            <span>User: {req.user_id}</span>
+                            <button className="px-2 py-0.5 bg-green-200 text-green-800 rounded" onClick={() => handleAcceptJoin(team.id, req.user_id)}>Accept</button>
+                            <button className="px-2 py-0.5 bg-red-200 text-red-800 rounded" onClick={() => handleRejectJoin(team.id, req.user_id)}>Reject</button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                   {isMember && !isOwner && <div className="text-xs text-gray-400">Waiting for owner to manage membership</div>}
                 </div>

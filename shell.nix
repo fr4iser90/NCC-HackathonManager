@@ -15,7 +15,7 @@ let
     # Monitoring Dependency
     psutil
     requests
-
+    pillow
     # Database dependencies
     sqlalchemy
     asyncpg

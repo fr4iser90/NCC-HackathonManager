@@ -13,7 +13,7 @@ export default function Navbar() {
     { href: '/profile', label: 'Profile', show: true },
     { href: '/teams', label: 'Teams', show: true },
     { href: '/projects', label: 'Projects', show: true },
-    { href: '/judging', label: 'Judging', show: userRole === 'judge' },
+    { href: '/judging', label: 'Judging', show: userRole === 'judge' || userRole === 'admin' },
     { href: '/admin', label: 'Admin', show: userRole === 'admin' },
   ];
 
