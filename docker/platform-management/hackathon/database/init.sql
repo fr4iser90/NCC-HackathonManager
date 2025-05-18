@@ -3,6 +3,7 @@ CREATE SCHEMA IF NOT EXISTS auth;
 CREATE SCHEMA IF NOT EXISTS projects;
 CREATE SCHEMA IF NOT EXISTS teams;
 CREATE SCHEMA IF NOT EXISTS judging;
+CREATE SCHEMA IF NOT EXISTS hackathons;
 
 -- Auth schema
 CREATE TABLE auth.users (
@@ -24,6 +25,36 @@ CREATE TABLE auth.sessions (
     token VARCHAR(255) NOT NULL UNIQUE,
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Hackathons schema
+CREATE TABLE hackathons.hackathons (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
+    start_date TIMESTAMPTZ NOT NULL,
+    end_date TIMESTAMPTZ NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'upcoming',
+    mode VARCHAR(32) NOT NULL DEFAULT 'TEAM_RECOMMENDED',
+    requirements TEXT[] DEFAULT ARRAY[]::TEXT[],
+    category VARCHAR(64),
+    tags TEXT[] DEFAULT ARRAY[]::TEXT[],
+    max_team_size INTEGER,
+    min_team_size INTEGER,
+    registration_deadline TIMESTAMPTZ,
+    is_public BOOLEAN DEFAULT TRUE,
+    banner_image_url VARCHAR(255),
+    rules_url VARCHAR(255),
+    sponsor VARCHAR(255),
+    prizes TEXT,
+    contact_email VARCHAR(255),
+    allow_individuals BOOLEAN DEFAULT TRUE,
+    allow_multiple_projects_per_team BOOLEAN DEFAULT FALSE,
+    custom_fields JSONB,
+    location VARCHAR(255),
+    organizer_id UUID REFERENCES auth.users(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Teams schema
@@ -97,6 +128,7 @@ CREATE INDEX idx_sessions_token ON auth.sessions(token);
 CREATE INDEX idx_teams_name ON teams.teams(name);
 CREATE INDEX idx_projects_team ON projects.projects(team_id);
 CREATE INDEX idx_scores_project ON judging.scores(project_id);
+CREATE INDEX idx_hackathons_name ON hackathons.hackathons(name);
 
 -- Create functions
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -128,8 +160,13 @@ CREATE TRIGGER update_scores_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at();
 
+CREATE TRIGGER update_hackathons_updated_at
+    BEFORE UPDATE ON hackathons.hackathons
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at();
+
 -- New tables
-CREATE TABLE IF NOT EXISTS teams.join_requests (
+CREATE TABLE teams.join_requests (
     team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
@@ -137,7 +174,7 @@ CREATE TABLE IF NOT EXISTS teams.join_requests (
     PRIMARY KEY (team_id, user_id)
 );
 
-CREATE TABLE IF NOT EXISTS teams.invites (
+CREATE TABLE teams.invites (
     team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
     email VARCHAR(255) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
@@ -146,5 +183,5 @@ CREATE TABLE IF NOT EXISTS teams.invites (
     PRIMARY KEY (team_id, email)
 );
 
-CREATE INDEX IF NOT EXISTS idx_join_requests_team ON teams.join_requests(team_id);
-CREATE INDEX IF NOT EXISTS idx_invites_team ON teams.invites(team_id);
+CREATE INDEX idx_join_requests_team ON teams.join_requests(team_id);
+CREATE INDEX idx_invites_team ON teams.invites(team_id);

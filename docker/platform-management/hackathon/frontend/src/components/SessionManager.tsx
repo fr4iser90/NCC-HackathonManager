@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 export default function SessionManager() {
   const { status, data: session } = useSession();
   const pathname = usePathname();
+  if (!pathname) return null;
   const router = useRouter();
 
   useEffect(() => {

@@ -8,6 +8,7 @@ import Link from 'next/link';
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  if (!searchParams) return null;
   const callbackUrl = searchParams.get('callbackUrl') || '/';
   const error = searchParams.get('error');
 

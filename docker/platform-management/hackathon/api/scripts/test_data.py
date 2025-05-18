@@ -30,7 +30,41 @@ TEAMS = [
 ]
 
 HACKATHONS = [
-    {"name": "Hackathon #1", "description": "Spring 2025", "start_date": datetime(2025, 5, 1, 10, 0), "end_date": datetime(2025, 5, 3, 18, 0), "status": "RUNNING"},
+    {
+        "name": "Solo Hackathon",
+        "description": "Nur Einzelteilnehmer",
+        "start_date": datetime(2025, 5, 1, 10, 0),
+        "end_date": datetime(2025, 5, 3, 18, 0),
+        "status": "UPCOMING",
+        "mode": "SOLO_ONLY",
+        "requirements": ["UI"],
+        "category": "UI/UX",
+        "tags": ["Beginner", "Remote"],
+        "max_team_size": 1,
+        "min_team_size": 1,
+        "registration_deadline": datetime(2025, 4, 25, 23, 59),
+        "is_public": True,
+        "banner_image_url": "https://example.com/banner1.png",
+        "rules_url": "https://example.com/rules1.pdf",
+        "sponsor": "Company X",
+        "prizes": "1st: 1000€, 2nd: 500€",
+        "contact_email": "orga@hackathon.com",
+        "allow_individuals": True,
+        "allow_multiple_projects_per_team": False,
+        "custom_fields": {"special_award": "Best UI"}
+    },
+    {
+        "name": "Team Hackathon",
+        "description": "Nur Teams",
+        "start_date": datetime(2025, 6, 1, 10, 0),
+        "end_date": datetime(2025, 6, 3, 18, 0),
+        "status": "ACTIVE",
+        "mode": "TEAM_ONLY",
+        "requirements": ["Security", "Backend"],
+        "category": "Security"
+    },
+    {"name": "Hackathon Completed", "description": "Herbst 2025", "start_date": datetime(2025, 9, 1, 10, 0), "end_date": datetime(2025, 9, 3, 18, 0), "status": "COMPLETED", "category": "General"},
+    {"name": "Hackathon Archived", "description": "Winter 2025", "start_date": datetime(2025, 12, 1, 10, 0), "end_date": datetime(2025, 12, 3, 18, 0), "status": "ARCHIVED", "category": "General"},
 ]
 
 PROJECTS = [
@@ -108,6 +142,22 @@ def main():
                     start_date=h["start_date"],
                     end_date=h["end_date"],
                     status=HackathonStatus[h["status"]],
+                    mode=h.get("mode", "TEAM_RECOMMENDED"),
+                    requirements=h.get("requirements", []),
+                    category=h.get("category"),
+                    tags=h.get("tags"),
+                    max_team_size=h.get("max_team_size"),
+                    min_team_size=h.get("min_team_size"),
+                    registration_deadline=h.get("registration_deadline"),
+                    is_public=h.get("is_public", True),
+                    banner_image_url=h.get("banner_image_url"),
+                    rules_url=h.get("rules_url"),
+                    sponsor=h.get("sponsor"),
+                    prizes=h.get("prizes"),
+                    contact_email=h.get("contact_email"),
+                    allow_individuals=h.get("allow_individuals", True),
+                    allow_multiple_projects_per_team=h.get("allow_multiple_projects_per_team", False),
+                    custom_fields=h.get("custom_fields"),
                 )
                 db.add(hack)
                 db.commit()
@@ -119,8 +169,8 @@ def main():
         project_objs = {}
         # Zwei Projekte für Hackathon #1, eins ohne Hackathon
         project_defs = [
-            {"name": "Test Project 1", "description": "Demo project 1", "status": "ACTIVE", "hackathon": hackathon_objs["Hackathon #1"]},
-            {"name": "Test Project 2", "description": "Demo project 2", "status": "DRAFT", "hackathon": hackathon_objs["Hackathon #1"]},
+            {"name": "Test Project 1", "description": "Demo project 1", "status": "ACTIVE", "hackathon": hackathon_objs["Solo Hackathon"]},
+            {"name": "Test Project 2", "description": "Demo project 2", "status": "DRAFT", "hackathon": hackathon_objs["Team Hackathon"]},
             {"name": "Free Project", "description": "No hackathon", "status": "DRAFT", "hackathon": None},
         ]
         for p in project_defs:

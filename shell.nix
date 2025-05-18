@@ -48,6 +48,7 @@ let
     black
     mypy
     pylint
+    
   ]);
 in
 pkgs.mkShell {
@@ -59,6 +60,7 @@ pkgs.mkShell {
     pkgs.docker    # Add Docker
     pkgs.docker-compose    # Add Docker Compose
     pkgs.curl    # Add curl for health checks
+    pkgs.lsof
   ];
   
   shellHook = ''
@@ -215,17 +217,195 @@ pkgs.mkShell {
       cd -
     }
 
+    rebuild-backend() {
+      echo "Stopping and removing all containers and volumes..."
+      cd docker/platform-management/hackathon/
+      docker compose down -v
+      echo "Rebuilding and starting containers in background..."
+      docker compose up --build -d
+      cd -
+      echo "Rebuild complete!"
+    }
+
+    rebuild-frontend() {
+      echo "Removing node_modules and package-lock.json in the frontend..."
+      cd docker/platform-management/hackathon/frontend
+      rm -rf node_modules package-lock.json
+      echo "Reinstalling npm dependencies..."
+      npm install
+      cd -
+      echo "Frontend dependencies have been completely reinstalled!"
+    }
+
+    kill-frontend-port() {
+      local port=$(get-frontend-port)
+      echo "Checking for processes using frontend port $port..."
+      
+      # Try multiple methods to find and kill the process
+      local pids=""
+      
+      # Method 1: lsof
+      pids=$(lsof -t -i :$port 2>/dev/null)
+      
+      # Method 2: netstat if lsof found nothing
+      if [ -z "$pids" ]; then
+        pids=$(netstat -tulpn 2>/dev/null | grep ":$port" | awk '{print $7}' | cut -d'/' -f1)
+      fi
+      
+      # Method 3: ss if both above found nothing
+      if [ -z "$pids" ]; then
+        pids=$(ss -tulpn 2>/dev/null | grep ":$port" | awk '{print $7}' | cut -d',' -f2 | cut -d'=' -f2)
+      fi
+      
+      if [ -n "$pids" ]; then
+        echo "Found process(es) on port $port: $pids"
+        # Try normal kill first
+        kill $pids 2>/dev/null
+        sleep 1
+        # Check if still running and use kill -9 if needed
+        if netstat -tulpn 2>/dev/null | grep -q ":$port"; then
+          echo "Process still running, using kill -9..."
+          kill -9 $pids 2>/dev/null
+        fi
+        echo "Killed process(es): $pids"
+      else
+        echo "No process found on port $port using any detection method."
+      fi
+    }
+
+    wait-for-port-free() {
+      local port=$1
+      local max_attempts=10
+      local attempt=1
+      
+      while [ $attempt -le $max_attempts ]; do
+        # Check using multiple methods
+        if ! lsof -i :$port >/dev/null 2>&1 && \
+           ! netstat -tulpn 2>/dev/null | grep -q ":$port" && \
+           ! ss -tulpn 2>/dev/null | grep -q ":$port"; then
+          echo "Port $port is now free."
+          return 0
+        fi
+        echo "Port $port is still in use, waiting... (attempt $attempt/$max_attempts)"
+        sleep 1
+        attempt=$((attempt + 1))
+      done
+      echo "WARNING: Port $port is STILL in use after $max_attempts seconds!"
+      return 1
+    }
+
+    clean-frontend() {
+      kill-frontend-port
+      echo "Removing node_modules, package-lock.json, and .next in the frontend..."
+      cd docker/platform-management/hackathon/frontend
+      rm -rf node_modules package-lock.json .next
+      cd -
+      echo "Frontend has been cleaned!"
+    }
+
+    rebuild-all() {
+      echo ">>> Stopping and removing all containers and volumes..."
+      kill-frontend-port
+      wait-for-port-free $(get-frontend-port)
+      cd docker/platform-management/hackathon/
+      docker compose down -v
+      cd -
+
+      echo ">>> Cleaning up frontend..."
+      cd docker/platform-management/hackathon/frontend
+      rm -rf node_modules package-lock.json .next
+      echo ">>> Installing dependencies..."
+      npm install
+      cd -
+
+      echo ">>> Rebuilding and starting backend containers..."
+      cd docker/platform-management/hackathon/
+      docker compose up --build -d
+      cd -
+
+      echo ">>> Starting frontend development server..."
+      cd docker/platform-management/hackathon/frontend
+      npm run dev &
+      cd -
+
+      echo ">>> Everything has been rebuilt and started!"
+      echo "Frontend: http://localhost:3000"
+      echo "Backend:  http://localhost:8000"
+    }
+
+    clean-all() {
+      clean-caches
+      kill-frontend-port
+      clean-frontend
+      echo "Everything has been cleaned!"
+    }
+
+    get-frontend-port() {
+      local env_file="docker/platform-management/hackathon/frontend/.env.local"
+      if [ -f "$env_file" ]; then
+        # Try to find a line like PORT=3050 or NEXTAUTH_URL=http://localhost:3050
+        local port
+        port=$(grep -E '^PORT=' "$env_file" | cut -d'=' -f2)
+        if [ -z "$port" ]; then
+          # Try to extract from NEXTAUTH_URL or similar
+          port=$(grep -E '^NEXTAUTH_URL=' "$env_file" | sed -E 's/.*:([0-9]+).*/\1/')
+        fi
+        # Fallback to 3000 if nothing found
+        if [ -z "$port" ]; then
+          port=3000
+        fi
+        echo "$port"
+      else
+        echo "3000"
+      fi
+    }
+
+    clean-ports() {
+      for port in "$@"; do
+        pids=$(lsof -t -i :$port)
+        if [ -n "$pids" ]; then
+          echo "Killing process(es) on port $port: $pids"
+          kill $pids
+        else
+          echo "No process found on port $port."
+        fi
+      done
+      echo "Waiting 1 second for processes to terminate..."
+      sleep 1
+      for port in "$@"; do
+        if lsof -i :$port >/dev/null; then
+          echo "Port $port is STILL in use after kill, trying kill -9..."
+          pids=$(lsof -t -i :$port)
+          if [ -n "$pids" ]; then
+            kill -9 $pids
+            sleep 1
+            if lsof -i :$port >/dev/null; then
+              echo "WARNING: Port $port is STILL in use after kill -9!"
+            else
+              echo "Port $port is now free after kill -9."
+            fi
+          fi
+        else
+          echo "Port $port is now free."
+        fi
+      done
+    }
+
     echo "Python development environment activated"
     echo "PYTHONPATH set to: $PYTHONPATH"
     echo "Available commands:"
-    echo "  pytest              - Run pytest locally (cleans host caches before & after)"
-    echo "  clean-caches        - Manually clean host __pycache__ and .pytest_cache directories"
-    echo "  db_upgrade          - Apply database migrations using Alembic inside the bot container"
-    echo "  update-trees        - Update structure markdown files (web, tests, shared, bot)"
+    echo "  quick-startup       - Start all services with automatic dependency checks"
+    echo "  quick-install       - Install all dependencies and build Docker containers"
     echo "  install-npm         - Install npm dependencies for the frontend"
     echo "  start-frontend-dev  - Start the frontend development server"
     echo "  start-backend       - Start the backend server using Docker"
-    echo "  quick-install       - Install all dependencies and build Docker containers"
-    echo "  quick-startup       - Start all services with automatic dependency checks"
+    echo "  rebuild-all         - Stop all containers, remove frontend dependencies, rebuild backend, and start frontend development server"
+    echo "  rebuild-backend     - Remove all containers & volumes, rebuild and start backend fresh"
+    echo "  rebuild-frontend    - Remove node_modules and package-lock.json in the frontend and reinstall npm dependencies"
+    echo "  pytest              - Run pytest locally (cleans host caches before & after)"
+    echo "  clean-caches        - Manually clean host __pycache__ and .pytest_cache directories"
+    echo "  clean-frontend      - Remove node_modules, package-lock.json, and .next in the frontend"
+    echo "  clean-all           - Clean both Python and frontend caches/artifacts"
+    echo "  db_upgrade          - Apply database migrations using Alembic inside the bot container"
   '';
 } 

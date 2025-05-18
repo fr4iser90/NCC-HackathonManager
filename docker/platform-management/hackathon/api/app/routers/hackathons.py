@@ -11,6 +11,7 @@ from app.schemas.hackathon import (
     HackathonCreate, HackathonRead, HackathonUpdate, HackathonStatus
 ) # Pydantic schemas
 from app.auth import get_current_user # Assuming a general get_current_user
+from app.static import banner_url
 # If you have a specific get_current_active_admin_user, import that instead for admin routes
 
 router = APIRouter(
@@ -90,7 +91,9 @@ def get_hackathon(hackathon_id: uuid.UUID, db: Session = Depends(get_db)):
     hackathon = db.query(Hackathon).filter(Hackathon.id == hackathon_id).first()
     if not hackathon:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hackathon not found")
-    return hackathon
+    hackathon_dict = hackathon.to_dict()
+    hackathon_dict["banner_image_url"] = banner_url(hackathon.banner_filename)
+    return hackathon_dict
 
 @router.put("/{hackathon_id}", response_model=HackathonRead)
 def update_hackathon(

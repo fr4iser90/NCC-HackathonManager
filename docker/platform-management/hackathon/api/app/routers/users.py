@@ -13,6 +13,7 @@ from PIL import Image
 import io
 from app.schemas.team import TeamRead
 from app.schemas.project import ProjectRead
+from app.static import avatar_url, avatar_path
 
 router = APIRouter()
 
@@ -99,7 +100,9 @@ def read_user_by_id(user_id: uuid.UUID, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+    user_dict = user.to_dict()
+    user_dict["avatar_url"] = avatar_url(user.avatar_filename)
+    return user_dict
 
 @router.put("/{user_id}", response_model=UserRead)
 def update_user_profile(
@@ -154,8 +157,6 @@ def delete_user_by_admin(
     db.commit()
     return # Return No Content 
 
-AVATAR_DIR = "./static/avatars"
-
 @router.post("/me/avatar")
 def upload_avatar(
     file: UploadFile = File(...),
@@ -185,19 +186,19 @@ def upload_avatar(
     img = img.crop((left, top, right, bottom))
     img = img.resize((256, 256))
     filename = f"{current_user.id}.png"
-    file_path = os.path.join(AVATAR_DIR, filename)
+    file_path = avatar_path(filename)
     print(f"[Avatar-Upload] Speichere Avatar nach: {file_path}")
     try:
         img.save(file_path, format="PNG")
     except Exception as e:
         print(f"[Avatar-Upload] Fehler beim Speichern: {e}")
         raise HTTPException(status_code=500, detail="Fehler beim Speichern des Avatars.")
-    avatar_url = f"/static/avatars/{filename}"
-    current_user.avatar_url = avatar_url
+    avatar_url_value = avatar_url(filename)
+    current_user.avatar_url = avatar_url_value
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
-    return {"avatar_url": avatar_url}
+    return {"avatar_url": avatar_url_value}
 
 @router.delete("/me/avatar")
 def delete_avatar(
@@ -206,7 +207,7 @@ def delete_avatar(
 ):
     if not current_user.avatar_url:
         raise HTTPException(status_code=404, detail="Kein Profilbild vorhanden.")
-    file_path = os.path.join(AVATAR_DIR, os.path.basename(current_user.avatar_url))
+    file_path = avatar_path(os.path.basename(current_user.avatar_url))
     if os.path.exists(file_path):
         os.remove(file_path)
     current_user.avatar_url = None
@@ -219,7 +220,7 @@ def delete_avatar(
 def get_avatar(current_user: User = Depends(get_current_user)):
     if not current_user.avatar_url:
         raise HTTPException(status_code=404, detail="Kein Profilbild vorhanden.")
-    file_path = os.path.join(AVATAR_DIR, os.path.basename(current_user.avatar_url))
+    file_path = avatar_path(os.path.basename(current_user.avatar_url))
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Datei nicht gefunden.")
     return FileResponse(file_path)

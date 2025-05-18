@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 export default function Navbar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  if (!pathname) return null;
   const userRole = (session?.user as any)?.role;
 
   const navLinks = [

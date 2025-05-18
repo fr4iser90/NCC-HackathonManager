@@ -21,6 +21,7 @@ const errorMessages: Record<string, string> = {
 
 export default function AuthErrorPage() {
   const searchParams = useSearchParams();
+  if (!searchParams) return null;
   const errorKey = searchParams.get('error');
   const [errorMessage, setErrorMessage] = useState('Loading error details...');
 
