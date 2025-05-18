@@ -38,6 +38,7 @@ class Project(Base):
     description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     status: Mapped[ProjectStatus] = mapped_column(SQLEnum(ProjectStatus, name="project_status_enum", create_type=False), nullable=False, default=ProjectStatus.DRAFT)
     repository_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    hackathon_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("hackathons.hackathons.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 

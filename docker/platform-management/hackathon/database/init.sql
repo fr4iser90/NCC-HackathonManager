@@ -63,6 +63,7 @@ CREATE TABLE projects.projects (
     repository_url VARCHAR(255),
     status VARCHAR(50) NOT NULL DEFAULT 'draft',
     resources JSONB,
+    hackathon_id UUID REFERENCES hackathons.hackathons(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -74,7 +75,8 @@ CREATE TABLE judging.criteria (
     description TEXT,
     max_score INTEGER NOT NULL,
     weight DECIMAL NOT NULL DEFAULT 1.0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE judging.scores (
@@ -83,8 +85,8 @@ CREATE TABLE judging.scores (
     criteria_id UUID REFERENCES judging.criteria(id) ON DELETE CASCADE,
     judge_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     score INTEGER NOT NULL,
-    feedback TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    comment TEXT,
+    submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (project_id, criteria_id, judge_id)
 );
