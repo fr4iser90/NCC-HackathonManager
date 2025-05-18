@@ -38,6 +38,7 @@ export default function TeamsPage() {
   const [joinRequests, setJoinRequests] = useState<Record<string, JoinRequest[]>>({});
   const [requestFeedback, setRequestFeedback] = useState<Record<string, string>>({});
   const [revoking, setRevoking] = useState<string | null>(null);
+  const [myJoinRequests, setMyJoinRequests] = useState<Record<string, JoinRequest | null>>({});
 
   const userId = (session?.user as any)?.id;
 
@@ -61,21 +62,27 @@ export default function TeamsPage() {
   }, [status, session]);
 
   useEffect(() => {
-    if (status === "authenticated" && teams.length > 0) {
-      teams.forEach(async (team) => {
-        const isOwner = team.members?.find((m) => m.user_id === userId)?.role === 'owner';
-        if (isOwner) {
-          try {
-            const token = (session?.user as any)?.accessToken;
-            const res = await axiosInstance.get(`/teams/${team.id}/join-requests`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            setJoinRequests((prev) => ({ ...prev, [team.id]: res.data }));
-          } catch {}
+    if (status === "authenticated") {
+      // Lade alle eigenen Join-Requests EINMAL
+      const fetchMyJoinRequests = async () => {
+        try {
+          const token = (session?.user as any)?.accessToken;
+          const res = await axiosInstance.get("/teams/my-join-requests", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          // Mappe zu {team_id: JoinRequest}
+          const map: Record<string, JoinRequest> = {};
+          for (const req of res.data) {
+            map[req.team_id] = req;
+          }
+          setMyJoinRequests(map);
+        } catch (err) {
+          setMyJoinRequests({});
         }
-      });
+      };
+      fetchMyJoinRequests();
     }
-  }, [status, session, teams, userId]);
+  }, [status, session]);
 
   const handleJoin = async (teamId: string) => {
     setJoining(teamId);
@@ -156,6 +163,22 @@ export default function TeamsPage() {
     } catch {}
   };
 
+  const reloadMyJoinRequests = async () => {
+    try {
+      const token = (session?.user as any)?.accessToken;
+      const res = await axiosInstance.get("/teams/my-join-requests", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const map: Record<string, JoinRequest> = {};
+      for (const req of res.data) {
+        map[req.team_id] = req;
+      }
+      setMyJoinRequests(map);
+    } catch {
+      setMyJoinRequests({});
+    }
+  };
+
   const handleRequestJoin = async (teamId: string) => {
     setRequesting(teamId);
     setRequestFeedback((prev) => ({ ...prev, [teamId]: '' }));
@@ -165,9 +188,10 @@ export default function TeamsPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setRequestFeedback((prev) => ({ ...prev, [teamId]: 'Request sent.' }));
-      await fetchJoinRequests(teamId);
+      await reloadMyJoinRequests();
     } catch (err: any) {
       setRequestFeedback((prev) => ({ ...prev, [teamId]: err?.response?.data?.detail || 'Error sending request.' }));
+      await reloadMyJoinRequests();
     } finally {
       setRequesting(null);
     }
@@ -182,9 +206,13 @@ export default function TeamsPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setRequestFeedback((prev) => ({ ...prev, [teamId]: 'Request revoked.' }));
-      await fetchJoinRequests(teamId);
+      await reloadMyJoinRequests();
+      setTimeout(() => {
+        setRequestFeedback((prev) => ({ ...prev, [teamId]: '' }));
+      }, 2000);
     } catch (err: any) {
       setRequestFeedback((prev) => ({ ...prev, [teamId]: err?.response?.data?.detail || 'Error revoking request.' }));
+      await reloadMyJoinRequests();
     } finally {
       setRevoking(null);
     }
@@ -309,7 +337,7 @@ export default function TeamsPage() {
                   <div>Last Activity: <span className="font-bold">—</span></div>
                 </div>
                 <div className="mt-3 flex flex-col gap-2">
-                  {!isMember && (team.is_open ?? true) === true && !myPendingRequest(team) && (
+                  {!isMember && (team.is_open ?? true) === true && !myJoinRequests[team.id] && (
                     <button
                       className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm"
                       onClick={() => handleRequestJoin(team.id)}
@@ -318,9 +346,9 @@ export default function TeamsPage() {
                       {requesting === team.id ? "Requesting..." : requestFeedback[team.id] || "Request to Join"}
                     </button>
                   )}
-                  {!isMember && myPendingRequest(team) && (
+                  {!isMember && myJoinRequests[team.id] && (
                     <button
-                      className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm"
+                      className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm"
                       onClick={() => handleRevokeRequest(team.id)}
                       disabled={revoking === team.id}
                     >

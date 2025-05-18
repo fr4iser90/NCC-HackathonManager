@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 import secrets
+import logging
 
 from app.database import get_db
 from app.models.user import User
@@ -17,6 +18,16 @@ from app.auth import (
 )
 
 router = APIRouter()
+
+@router.get("/my-join-requests", response_model=List[JoinRequestRead], dependencies=[Depends(get_current_user)])
+def list_my_join_requests(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    allowed = {JoinRequestStatus.pending, JoinRequestStatus.accepted, JoinRequestStatus.rejected}
+    all_reqs = db.query(JoinRequest).filter(JoinRequest.user_id == current_user.id).all()
+    filtered = [req for req in all_reqs if req.status in allowed]
+    logging.warning(f"DEBUG JOINREQUESTS COUNT: {len(filtered)}")
+    for req in filtered:
+        logging.warning(f"DEBUG JOINREQUEST: team_id={req.team_id} ({type(req.team_id)}), user_id={req.user_id} ({type(req.user_id)}), status={req.status} ({type(req.status)}), created_at={req.created_at} ({type(req.created_at)})")
+    return [JoinRequestRead.model_validate(req) for req in filtered]
 
 @router.post("/", response_model=TeamRead, status_code=status.HTTP_201_CREATED)
 def create_team(team_in: TeamCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -291,9 +302,16 @@ def reject_invite(team_id: uuid.UUID, email: str, token: str, db: Session = Depe
 
 @router.delete("/{team_id}/join-requests/me", status_code=204)
 def revoke_own_join_request(team_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    req = db.query(JoinRequest).filter_by(team_id=team_id, user_id=current_user.id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="No join request found for this team and user.")
+    db.delete(req)
+    db.commit()
+    return
+
+@router.get("/{team_id}/join-requests/me", response_model=JoinRequestRead)
+def get_own_join_request(team_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     req = db.query(JoinRequest).filter_by(team_id=team_id, user_id=current_user.id, status=JoinRequestStatus.pending).first()
     if not req:
         raise HTTPException(status_code=404, detail="No pending join request found.")
-    db.delete(req)
-    db.commit()
-    return 
+    return req 

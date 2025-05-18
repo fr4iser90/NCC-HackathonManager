@@ -49,7 +49,6 @@ class JoinRequestRead(BaseModel):
     user_id: uuid.UUID
     status: JoinRequestStatus
     created_at: datetime
-    # Optional: user details
     model_config = {"from_attributes": True}
 
 class TeamInviteRead(BaseModel):

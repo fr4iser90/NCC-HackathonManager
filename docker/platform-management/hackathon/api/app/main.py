@@ -14,7 +14,7 @@ from app.routers import (
     teams_router,
     judging_router,
     submissions_router,
-    ping_router
+    ping_router,
 )
 
 app = FastAPI(
