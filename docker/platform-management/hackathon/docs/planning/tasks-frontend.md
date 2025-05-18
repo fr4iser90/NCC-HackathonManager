@@ -30,6 +30,7 @@
 - [ ] Show judging assignments (if judge)
 - [ ] Only for users with judge role
 - [ ] Acceptance: Judges see assignments, others do nicht
+- [x] Build navigation/sidebar for dashboard (responsive, role-based, links to Profile, Teams, Projects, Admin, Judging)
 
 ## Team Management
 - [ ] Build team creation form
@@ -46,6 +47,9 @@
 - [x] Acceptance: Only leader can manage, errors handled
 - [x] Show team details and activity
 - [x] Acceptance: Team details/activity visible
+- [ ] Show team overview (name, member count, project count, user role, avatar/logo)
+- [ ] [optional] Show team statistics (wins, average score, submissions, last activity)
+- [ ] [optional] Show user statistics (total score, participations, wins, placements)
 
 ## Project Management
 - [x] Build project creation form

@@ -373,11 +373,34 @@ export default function ProfilePage() {
         ) : teams.length === 0 ? (
           <div>No teams found.</div>
         ) : (
-          <ul className="list-disc pl-5">
-            {teams.map((team) => (
-              <li key={team.id} className="mb-1">{team.name}</li>
-            ))}
-          </ul>
+          <section>
+            <h2 className="text-lg font-semibold mb-2">My Teams</h2>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {teams.map((team) => (
+                <div key={team.id} className="bg-white border rounded-lg shadow p-4 flex flex-col gap-2">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 text-2xl font-bold">
+                      <span role="img" aria-label="Team">👥</span>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-lg">{team.name}</div>
+                      <div className="text-xs text-gray-500">{team.role || 'Member'}</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-4 text-sm text-gray-700">
+                    <div><span className="font-bold">{team.member_count ?? '—'}</span> Members</div>
+                    <div><span className="font-bold">{team.project_count ?? '—'}</span> Projects</div>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-500">
+                    <div>Wins: <span className="font-bold">—</span></div>
+                    <div>Avg. Score: <span className="font-bold">—</span></div>
+                    <div>Submissions: <span className="font-bold">—</span></div>
+                    <div>Last Activity: <span className="font-bold">—</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
       </div>
       <div className="mt-6">
@@ -396,6 +419,28 @@ export default function ProfilePage() {
           </ul>
         )}
       </div>
+      {/* User-Statistiken (Platzhalter) */}
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold mb-2">Your Hackathon Stats</h2>
+        <div className="flex flex-wrap gap-4 bg-slate-50 border rounded shadow p-4">
+          <div className="flex-1 min-w-[120px]">
+            <div className="text-xs text-gray-500">Total Score</div>
+            <div className="text-lg font-bold">—</div>
+          </div>
+          <div className="flex-1 min-w-[120px]">
+            <div className="text-xs text-gray-500">Participations</div>
+            <div className="text-lg font-bold">—</div>
+          </div>
+          <div className="flex-1 min-w-[120px]">
+            <div className="text-xs text-gray-500">Wins</div>
+            <div className="text-lg font-bold">—</div>
+          </div>
+          <div className="flex-1 min-w-[120px]">
+            <div className="text-xs text-gray-500">Placements</div>
+            <div className="text-lg font-bold">—</div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 } 
