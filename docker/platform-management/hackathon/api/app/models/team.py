@@ -27,9 +27,8 @@ class TeamMember(Base):
     __tablename__ = "members"
     __table_args__ = {"schema": "teams"}
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.teams.id"), nullable=False)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("auth.users.id"), nullable=False)
+    team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.teams.id"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("auth.users.id"), primary_key=True)
     role: Mapped[TeamMemberRole] = mapped_column(SQLEnum(TeamMemberRole, name="team_member_role_enum", create_type=False), nullable=False, default=TeamMemberRole.member)
     joined_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 

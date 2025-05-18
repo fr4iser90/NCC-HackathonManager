@@ -30,6 +30,12 @@ export default function ProfilePage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [teams, setTeams] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(true);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  const [teamsError, setTeamsError] = useState<string | null>(null);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -63,6 +69,52 @@ export default function ProfilePage() {
         }
       };
       fetchProfile();
+    }
+  }, [status, session]);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      const fetchTeams = async () => {
+        setLoadingTeams(true);
+        setTeamsError(null);
+        try {
+          const token = (session?.user as any)?.accessToken;
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/me/teams`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error('Failed to load teams');
+          const data = await res.json();
+          setTeams(data);
+        } catch (err: any) {
+          setTeamsError(err.message || 'Failed to load teams');
+        } finally {
+          setLoadingTeams(false);
+        }
+      };
+      fetchTeams();
+    }
+  }, [status, session]);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      const fetchProjects = async () => {
+        setLoadingProjects(true);
+        setProjectsError(null);
+        try {
+          const token = (session?.user as any)?.accessToken;
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/me/projects`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error('Failed to load projects');
+          const data = await res.json();
+          setProjects(data);
+        } catch (err: any) {
+          setProjectsError(err.message || 'Failed to load projects');
+        } finally {
+          setLoadingProjects(false);
+        }
+      };
+      fetchProjects();
     }
   }, [status, session]);
 
@@ -185,7 +237,7 @@ export default function ProfilePage() {
     return <div className="container mx-auto p-4 text-center text-red-500">Error: {error}</div>;
   }
 
-  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
   const avatarSrc = avatarPreview
     || (avatarUrl ? `${backendUrl}${avatarUrl}` : `${backendUrl}/static/default-avatar.svg`);
 
@@ -312,6 +364,38 @@ export default function ProfilePage() {
           </button>
         </div>
       </form>
+      <div className="mt-10">
+        <h2 className="text-xl font-semibold mb-2">My Teams</h2>
+        {loadingTeams ? (
+          <div>Loading teams...</div>
+        ) : teamsError ? (
+          <div className="text-red-500">{teamsError}</div>
+        ) : teams.length === 0 ? (
+          <div>No teams found.</div>
+        ) : (
+          <ul className="list-disc pl-5">
+            {teams.map((team) => (
+              <li key={team.id} className="mb-1">{team.name}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="mt-6">
+        <h2 className="text-xl font-semibold mb-2">My Projects</h2>
+        {loadingProjects ? (
+          <div>Loading projects...</div>
+        ) : projectsError ? (
+          <div className="text-red-500">{projectsError}</div>
+        ) : projects.length === 0 ? (
+          <div>No projects found.</div>
+        ) : (
+          <ul className="list-disc pl-5">
+            {projects.map((project) => (
+              <li key={project.id} className="mb-1">{project.name}</li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 } 

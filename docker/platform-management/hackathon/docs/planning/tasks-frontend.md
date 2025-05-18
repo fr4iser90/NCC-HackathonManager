@@ -6,11 +6,11 @@
 - [x] Show error on failed login
 - [x] Redirect on success
 - [x] Acceptance: User can log in, errors shown on failure
-- [ ] Build registration page
-- [ ] Form validation (email, password, username)
-- [ ] Show error on failed registration
-- [ ] Redirect on success
-- [ ] Acceptance: User can register, errors shown on failure
+- [x] Build registration page
+- [x] Form validation (email, password, username)
+- [x] Show error on failed registration
+- [x] Redirect on success
+- [x] Acceptance: User can register, errors shown on failure
 - [x] Implement JWT-based authentication flow
 - [x] Store JWT securely (httpOnly cookie or localStorage)
 - [x] Attach JWT to API requests
@@ -20,10 +20,10 @@
 - [x] Acceptance: Protected pages not accessible without login
 
 ## User Dashboard
-- [ ] Build user profile page (view/edit profile)
-- [ ] Form for editing profile
-- [ ] Show user info from API
-- [ ] Acceptance: User can view/edit profile, changes saved
+- [x] Build user profile page (view/edit profile)
+- [x] Form for editing profile
+- [x] Show user info from API
+- [x] Acceptance: User can view/edit profile, changes saved
 - [ ] Show user's teams and projects
 - [ ] Fetch from API, display in dashboard
 - [ ] Acceptance: User sees correct teams/projects

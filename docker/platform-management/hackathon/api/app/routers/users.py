@@ -11,6 +11,8 @@ import os
 from fastapi.responses import FileResponse
 from PIL import Image
 import io
+from app.schemas.team import TeamRead
+from app.schemas.project import ProjectRead
 
 router = APIRouter()
 
@@ -220,4 +222,29 @@ def get_avatar(current_user: User = Depends(get_current_user)):
     file_path = os.path.join(AVATAR_DIR, os.path.basename(current_user.avatar_url))
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Datei nicht gefunden.")
-    return FileResponse(file_path) 
+    return FileResponse(file_path)
+
+@router.get("/me/teams", response_model=List[TeamRead])
+def get_my_teams(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Return all teams the current user is a member of.
+    """
+    from app.models.team import Team, TeamMember
+    memberships = db.query(TeamMember).filter(TeamMember.user_id == current_user.id).all()
+    team_ids = [m.team_id for m in memberships]
+    teams = db.query(Team).filter(Team.id.in_(team_ids)).all() if team_ids else []
+    return teams
+
+@router.get("/me/projects", response_model=List[ProjectRead])
+def get_my_projects(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Return all projects the current user is a member of (via team membership) or owns.
+    """
+    from app.models.project import Project
+    from app.models.team import TeamMember
+    # Get all team IDs the user is a member of
+    memberships = db.query(TeamMember).filter(TeamMember.user_id == current_user.id).all()
+    team_ids = [m.team_id for m in memberships]
+    # Get all projects for those teams
+    projects = db.query(Project).filter(Project.team_id.in_(team_ids)).all() if team_ids else []
+    return projects 
