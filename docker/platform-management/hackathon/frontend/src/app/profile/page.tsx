@@ -185,6 +185,10 @@ export default function ProfilePage() {
     return <div className="container mx-auto p-4 text-center text-red-500">Error: {error}</div>;
   }
 
+  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+  const avatarSrc = avatarPreview
+    || (avatarUrl ? `${backendUrl}${avatarUrl}` : `${backendUrl}/static/default-avatar.svg`);
+
   return (
     <div className="container mx-auto max-w-lg p-4">
       <h1 className="text-2xl font-bold mb-6">My Profile</h1>
@@ -195,7 +199,7 @@ export default function ProfilePage() {
         <div className="flex flex-col items-center mb-6">
           <div className="relative w-24 h-24 mb-2">
             <img
-              src={avatarPreview || avatarUrl || `${process.env.NEXT_PUBLIC_API_BASE_URL}/static/default-avatar.svg`}
+              src={avatarSrc}
               alt="Profilbild"
               className="w-24 h-24 rounded-full object-cover border border-gray-300"
             />

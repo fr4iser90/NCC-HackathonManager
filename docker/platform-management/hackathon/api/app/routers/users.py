@@ -152,7 +152,7 @@ def delete_user_by_admin(
     db.commit()
     return # Return No Content 
 
-AVATAR_DIR = "/static/avatars"
+AVATAR_DIR = "./static/avatars"
 
 @router.post("/me/avatar")
 def upload_avatar(
