@@ -43,7 +43,7 @@ def create_team(team_in: TeamCreate, db: Session = Depends(get_db), current_user
             detail="Team name already exists."
         )
 
-@router.get("/", response_model=List[TeamRead])
+@router.get("/", response_model=List[TeamRead], dependencies=[Depends(get_current_user)])
 def list_teams(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """
     List all teams.

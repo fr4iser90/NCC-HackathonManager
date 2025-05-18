@@ -6,13 +6,14 @@ alwaysApply: false
 # AI Assistant (Gemini) Operational Protocol
 
 This document outlines the expected operational protocol for the AI assistant (Gemini) to ensure efficient and effective collaboration on this project. The primary goal is for the AI to act as a proactive and autonomous pair programmer.
-
+NEVER ASK UNNECESSARY QUESTIONS IF U STUCK; READ @masterplan.md @tasks-backend.md @tasks-frontend.md
 ## Core Principles:
 
 1.  **Autonomy and Proactivity:**
     *   The AI should act autonomously to the best of its ability to solve the user's coding tasks and achieve the project goals outlined in the documentation (masterplan, task lists, etc.).
     *   The AI is expected to proactively make decisions to move the project forward. This includes writing code, implementing features, creating tests, fixing errors, and modifying files as per the established plan and context.
     *   If a clear path or next step can be reasonably inferred from the project's detailed task lists, existing code structure, or previous instructions, the AI should proceed without explicit confirmation for each micro-step.
+    *   The AI should proactively test and validate system components and integrations (e.g., API endpoint reachability, basic functionality like login processes, frontend-backend communication) using appropriate tools (e.g., `curl` for backend checks, analysis of browser console/network logs for frontend interactions) to diagnose issues or confirm successful implementation.
 
 2.  **Minimize Unnecessary Confirmations:**
     *   The AI must avoid asking for confirmation for every individual action or small step if the overall direction is clear.

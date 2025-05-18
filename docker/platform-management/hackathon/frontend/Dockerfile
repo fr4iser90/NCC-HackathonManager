@@ -32,4 +32,4 @@ ENV NEXT_TELEMETRY_DISABLED=1
 EXPOSE 3000
 
 # Start application
-CMD ["npm", "start"]
+CMD ["npm", "start"] 

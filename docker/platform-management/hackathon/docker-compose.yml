@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  db:
+    build:
+      context: ./database
+      dockerfile: Dockerfile
+    container_name: hackathon-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env # Will load DB credentials from .env in the project root
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: hackathon-api
+    ports:
+      - "8000:8000" # Exposing backend API on host port 8000
+    depends_on:
+      - db
+    env_file:
+      - .env # Will load API and INITIAL_ADMIN credentials from .env
+    restart: unless-stopped
+    # command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload # Or whatever your API's start command is
+
+volumes:
+  postgres_data:
+    driver: local 

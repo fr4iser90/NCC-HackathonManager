@@ -49,7 +49,9 @@ class ProjectUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=255)
     description: Optional[str] = None
     status: Optional[ProjectStatus] = None
-    # project_template_id: Optional[uuid.UUID] = None # Add if template can be updated
+    team_id: Optional[uuid.UUID] = None # Added for admin update
+    project_template_id: Optional[uuid.UUID] = None # Added for admin update
+    repository_url: Optional[str] = Field(None, max_length=255) # Added for admin update
 
 class ProjectRead(ProjectBase):
     id: uuid.UUID

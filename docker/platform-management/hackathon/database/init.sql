@@ -8,12 +8,14 @@ CREATE SCHEMA IF NOT EXISTS judging;
 CREATE TABLE auth.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) NOT NULL UNIQUE,
+    username VARCHAR(100) NOT NULL UNIQUE,
     hashed_password VARCHAR(255) NOT NULL,
     full_name VARCHAR(255),
     role VARCHAR(50) NOT NULL DEFAULT 'participant',
     github_id VARCHAR(100),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    avatar_url VARCHAR(255)
 );
 
 CREATE TABLE auth.sessions (
@@ -54,11 +56,11 @@ CREATE TABLE projects.templates (
 CREATE TABLE projects.projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
-    template_id UUID REFERENCES projects.templates(id),
+    project_template_id UUID REFERENCES projects.templates(id),
     name VARCHAR(255) NOT NULL,
     description TEXT,
     repository_url VARCHAR(255),
-    deployment_status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    status VARCHAR(50) NOT NULL DEFAULT 'draft',
     resources JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

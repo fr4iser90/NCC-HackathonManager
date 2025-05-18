@@ -1,0 +1,36 @@
+node_modules
+.next
+.git
+.env*
+
+# Backup files
+Dockerfile.bak
+package.json.bak
+
+# Ignore the Dockerfile itself from being copied into the image context
+Dockerfile
+
+# OS-specific
+.DS_Store
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build artifacts that might be present locally
+/build
+/out/
+
+# Coverage reports
+/coverage
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Editor/IDE specific
+.vscode/
+
+# README (optional, but usually not needed in image)
+README.md 

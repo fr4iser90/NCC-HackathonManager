@@ -19,6 +19,7 @@ class User(Base):
     full_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="participant") # Roles: participant, judge, admin
     github_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, unique=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     # is_active: Mapped[bool] = mapped_column(Boolean, default=True) # Decided to keep is_active out of DB model for now, can be derived or managed in schemas if needed.
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

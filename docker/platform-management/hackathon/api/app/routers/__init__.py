@@ -4,6 +4,7 @@ from .projects import router as projects_router
 from .judging import router as judging_router
 from .hackathons import router as hackathons_router
 from .submissions import router as submissions_router
+from .ping import router as ping_router
 
 __all__ = [
     "users_router",
@@ -12,4 +13,5 @@ __all__ = [
     "judging_router",
     "hackathons_router",
     "submissions_router",
+    "ping_router",
 ]

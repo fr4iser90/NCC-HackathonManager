@@ -2,6 +2,8 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 # from fastapi.security import OAuth2PasswordBearer # No longer needed here if not defining scheme
+from fastapi.staticfiles import StaticFiles
+import os
 
 # Import app components
 from app.database import get_db
@@ -11,7 +13,8 @@ from app.routers import (
     projects_router,
     teams_router,
     judging_router,
-    submissions_router
+    submissions_router,
+    ping_router
 )
 
 app = FastAPI(
@@ -29,6 +32,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/static", StaticFiles(directory="/static"), name="static")
+
 # Router einbinden
 app.include_router(users_router, prefix="/users", tags=["users"])
 app.include_router(hackathons_router, prefix="/hackathons", tags=["hackathons"])
@@ -36,6 +41,7 @@ app.include_router(projects_router, prefix="/projects", tags=["projects"])
 app.include_router(teams_router, prefix="/teams", tags=["teams"])
 app.include_router(judging_router, prefix="/judging", tags=["judging"])
 app.include_router(submissions_router, tags=["submissions"])
+app.include_router(ping_router, prefix="/ping", tags=["ping"])
 
 # Define oauth2_scheme AFTER all routers are included in the app
 # This allows the tokenUrl to be resolvable against the app's routing table
