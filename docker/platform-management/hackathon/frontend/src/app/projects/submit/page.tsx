@@ -1,7 +1,9 @@
 "use client";
 import { useState, useRef } from "react";
+import { useSession } from "next-auth/react";
 
 export default function ProjectSubmitPage() {
+  const { data: session } = useSession();
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [logs, setLogs] = useState<string>("");
@@ -68,11 +70,15 @@ export default function ProjectSubmitPage() {
     setLogs("");
     setError(null);
     setProgress(0);
-    // Upload mit XHR für Fortschrittsbalken
     const formData = new FormData();
     formData.append("file", file);
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/projects/submit", true);
+    // Authorization-Header setzen
+    const token = (session?.user as any)?.accessToken;
+    if (token) {
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    }
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) {
         setProgress(Math.round((event.loaded / event.total) * 100));

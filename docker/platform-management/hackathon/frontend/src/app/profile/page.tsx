@@ -201,7 +201,7 @@ export default function ProfilePage() {
       if (avatarFile) {
         const formDataImg = new FormData();
         formDataImg.append('file', avatarFile);
-        const resImg = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/me/avatar`, {
+        const resImg = await fetch('/api/users/me/avatar', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` },
           body: formDataImg,

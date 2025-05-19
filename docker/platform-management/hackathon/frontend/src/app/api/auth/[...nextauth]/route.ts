@@ -86,7 +86,7 @@ export const authOptions: NextAuthOptions = {
                   id: profileResponse.data.id, 
                   email: profileResponse.data.email,
                   name: profileResponse.data.full_name || profileResponse.data.email,
-                  role: profileResponse.data.role // <<< ROLE HERE
+                  role: profileResponse.data.role
                 };
                 console.log("[NextAuth Authorize] User profile constructed:", JSON.stringify(userProfile));
               }
