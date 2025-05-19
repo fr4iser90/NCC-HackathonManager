@@ -190,27 +190,76 @@ async def submit_project(
     """
     Nimmt ein ZIP-File entgegen, entpackt es, baut ein Docker-Image und gibt Build-Logs/Status zurück.
     """
-    # 1. Temporäres Verzeichnis für Upload
-    temp_dir = tempfile.mkdtemp(prefix="project-upload-")
-    zip_path = f"{temp_dir}/upload.zip"
-    with open(zip_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
-    # 2. Entpacken
-    project_dir = f"{temp_dir}/project"
-    os.makedirs(project_dir, exist_ok=True)
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extractall(project_dir)
-    # 3. Build-Skript aufrufen
-    tag = f"userproject-{uuid.uuid4()}"
-    build_script = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../scripts/build_project_container.py'))
-    cmd = ["python3", build_script, "--project-path", project_dir, "--tag", tag]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    logs = ""
-    for line in proc.stdout:
-        logs += line
-    proc.wait()
-    status = "success" if proc.returncode == 0 else "error"
-    # 4. Aufräumen
-    shutil.rmtree(temp_dir)
-    return {"status": status, "logs": logs, "image_tag": tag if status == "success" else None} 
+    from app.logger import get_logger
+    logger = get_logger("project_submission")
+    
+    temp_dir = None
+    try:
+        # 1. Temporäres Verzeichnis für Upload
+        logger.info(f"Starting project submission for user {current_user.username}")
+        temp_dir = tempfile.mkdtemp(prefix="project-upload-")
+        logger.info(f"Created temp directory: {temp_dir}")
+        
+        zip_path = os.path.join(temp_dir, "upload.zip")
+        logger.info(f"Saving uploaded file to {zip_path}")
+        
+        # Stream the file to disk in chunks instead of loading it all into memory
+        CHUNK_SIZE = 1024 * 1024  # 1MB chunks
+        with open(zip_path, "wb") as buffer:
+            while True:
+                chunk = await file.read(CHUNK_SIZE)
+                if not chunk:
+                    break
+                buffer.write(chunk)
+        
+        logger.info(f"File saved successfully: {os.path.getsize(zip_path)} bytes")
+        
+        # 2. Entpacken
+        project_dir = os.path.join(temp_dir, "project")
+        os.makedirs(project_dir, exist_ok=True)
+        logger.info(f"Created project directory: {project_dir}")
+        
+        try:
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(project_dir)
+            logger.info(f"ZIP file extracted successfully to {project_dir}")
+        except zipfile.BadZipFile as e:
+            logger.error(f"Bad ZIP file: {str(e)}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
+                                detail=f"Invalid ZIP file: {str(e)}")
+        
+        # 3. Build-Skript aufrufen
+        tag = f"userproject-{uuid.uuid4()}"
+        logger.info(f"Generated image tag: {tag}")
+        
+        build_script = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../scripts/build_project_container.py'))
+        logger.info(f"Build script path: {build_script}")
+        
+        cmd = ["python3", build_script, "--project-path", project_dir, "--tag", tag]
+        logger.info(f"Executing command: {' '.join(cmd)}")
+        
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        logs = ""
+        for line in proc.stdout:
+            logs += line
+            logger.debug(line.strip())
+        
+        proc.wait()
+        status = "success" if proc.returncode == 0 else "error"
+        logger.info(f"Build completed with status: {status}, return code: {proc.returncode}")
+        
+        return {"status": status, "logs": logs, "image_tag": tag if status == "success" else None}
+    
+    except Exception as e:
+        logger.error(f"Error during project submission: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                            detail=f"Error processing project submission: {str(e)}")
+    
+    finally:
+        # 4. Aufräumen
+        if temp_dir and os.path.exists(temp_dir):
+            try:
+                shutil.rmtree(temp_dir)
+                logger.info(f"Cleaned up temp directory: {temp_dir}")
+            except Exception as e:
+                logger.error(f"Error cleaning up temp directory: {str(e)}")

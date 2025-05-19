@@ -61,6 +61,7 @@ pkgs.mkShell {
     pkgs.docker-compose    # Add Docker Compose
     pkgs.curl    # Add curl for health checks
     pkgs.lsof
+    pkgs.tmux    # Add tmux for terminal sessions
   ];
   
   shellHook = ''
@@ -199,6 +200,22 @@ pkgs.mkShell {
       npm run dev
       cd -
     }
+    
+    start-frontend-tmux() {
+      echo "Starting frontend development server in tmux session..."
+      # Create a new tmux session named 'frontend' if it doesn't exist
+      if ! tmux has-session -t frontend 2>/dev/null; then
+        tmux new-session -d -s frontend
+      fi
+      
+      # Send commands to the tmux session
+      tmux send-keys -t frontend "cd $(pwd)/docker/platform-management/hackathon/frontend" C-m
+      tmux send-keys -t frontend "npm run dev" C-m
+      
+      echo "Frontend server started in tmux session 'frontend'"
+      echo "To attach to the session: tmux attach -t frontend"
+      echo "To detach from session: press Ctrl+B then D"
+    }
 
     start-backend() {
       echo "Starting backend server..."
@@ -237,61 +254,175 @@ pkgs.mkShell {
       echo "Frontend dependencies have been completely reinstalled!"
     }
 
-    kill-frontend-port() {
-      local port=$(get-frontend-port)
-      echo "Checking for processes using frontend port $port..."
-      
-      # Try multiple methods to find and kill the process
+    # --- Improved Port Management Functions ---
+    
+    # Detect processes using a specific port (using multiple methods)
+    detect_port_process() {
+      local port=$1
       local pids=""
       
-      # Method 1: lsof
-      pids=$(lsof -t -i :$port 2>/dev/null)
+      # Method 1: lsof (most common)
+      if command -v lsof &>/dev/null; then
+        pids=$(lsof -t -i ":$port" 2>/dev/null)
+      fi
       
       # Method 2: netstat if lsof found nothing
-      if [ -z "$pids" ]; then
-        pids=$(netstat -tulpn 2>/dev/null | grep ":$port" | awk '{print $7}' | cut -d'/' -f1)
+      if [ -z "$pids" ] && command -v netstat &>/dev/null; then
+        pids=$(netstat -tulpn 2>/dev/null | grep ":$port " | awk '{print $7}' | cut -d'/' -f1 | grep -v "-" | sort -u)
       fi
       
-      # Method 3: ss if both above found nothing
-      if [ -z "$pids" ]; then
-        pids=$(ss -tulpn 2>/dev/null | grep ":$port" | awk '{print $7}' | cut -d',' -f2 | cut -d'=' -f2)
+      # Method 3: ss (modern netstat replacement)
+      if [ -z "$pids" ] && command -v ss &>/dev/null; then
+        pids=$(ss -tulpn 2>/dev/null | grep ":$port " | awk '{print $7}' | cut -d',' -f2 | cut -d'=' -f2 | grep -v "-" | sort -u)
       fi
+      
+      # Method 4: fuser (another approach)
+      if [ -z "$pids" ] && command -v fuser &>/dev/null; then
+        pids=$(fuser -n tcp "$port" 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i+0>0) print $i}')
+      fi
+      
+      echo "$pids"
+    }
+
+    # Check if port is in use by any process
+    is_port_in_use() {
+      local port=$1
+      
+      # Try multiple detection methods
+      if command -v lsof &>/dev/null && lsof -i ":$port" &>/dev/null; then
+        return 0  # Port is in use
+      fi
+      
+      if command -v netstat &>/dev/null && netstat -tuln 2>/dev/null | grep -q ":$port "; then
+        return 0  # Port is in use
+      fi
+      
+      if command -v ss &>/dev/null && ss -tuln 2>/dev/null | grep -q ":$port "; then
+        return 0  # Port is in use
+      fi
+      
+      if command -v fuser &>/dev/null && fuser -n tcp "$port" 2>/dev/null | grep -q "$port"; then
+        return 0  # Port is in use
+      fi
+      
+      # Try direct connection test as last resort
+      if command -v nc &>/dev/null; then
+        nc -z localhost "$port" &>/dev/null && return 0
+      elif command -v timeout &>/dev/null; then
+        timeout 1 bash -c "</dev/tcp/localhost/$port" &>/dev/null && return 0
+      fi
+      
+      return 1  # Port is free
+    }
+
+    # Kill processes using a specific port
+    kill_port_process() {
+      local port=$1
+      local force=$2
+      local pids=$(detect_port_process "$port")
+      local killed=false
       
       if [ -n "$pids" ]; then
         echo "Found process(es) on port $port: $pids"
-        # Try normal kill first
-        kill $pids 2>/dev/null
-        sleep 1
-        # Check if still running and use kill -9 if needed
-        if netstat -tulpn 2>/dev/null | grep -q ":$port"; then
-          echo "Process still running, using kill -9..."
-          kill -9 $pids 2>/dev/null
+        
+        # Try normal kill first unless force is specified
+        if [ "$force" != "force" ]; then
+          echo "Attempting graceful termination..."
+          for pid in $pids; do
+            kill "$pid" 2>/dev/null
+            killed=true
+          done
+          
+          # Give processes time to terminate
+          sleep 1
         fi
-        echo "Killed process(es): $pids"
+        
+        # Check if still running or force kill requested
+        if [ "$force" = "force" ] || is_port_in_use "$port"; then
+          echo "Using force termination (kill -9)..."
+          for pid in $pids; do
+            kill -9 "$pid" 2>/dev/null
+            killed=true
+          done
+          sleep 1
+        fi
+        
+        # Final check
+        if is_port_in_use "$port"; then
+          echo "WARNING: Port $port is still in use after kill attempts!"
+          return 1
+        else
+          echo "Successfully freed port $port"
+          return 0
+        fi
       else
-        echo "No process found on port $port using any detection method."
+        echo "No process found using port $port"
+        if is_port_in_use "$port"; then
+          echo "WARNING: Port $port appears to be in use, but couldn't identify the process"
+          return 1
+        fi
+        return 0
       fi
     }
 
-    wait-for-port-free() {
+    # Wait for a port to become free
+    wait_for_port_free() {
       local port=$1
       local max_attempts=10
+      local wait_time=1
+      
+      # Set max_attempts if provided
+      if [ -n "$2" ]; then
+        max_attempts=$2
+      fi
+      
+      # Set wait_time if provided
+      if [ -n "$3" ]; then
+        wait_time=$3
+      fi
+      
       local attempt=1
       
       while [ $attempt -le $max_attempts ]; do
-        # Check using multiple methods
-        if ! lsof -i :$port >/dev/null 2>&1 && \
-           ! netstat -tulpn 2>/dev/null | grep -q ":$port" && \
-           ! ss -tulpn 2>/dev/null | grep -q ":$port"; then
+        if ! is_port_in_use "$port"; then
           echo "Port $port is now free."
           return 0
         fi
+        
         echo "Port $port is still in use, waiting... (attempt $attempt/$max_attempts)"
-        sleep 1
+        sleep $wait_time
         attempt=$((attempt + 1))
       done
-      echo "WARNING: Port $port is STILL in use after $max_attempts seconds!"
+      
+      echo "WARNING: Port $port is STILL in use after $max_attempts attempts!"
       return 1
+    }
+
+    # Kill frontend port using improved functions
+    kill-frontend-port() {
+      local port=$(get-frontend-port)
+      echo "Checking for processes using frontend port $port..."
+      kill_port_process "$port"
+      
+      # If first attempt failed, try with force
+      if is_port_in_use "$port"; then
+        echo "First attempt failed, trying force kill..."
+        kill_port_process "$port" "force"
+      fi
+    }
+
+    # Clean multiple ports
+    clean-ports() {
+      for port in "$@"; do
+        echo "Cleaning port $port..."
+        kill_port_process "$port"
+        
+        # If first attempt failed, try with force
+        if is_port_in_use "$port"; then
+          echo "First attempt failed, trying force kill for port $port..."
+          kill_port_process "$port" "force"
+        fi
+      done
     }
 
     clean-frontend() {
@@ -305,8 +436,16 @@ pkgs.mkShell {
 
     rebuild-all() {
       echo ">>> Stopping and removing all containers and volumes..."
+      local frontend_port=$(get-frontend-port)
+      
+      # Kill frontend processes and wait for port to be free
       kill-frontend-port
-      wait-for-port-free $(get-frontend-port)
+      if ! wait_for_port_free "$frontend_port" 15 2; then
+        echo "WARNING: Could not free port $frontend_port after multiple attempts."
+        echo "You may need to manually identify and kill the process using this port."
+        echo "Continuing with rebuild anyway..."
+      fi
+      
       cd docker/platform-management/hackathon/
       docker compose down -v
       cd -
@@ -360,37 +499,6 @@ pkgs.mkShell {
       fi
     }
 
-    clean-ports() {
-      for port in "$@"; do
-        pids=$(lsof -t -i :$port)
-        if [ -n "$pids" ]; then
-          echo "Killing process(es) on port $port: $pids"
-          kill $pids
-        else
-          echo "No process found on port $port."
-        fi
-      done
-      echo "Waiting 1 second for processes to terminate..."
-      sleep 1
-      for port in "$@"; do
-        if lsof -i :$port >/dev/null; then
-          echo "Port $port is STILL in use after kill, trying kill -9..."
-          pids=$(lsof -t -i :$port)
-          if [ -n "$pids" ]; then
-            kill -9 $pids
-            sleep 1
-            if lsof -i :$port >/dev/null; then
-              echo "WARNING: Port $port is STILL in use after kill -9!"
-            else
-              echo "Port $port is now free after kill -9."
-            fi
-          fi
-        else
-          echo "Port $port is now free."
-        fi
-      done
-    }
-
     echo "Python development environment activated"
     echo "PYTHONPATH set to: $PYTHONPATH"
     echo "Available commands:"
@@ -398,6 +506,7 @@ pkgs.mkShell {
     echo "  quick-install       - Install all dependencies and build Docker containers"
     echo "  install-npm         - Install npm dependencies for the frontend"
     echo "  start-frontend-dev  - Start the frontend development server"
+    echo "  start-frontend-tmux - Start the frontend development server in a tmux session"
     echo "  start-backend       - Start the backend server using Docker"
     echo "  rebuild-all         - Stop all containers, remove frontend dependencies, rebuild backend, and start frontend development server"
     echo "  rebuild-backend     - Remove all containers & volumes, rebuild and start backend fresh"
@@ -408,4 +517,4 @@ pkgs.mkShell {
     echo "  clean-all           - Clean both Python and frontend caches/artifacts"
     echo "  db_upgrade          - Apply database migrations using Alembic inside the bot container"
   '';
-} 
+}

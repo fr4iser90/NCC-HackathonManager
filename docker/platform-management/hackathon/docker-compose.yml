@@ -25,9 +25,31 @@ services:
       - db
     env_file:
       - .env # Will load API and INITIAL_ADMIN credentials from .env
+    volumes:
+      - api_logs:/app/logs # Mount volume for logs
+      - /var/run/docker.sock:/var/run/docker.sock # Mount Docker socket for Docker-outside-of-Docker (DooD)
     restart: unless-stopped
     # command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload # Or whatever your API's start command is
+    
+#  frontend:
+#    build:
+#      context: ./frontend
+#      dockerfile: Dockerfile
+#    container_name: hackathon-frontend
+#    ports:
+#      - "3000:3000" # Exposing frontend on host port 3000
+#    depends_on:
+#      - api
+#    env_file:
+#      - .env
+#    volumes:
+#      - frontend_logs:/app/logs # Mount volume for logs
+#    restart: unless-stopped
 
 volumes:
   postgres_data:
-    driver: local 
+    driver: local
+  api_logs:
+    driver: local
+#  frontend_logs:
+#    driver: local

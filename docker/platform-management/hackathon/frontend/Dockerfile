@@ -24,6 +24,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/public ./public
 
+# Create logs directory
+RUN mkdir -p /app/logs
+
 # Set environment variables
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -31,5 +34,5 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Expose port
 EXPOSE 3000
 
-# Start application
-CMD ["npm", "start"] 
+# Start application with logging
+CMD sh -c 'npm start > /app/logs/frontend.log 2> /app/logs/frontend-error.log'

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { useApiClient } from "@/lib/useApiClient";
 
 export default function ProjectSubmitPage() {
   const { data: session } = useSession();
@@ -12,6 +13,9 @@ export default function ProjectSubmitPage() {
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [adminRequestSent, setAdminRequestSent] = useState(false);
+
+  const apiFetch = useApiClient();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -84,7 +88,7 @@ export default function ProjectSubmitPage() {
         setProgress(Math.round((event.loaded / event.total) * 100));
       }
     };
-    xhr.onload = () => {
+    xhr.onload = async () => {
       setLoading(false);
       if (xhr.status === 200) {
         try {
@@ -106,6 +110,18 @@ export default function ProjectSubmitPage() {
       setError("Netzwerkfehler beim Upload.");
     };
     xhr.send(formData);
+  };
+
+  // Hilfsfunktion: Prüft, ob eine Sicherheitswarnung im Log steht
+  function extractSecurityWarning(logs: string) {
+    const match = logs.match(/\[SECURITY\][^\n]*/);
+    return match ? match[0] : null;
+  }
+
+  const handleAdminRequest = () => {
+    // Hier könnte ein echter API-Call an ein Admin-Request-Backend erfolgen
+    setAdminRequestSent(true);
+    setTimeout(() => setAdminRequestSent(false), 4000);
   };
 
   return (
@@ -162,6 +178,23 @@ export default function ProjectSubmitPage() {
           <div className={`font-semibold ${status === "success" ? "text-green-600" : "text-red-600"}`}>
             Build-Status: {status}
           </div>
+          {/* Sicherheitswarnung prominent anzeigen */}
+          {logs && extractSecurityWarning(logs) && (
+            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 my-4 rounded">
+              <div className="font-bold mb-2">Sicherheitswarnung:</div>
+              <div>{extractSecurityWarning(logs)}</div>
+              {!adminRequestSent ? (
+                <button
+                  className="mt-3 bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+                  onClick={handleAdminRequest}
+                >
+                  Admin um Freigabe bitten
+                </button>
+              ) : (
+                <div className="mt-3 text-green-700 font-semibold">Anfrage an Admin gesendet!</div>
+              )}
+            </div>
+          )}
           <pre className="bg-gray-100 p-4 mt-2 rounded text-xs overflow-x-auto max-h-96">
             {logs}
           </pre>
