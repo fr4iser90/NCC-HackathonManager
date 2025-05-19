@@ -1,9 +1,14 @@
 # routers/projects.py
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Body, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+import os
+import tempfile
+import zipfile
+import subprocess
+import shutil
 
 from app.database import get_db
 from app.models.user import User
@@ -176,3 +181,36 @@ def delete_project(
     db.delete(db_project)
     db.commit()
     return 
+
+@router.post("/submit", tags=["projects"])
+async def submit_project(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Nimmt ein ZIP-File entgegen, entpackt es, baut ein Docker-Image und gibt Build-Logs/Status zurück.
+    """
+    # 1. Temporäres Verzeichnis für Upload
+    temp_dir = tempfile.mkdtemp(prefix="project-upload-")
+    zip_path = f"{temp_dir}/upload.zip"
+    with open(zip_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+    # 2. Entpacken
+    project_dir = f"{temp_dir}/project"
+    os.makedirs(project_dir, exist_ok=True)
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(project_dir)
+    # 3. Build-Skript aufrufen
+    tag = f"userproject-{uuid.uuid4()}"
+    build_script = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../scripts/build_project_container.py'))
+    cmd = ["python3", build_script, "--project-path", project_dir, "--tag", tag]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    logs = ""
+    for line in proc.stdout:
+        logs += line
+    proc.wait()
+    status = "success" if proc.returncode == 0 else "error"
+    # 4. Aufräumen
+    shutil.rmtree(temp_dir)
+    return {"status": status, "logs": logs, "image_tag": tag if status == "success" else None} 

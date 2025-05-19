@@ -1,0 +1,8 @@
+{
+  "name": "hackathon-react-native-template",
+  "version": "1.0.0",
+  "main": "App.js",
+  "scripts": {
+    "start": "expo start --web"
+  }
+}
