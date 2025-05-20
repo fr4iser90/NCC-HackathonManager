@@ -1,10 +1,12 @@
 "use client";
 import { useState, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useApiClient } from "@/lib/useApiClient";
 
-export default function ProjectSubmitPage({ params }: { params: { id: string } }) {
+export default function ProjectSubmitPage() {
+  const params = useParams();
+  const projectId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : "";
   const { data: session } = useSession();
   const apiFetch = useApiClient();
   const [file, setFile] = useState<File | null>(null);
@@ -17,7 +19,6 @@ export default function ProjectSubmitPage({ params }: { params: { id: string } }
   const [success, setSuccess] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const projectId = params.id;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -84,6 +85,17 @@ export default function ProjectSubmitPage({ params }: { params: { id: string } }
   return (
     <div className="max-w-xl mx-auto py-10">
       <h1 className="text-2xl font-bold mb-4">Projekt einreichen (ZIP-Upload)</h1>
+      {loading && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl flex flex-col items-center">
+            <svg className="animate-spin h-8 w-8 text-blue-600 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
+            <div className="text-blue-700 dark:text-blue-300 font-semibold">Build läuft, bitte warten...</div>
+          </div>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <input
@@ -147,7 +159,7 @@ export default function ProjectSubmitPage({ params }: { params: { id: string } }
           <div className={`font-semibold ${status === "success" ? "text-green-600" : "text-red-600"}`}>
             Build-Status: {status}
           </div>
-          <pre className="bg-gray-100 p-4 mt-2 rounded text-xs overflow-x-auto max-h-96">
+          <pre className="bg-gray-900 text-green-200 p-4 mt-2 rounded text-xs overflow-x-auto max-h-96 border border-gray-700 shadow-inner" style={{ background: "#18181b" }}>
             {logs}
           </pre>
         </div>

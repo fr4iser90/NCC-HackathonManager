@@ -503,6 +503,9 @@ pkgs.mkShell {
       tree docker/platform-management/hackathon/frontend -I 'node_modules|.next|.swc'
     }
     
+    trivy() {
+      nix-shell -p trivy --run "trivy fs --scanners vuln,secret,misconfig --exit-code 0 --format table --ignore-unfixed ."
+    }
     get-backend-tree
     echo "Python development environment activated"
     echo "PYTHONPATH set to: $PYTHONPATH"

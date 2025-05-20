@@ -175,6 +175,50 @@ def delete_hackathon(
 # async def list_hackathons():
 #     pass
 
+@router.delete("/{hackathon_id}/registration", status_code=status.HTTP_204_NO_CONTENT)
+def withdraw_registration(
+    hackathon_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Withdraw the current user's registration (solo or team) for a hackathon, before the deadline.
+    """
+    db_hackathon = db.query(Hackathon).filter(Hackathon.id == hackathon_id).first()
+    if not db_hackathon:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hackathon not found")
+
+    # Check deadline
+    if db_hackathon.registration_deadline and db_hackathon.registration_deadline < datetime.now(timezone.utc):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Registration deadline has passed.")
+
+    # Try to find solo registration
+    reg = db.query(HackathonRegistration).filter(
+        HackathonRegistration.hackathon_id == hackathon_id,
+        HackathonRegistration.user_id == current_user.id
+    ).first()
+
+    # If not found, try to find team registration where user is owner/admin
+    if not reg:
+        user_team_ids = [
+            m.team_id for m in db.query(TeamMember).filter(
+                TeamMember.user_id == current_user.id,
+                TeamMember.role.in_([TeamMemberRole.owner, TeamMemberRole.admin])
+            ).all()
+        ]
+        if user_team_ids:
+            reg = db.query(HackathonRegistration).filter(
+                HackathonRegistration.hackathon_id == hackathon_id,
+                HackathonRegistration.team_id.in_(user_team_ids)
+            ).first()
+
+    if not reg:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No registration found for user or their teams.")
+
+    db.delete(reg)
+    db.commit()
+    return
+
 @router.post("/{hackathon_id}/register", response_model=HackathonRegistrationRead, status_code=status.HTTP_201_CREATED)
 def register_participant_for_hackathon(
     hackathon_id: uuid.UUID,

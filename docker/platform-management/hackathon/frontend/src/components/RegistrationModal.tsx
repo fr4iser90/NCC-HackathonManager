@@ -33,6 +33,9 @@ export default function RegistrationModal({ hackathon, isOpen, onClose }: Regist
   const [isAlreadyRegistered, setIsAlreadyRegistered] = useState(false);
   const [currentRegistrationId, setCurrentRegistrationId] = useState<string | null>(null);
 
+  // For team search in large lists
+  const [teamSearch, setTeamSearch] = useState("");
+
   // --- New state for create team modal
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
@@ -151,25 +154,26 @@ export default function RegistrationModal({ hackathon, isOpen, onClose }: Regist
   };
 
   const handleWithdrawRegistration = async () => {
-    if (!currentRegistrationId) {
-        setError("No current registration to withdraw.");
-        return;
-    }
     setIsLoading(true);
     setError(null);
     try {
-      // TODO: Implement DELETE /registrations/{currentRegistrationId} or similar backend endpoint
-      // For now, simulate success:
-      setSuccessMessage(`Withdrawal for registration ID ${currentRegistrationId} successful (TODO: Backend)`);
-      setIsAlreadyRegistered(false); // Update UI state
+      const res = await apiFetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/hackathons/${hackathon?.id}/registration`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ detail: "Withdrawal failed" }));
+        throw new Error(errorData.detail || "Withdrawal failed");
+      }
+      setSuccessMessage(`Registration withdrawn successfully.`);
+      setIsAlreadyRegistered(false);
       setCurrentRegistrationId(null);
-      // Potentially re-fetch hackathon data on page to update participant count, or update locally
       setTimeout(() => {
         setSuccessMessage(null);
         onClose();
       }, 2000);
     } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred during withdrawal.');
+      setError(err.message || "An unexpected error occurred during withdrawal.");
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -321,17 +325,43 @@ export default function RegistrationModal({ hackathon, isOpen, onClose }: Regist
                       </form>
                     ) : userTeams.length > 0 ? (
                       <>
-                        <select 
-                          value={selectedTeamId}
-                          onChange={(e) => setSelectedTeamId(e.target.value)}
-                          disabled={isLoading}
-                          className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white mb-2 disabled:opacity-70"
-                        >
-                          <option value="">Select a team</option>
-                          {userTeams.map(team => (
-                            <option key={team.id} value={team.id}>{team.name}</option>
-                          ))}
-                        </select>
+                        {userTeams.length > 5 ? (
+                          <>
+                            <input
+                              type="text"
+                              placeholder="Search teams..."
+                              value={teamSearch}
+                              onChange={e => setTeamSearch(e.target.value)}
+                              className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white mb-2"
+                              disabled={isLoading}
+                            />
+                            <div className="max-h-40 overflow-y-auto border rounded mb-2">
+                              {userTeams
+                                .filter(team => team.name.toLowerCase().includes(teamSearch.toLowerCase()))
+                                .map(team => (
+                                  <div
+                                    key={team.id}
+                                    className={`p-2 cursor-pointer ${selectedTeamId === team.id ? "bg-blue-100 dark:bg-blue-900" : ""}`}
+                                    onClick={() => setSelectedTeamId(team.id)}
+                                  >
+                                    {team.name}
+                                  </div>
+                                ))}
+                            </div>
+                          </>
+                        ) : (
+                          <select
+                            value={selectedTeamId}
+                            onChange={(e) => setSelectedTeamId(e.target.value)}
+                            disabled={isLoading}
+                            className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white mb-2 disabled:opacity-70"
+                          >
+                            <option value="">Select a team</option>
+                            {userTeams.map(team => (
+                              <option key={team.id} value={team.id}>{team.name}</option>
+                            ))}
+                          </select>
+                        )}
                         <button
                           onClick={handleRegisterTeam}
                           disabled={isLoading || !selectedTeamId}
