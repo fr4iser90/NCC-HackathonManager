@@ -12,6 +12,7 @@ class SubmissionContentType(str, enum.Enum):
     LINK = "link"
     TEXT = "text"
     FILE_PATH = "file_path" # Placeholder for when file uploads are integrated
+    DOCKER_IMAGE_TAG = "docker_image_tag" # For storing the tag of a built Docker image
 
 class SubmissionBase(BaseModel):
     content_type: SubmissionContentType
@@ -35,4 +36,4 @@ class SubmissionRead(SubmissionBase):
     submitter: Optional[UserRead] = None # Details of the user who submitted
     # project: Optional[ProjectRead] = None # Example for nesting project info
 
-    model_config = {"from_attributes": True} 
+    model_config = {"from_attributes": True}

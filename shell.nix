@@ -498,7 +498,12 @@ pkgs.mkShell {
         echo "3000"
       fi
     }
-
+    
+    get-frontend-tree() {
+      tree docker/platform-management/hackathon/frontend -I 'node_modules|.next|.swc'
+    }
+    
+    get-backend-tree
     echo "Python development environment activated"
     echo "PYTHONPATH set to: $PYTHONPATH"
     echo "Available commands:"

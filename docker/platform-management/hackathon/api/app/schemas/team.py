@@ -10,7 +10,9 @@ from .user import UserRead
 
 class TeamMemberRole(str, enum.Enum):
     owner = "owner"
+    admin = "admin"
     member = "member"
+    viewer = "viewer"
 
 class TeamBase(BaseModel):
     name: str
@@ -65,4 +67,4 @@ class TeamRead(TeamBase):
     members: List[TeamMemberRead] = []
     join_requests: Optional[List[JoinRequestRead]] = None
     invites: Optional[List[TeamInviteRead]] = None
-    model_config = {"from_attributes": True} 
+    model_config = {"from_attributes": True}

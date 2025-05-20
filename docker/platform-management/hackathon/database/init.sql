@@ -87,17 +87,29 @@ CREATE TABLE projects.templates (
 
 CREATE TABLE projects.projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
     project_template_id UUID REFERENCES projects.templates(id),
     name VARCHAR(255) NOT NULL,
     description TEXT,
     repository_url VARCHAR(255),
     status VARCHAR(50) NOT NULL DEFAULT 'draft',
     resources JSONB,
-    hackathon_id UUID REFERENCES hackathons.hackathons(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE projects.submissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id UUID REFERENCES projects.projects(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    content_type VARCHAR(50) NOT NULL,
+    content_value TEXT NOT NULL,
+    description TEXT,
+    submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_submissions_project_id ON projects.submissions(project_id);
+CREATE INDEX idx_submissions_user_id ON projects.submissions(user_id);
 
 -- Judging schema
 CREATE TABLE judging.criteria (
@@ -126,9 +138,28 @@ CREATE TABLE judging.scores (
 CREATE INDEX idx_users_email ON auth.users(email);
 CREATE INDEX idx_sessions_token ON auth.sessions(token);
 CREATE INDEX idx_teams_name ON teams.teams(name);
-CREATE INDEX idx_projects_team ON projects.projects(team_id);
 CREATE INDEX idx_scores_project ON judging.scores(project_id);
 CREATE INDEX idx_hackathons_name ON hackathons.hackathons(name);
+
+CREATE TABLE hackathons.hackathon_registrations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hackathon_id UUID REFERENCES hackathons.hackathons(id) ON DELETE CASCADE NOT NULL,
+    project_id UUID REFERENCES projects.projects(id) ON DELETE RESTRICT NOT NULL UNIQUE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
+    registered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    status VARCHAR(50) NOT NULL DEFAULT 'registered', -- e.g., registered, withdrawn
+    CONSTRAINT chk_participant_type CHECK (
+        (user_id IS NOT NULL AND team_id IS NULL) OR
+        (user_id IS NULL AND team_id IS NOT NULL)
+    )
+);
+
+CREATE INDEX idx_hackathon_registrations_hackathon_id ON hackathons.hackathon_registrations(hackathon_id);
+CREATE INDEX idx_hackathon_registrations_project_id ON hackathons.hackathon_registrations(project_id);
+CREATE INDEX idx_hackathon_registrations_user_id ON hackathons.hackathon_registrations(user_id);
+CREATE INDEX idx_hackathon_registrations_team_id ON hackathons.hackathon_registrations(team_id);
+
 
 -- Create functions
 CREATE OR REPLACE FUNCTION update_updated_at()

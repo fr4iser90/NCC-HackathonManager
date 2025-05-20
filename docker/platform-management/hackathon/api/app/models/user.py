@@ -1,12 +1,13 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List # Added List for Mapped
 
 from sqlalchemy import Column, String, DateTime, Boolean # Added Boolean for is_active if needed
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship # Added relationship
 
 from app.database import Base
+# We will use string literals for forward references to avoid direct imports for relationships.
 
 class User(Base):
     __tablename__ = "users"
@@ -24,4 +25,12 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
-# Pydantic Schemas (UserCreate, UserRead, UserUpdate) have been moved to app.schemas.user.py 
+    # Relationship to HackathonRegistration
+    hackathon_registrations: Mapped[List["HackathonRegistration"]] = relationship(
+        "HackathonRegistration", # String literal for the class name
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )
+
+# Pydantic Schemas (UserCreate, UserRead, UserUpdate) have been moved to app.schemas.user.py

@@ -14,6 +14,7 @@ import io
 from app.schemas.team import TeamRead
 from app.schemas.project import ProjectRead
 from app.static import avatar_url, avatar_path
+from app.models.hackathon_registration import HackathonRegistration # Added import
 
 router = APIRouter()
 
@@ -239,13 +240,32 @@ def get_my_teams(db: Session = Depends(get_db), current_user: User = Depends(get
 @router.get("/me/projects", response_model=List[ProjectRead])
 def get_my_projects(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
-    Return all projects the current user is a member of (via team membership) or owns.
+    Return all projects the current user is associated with, either as a solo participant
+    or as a member of a team that is registered for a hackathon.
     """
     from app.models.project import Project
     from app.models.team import TeamMember
-    # Get all team IDs the user is a member of
+
+    project_ids = set()
+
+    # 1. Get projects where the user is a solo participant
+    solo_registrations = db.query(HackathonRegistration).filter(HackathonRegistration.user_id == current_user.id).all()
+    for reg in solo_registrations:
+        project_ids.add(reg.project_id)
+
+    # 2. Get projects for teams the user is a member of
     memberships = db.query(TeamMember).filter(TeamMember.user_id == current_user.id).all()
-    team_ids = [m.team_id for m in memberships]
-    # Get all projects for those teams
-    projects = db.query(Project).filter(Project.team_id.in_(team_ids)).all() if team_ids else []
-    return projects 
+    user_team_ids = [m.team_id for m in memberships]
+
+    if user_team_ids:
+        team_registrations = db.query(HackathonRegistration).filter(HackathonRegistration.team_id.in_(user_team_ids)).all()
+        for reg in team_registrations:
+            project_ids.add(reg.project_id)
+
+    # 3. Fetch all unique projects
+    if project_ids:
+        projects = db.query(Project).filter(Project.id.in_(list(project_ids))).all()
+    else:
+        projects = []
+        
+    return projects

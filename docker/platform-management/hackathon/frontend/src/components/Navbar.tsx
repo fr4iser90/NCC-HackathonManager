@@ -11,9 +11,14 @@ export default function Navbar() {
   const userRole = (session?.user as any)?.role;
 
   const navLinks = [
+    { href: '/hackathons', label: 'Hackathons', show: true },
     { href: '/profile', label: 'Profile', show: true },
     { href: '/teams', label: 'Teams', show: true },
     { href: '/projects', label: 'Projects', show: true },
+    { href: '/mentors', label: 'Mentors', show: true },
+    { href: '/sponsors', label: 'Sponsors', show: true },
+    { href: '/faq', label: 'FAQ', show: true },
+    { href: '/contact', label: 'Contact', show: true },
     { href: '/judging', label: 'Judging', show: userRole === 'judge' || userRole === 'admin' },
     { href: '/admin', label: 'Admin', show: userRole === 'admin' },
   ];

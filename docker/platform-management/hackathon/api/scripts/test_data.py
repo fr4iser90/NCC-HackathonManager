@@ -14,7 +14,9 @@ from app.models.project import Project
 from app.models.judging import Criterion, Score
 from app.auth import get_password_hash
 from app.models.hackathon import Hackathon
-from app.schemas.hackathon import HackathonStatus
+from app.schemas.hackathon import HackathonStatus, HackathonMode # Added HackathonMode
+from app.schemas.project import ProjectStatus # Added ProjectStatus for creating projects
+from app.models.hackathon_registration import HackathonRegistration # Added HackathonRegistration
 
 # --- Testdaten ---
 USERS = [
@@ -169,26 +171,105 @@ def main():
         project_objs = {}
         # Zwei Projekte für Hackathon #1, eins ohne Hackathon
         project_defs = [
-            {"name": "Test Project 1", "description": "Demo project 1", "status": "ACTIVE", "hackathon": hackathon_objs["Solo Hackathon"]},
-            {"name": "Test Project 2", "description": "Demo project 2", "status": "DRAFT", "hackathon": hackathon_objs["Team Hackathon"]},
+            {"name": "Test Project 1", "description": "Demo project 1", "status": "ACTIVE", "hackathon": hackathon_objs["Solo Hackathon"], "assignee_username": "user1"},
+            {"name": "Test Project 2", "description": "Demo project 2", "status": "DRAFT", "hackathon": hackathon_objs["Team Hackathon"], "assignee_team_name": "Open Team"},
             {"name": "Free Project", "description": "No hackathon", "status": "DRAFT", "hackathon": None},
         ]
-        for p in project_defs:
-            project = db.query(Project).filter_by(name=p["name"]).first()
+        for p_def in project_defs:
+            project = db.query(Project).filter_by(name=p_def["name"]).first()
             if not project:
                 project = Project(
                     id=uuid.uuid4(),
-                    name=p["name"],
-                    description=p["description"],
-                    status=p["status"],
-                    team_id=team_objs["Open Team"].id,
-                    hackathon_id=p["hackathon"].id if p["hackathon"] else None,
+                    name=p_def["name"],
+                    description=p_def["description"],
+                    status=p_def["status"],
+                    # team_id and hackathon_id are removed from Project model
                 )
                 db.add(project)
-                db.commit()
+                db.commit() # Commit project first to get its ID
                 db.refresh(project)
-            project_objs[p["name"]] = project
+
+                # Create HackathonRegistration if hackathon is specified
+                if p_def["hackathon"]:
+                    hackathon_obj = p_def["hackathon"]
+                    user_id_for_reg = None
+                    team_id_for_reg = None
+
+                    if hackathon_obj.mode == HackathonMode.SOLO_ONLY and p_def.get("assignee_username"):
+                        user_id_for_reg = user_objs[p_def["assignee_username"]].id
+                    elif p_def.get("assignee_team_name"): # For team-based or flexible hackathons
+                        team_id_for_reg = team_objs[p_def["assignee_team_name"]].id
+                    
+                    # Ensure either user_id or team_id is set for registration
+                    if user_id_for_reg or team_id_for_reg:
+                        registration = HackathonRegistration(
+                            hackathon_id=hackathon_obj.id,
+                            project_id=project.id,
+                            user_id=user_id_for_reg,
+                            team_id=team_id_for_reg,
+                            status="registered" 
+                        )
+                        db.add(registration)
+                        db.commit()
+                    else:
+                        print(f"Warning: Could not determine participant for project '{project.name}' in hackathon '{hackathon_obj.name}'. Registration skipped.")
+
+            project_objs[p_def["name"]] = project
         print(f"Projects: {[p.name for p in project_objs.values()]}")
+
+        # --- Specific Registrations for admin@example.com ---
+        admin_user_obj = user_objs.get("admin")
+        solo_hackathon_obj = hackathon_objs.get("Solo Hackathon")
+        team_hackathon_obj = hackathon_objs.get("Team Hackathon")
+        open_team_obj = team_objs.get("Open Team")
+
+        if admin_user_obj and solo_hackathon_obj:
+            # Check if admin is already registered for Solo Hackathon
+            existing_solo_reg = db.query(HackathonRegistration).filter(
+                HackathonRegistration.hackathon_id == solo_hackathon_obj.id,
+                HackathonRegistration.user_id == admin_user_obj.id
+            ).first()
+            if not existing_solo_reg:
+                solo_project_name = f"{admin_user_obj.username}'s Solo Project for {solo_hackathon_obj.name}"
+                solo_project = db.query(Project).filter(Project.name == solo_project_name).first()
+                if not solo_project:
+                    solo_project = Project(name=solo_project_name, status=ProjectStatus.DRAFT)
+                    db.add(solo_project)
+                    db.flush() # Get ID
+                
+                solo_reg = HackathonRegistration(
+                    hackathon_id=solo_hackathon_obj.id,
+                    project_id=solo_project.id,
+                    user_id=admin_user_obj.id,
+                    status="registered"
+                )
+                db.add(solo_reg)
+                print(f"Registered admin user for '{solo_hackathon_obj.name}' with project '{solo_project.name}'.")
+
+        if admin_user_obj and team_hackathon_obj and open_team_obj:
+            # Check if Open Team (with admin as member) is already registered for Team Hackathon
+            existing_team_reg = db.query(HackathonRegistration).filter(
+                HackathonRegistration.hackathon_id == team_hackathon_obj.id,
+                HackathonRegistration.team_id == open_team_obj.id
+            ).first()
+            if not existing_team_reg:
+                team_project_name = f"{open_team_obj.name}'s Team Project for {team_hackathon_obj.name}"
+                team_project = db.query(Project).filter(Project.name == team_project_name).first()
+                if not team_project:
+                    team_project = Project(name=team_project_name, status=ProjectStatus.DRAFT)
+                    db.add(team_project)
+                    db.flush() # Get ID
+
+                team_reg = HackathonRegistration(
+                    hackathon_id=team_hackathon_obj.id,
+                    project_id=team_project.id,
+                    team_id=open_team_obj.id,
+                    status="registered"
+                )
+                db.add(team_reg)
+                print(f"Registered team '{open_team_obj.name}' for '{team_hackathon_obj.name}' with project '{team_project.name}'.")
+        
+        db.commit()
 
         # --- Judging Criteria ---
         crit_objs = {}
