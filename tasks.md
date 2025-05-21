@@ -46,39 +46,253 @@ This document tracks planned features, improvements, and tasks for the Hackathon
     -   [DONE] Allow registered participants to withdraw their registration (before a deadline).
     -   [DONE] Requires backend endpoint for withdrawal.
 
+## Phase 2: Team System Refactoring
 
-## Phase 2: Enhanced Features & User Experience
+-   **Team System Refactoring**
+    -   [TODO] Database Schema Updates:
+        -   [TODO] Remove permanent team tables
+        -   [TODO] Create hackathon-specific team tables
+        -   [TODO] Update user-team relationships
+        -   [TODO] Create team history tables
+    -   [TODO] API Endpoint Updates:
+        -   [TODO] Remove permanent team endpoints
+        -   [TODO] Create hackathon-specific team endpoints
+        -   [TODO] Update team-related queries
+        -   [TODO] Add team history endpoints
+    -   [TODO] Frontend Updates:
+        -   [TODO] Update team management UI
+        -   [TODO] Modify team creation flow
+        -   [TODO] Update team display components
+        -   [TODO] Add team history views
+    -   [TODO] Data Migration:
+        -   [TODO] Create migration scripts
+        -   [TODO] Convert existing teams to hackathon-specific
+        -   [TODO] Preserve team history
+        -   [TODO] Update related data
+    -   [TODO] Testing & Validation:
+        -   [TODO] Update unit tests
+        -   [TODO] Create integration tests
+        -   [TODO] Perform system testing
+        -   [TODO] Validate data integrity
 
--   **Team Management (within Hackathon Context)**
-    -   [TODO] Team leader can manage project upload permissions for team members (for the specific hackathon project).
-    -   [TODO] Team leader can transfer leadership role.
-    -   [TODO] Mechanisms for team formation (e.g., users looking for a team, teams looking for members for a specific hackathon).
-    -   [IN PROGRESS] Team roles: owner, admin, member, viewer (backend and schema updated; frontend management pending).
+## Phase 3: Enhanced Features & User Experience
+
+-   **Team Management (Hackathon-Specific)**
+    -   [TODO] Hackathon Team Formation System:
+        -   [TODO] Team creation during hackathon registration:
+            -   [TODO] Create team with hackathon-specific name and description
+            -   [TODO] Set team size limits per hackathon
+            -   [TODO] Define team roles for the hackathon duration
+            -   [TODO] Team visibility settings
+        -   [TODO] Team finder for hackathon:
+            -   [TODO] Skill-based matching system
+            -   [TODO] Team size recommendations
+            -   [TODO] Team join requests
+            -   [TODO] Team invitation system
+        -   [TODO] Team workspace for hackathon:
+            -   [TODO] Project management tools
+            -   [TODO] Team chat/announcements
+            -   [TODO] Resource sharing
+            -   [TODO] Task tracking
+    -   [TODO] Post-Hackathon Team Handling:
+        -   [TODO] Team archival system
+        -   [TODO] Team history preservation
+        -   [TODO] Team achievements recording
+        -   [TODO] Team member history tracking
+
 -   **Hackathon Management (Admin)**
-    -   [TODO] Admin dashboard to manage hackathons (CRUD already exists, but more detailed views/controls).
-    -   [TODO] Admin ability to manage hackathon themes, specific submission deadlines (if different from end_date).
-    -   [TODO] Admin ability to manage participant limits per hackathon (e.g., max 200 participants).
-    -   [TODO] Admin ability to view/manage registered teams and their projects.
+    -   [TODO] Admin dashboard to manage hackathons:
+        -   [TODO] Comprehensive hackathon overview:
+            -   [TODO] Registration statistics
+            -   [TODO] Team formation progress
+            -   [TODO] Project submission status
+            -   [TODO] Resource usage metrics
+        -   [TODO] Participant management:
+            -   [TODO] View/manage registrations
+            -   [TODO] Handle waitlist
+            -   [TODO] Process withdrawals
+            -   [TODO] Export participant data
+        -   [TODO] Team management:
+            -   [TODO] View all teams for specific hackathon
+            -   [TODO] Team status tracking
+            -   [TODO] Team size monitoring
+            -   [TODO] Team merge/split tools
+    -   [TODO] Admin ability to manage hackathon themes:
+        -   [TODO] Theme creation and editing
+        -   [TODO] Theme assignment to hackathons
+        -   [TODO] Theme-based team matching
+        -   [TODO] Theme resource management
+    -   [TODO] Admin ability to manage deadlines:
+        -   [TODO] Multiple deadline types:
+            -   [TODO] Registration deadlines
+            -   [TODO] Team formation deadlines
+            -   [TODO] Project submission deadlines
+            -   [TODO] Judging deadlines
+        -   [TODO] Deadline notifications
+        -   [TODO] Deadline extensions
+        -   [TODO] Timezone handling
+        -   [TODO] Admin ability to manage participant limits:
+            -   [TODO] Set overall participant cap
+            -   [TODO] Configure team size limits
+            -   [TODO] Set minimum team size
+            -   [TODO] Handle overflow/waitlist
+
 -   **User Experience & Information**
-    -   [TODO] Users can see a list of participants/teams registered for a hackathon.
-    -   [TODO] Clear display of hackathon rules, themes, deadlines, and participant count/limit.
-    -   [TODO] User profiles showing hackathon participation history, projects.
-    -   [TODO] Improve project/team detail pages for better navigation and context.
--   **Judging Module Integration**
-    -   [TODO] Judges can view submitted projects for a hackathon they are assigned to.
-    -   [TODO] Judges can submit scores based on defined criteria.
-    -   (Requires further planning of the Judging models and workflow if not already detailed)
--   **Leaderboards**
-    -   [TODO] Display leaderboards for hackathons (based on judging scores).
-    -   [TODO] Filterable leaderboards (e.g., per hackathon, overall user/team rankings).
+    -   [TODO] User profiles showing hackathon participation history:
+        -   [TODO] Profile dashboard:
+            -   [TODO] Participation history with team information
+            -   [TODO] Project portfolio
+            -   [TODO] Skills showcase
+            -   [TODO] Achievements display
+        -   [TODO] Activity timeline:
+            -   [TODO] Past hackathons with team details
+            -   [TODO] Current hackathon participation
+            -   [TODO] Future registrations
+        -   [TODO] Team history:
+            -   [TODO] Past hackathon teams
+            -   [TODO] Team achievements
+            -   [TODO] Team roles in past hackathons
+    -   [TODO] Hackathon-specific team directory:
+        -   [TODO] Current hackathon teams:
+            -   [TODO] Team profiles
+            -   [TODO] Team member list
+            -   [TODO] Team project status
+            -   [TODO] Team achievements
+        -   [TODO] Team finder:
+            -   [TODO] Filter by skills
+            -   [TODO] Filter by availability
+            -   [TODO] Search functionality
+            -   [TODO] Team size preferences
 
-## Phase 3: Social & Advanced Features
+## Scoring System & Points
 
--   **Social Features**
-    -   [TODO] Friends list system.
-    -   [TODO] Basic messaging system (user-to-user, or within teams).
--   **Notifications**
-    -   [TODO] Notifications for important events (e.g., registration confirmation, deadline reminders, new messages).
+-   [TODO] Backend: Implement scoring schema and models
+    -   [TODO] Create `Score` model to track points for users/teams
+    -   [TODO] Create `Achievement` model to define different types of achievements:
+        -   [TODO] Project-based achievements:
+            -   [TODO] First submission bonus
+            -   [TODO] Multiple submission milestones
+            -   [TODO] Project completion milestones
+            -   [TODO] Code quality achievements (if integrated with code analysis)
+        -   [TODO] Team-based achievements:
+            -   [TODO] Team formation milestones
+            -   [TODO] Team size achievements (e.g., full team bonus)
+            -   [TODO] Team collaboration milestones
+            -   [TODO] Cross-team collaboration points
+        -   [TODO] Hackathon participation achievements:
+            -   [TODO] Early registration bonus
+            -   [TODO] Workshop attendance tracking
+            -   [TODO] Mentor interaction points
+            -   [TODO] Sponsor challenge completion
+        -   [TODO] Judging-based achievements:
+            -   [TODO] Category winner points
+            -   [TODO] Special recognition awards
+            -   [TODO] Judge's choice awards
+        -   [TODO] Community achievements:
+            -   [TODO] Helping other participants
+            -   [TODO] Documentation contributions
+            -   [TODO] Resource sharing
+    -   [TODO] Define scoring criteria and point allocation rules:
+        -   [TODO] Base points for different achievement types
+        -   [TODO] Time-based bonuses:
+            -   [TODO] Early registration multipliers
+            -   [TODO] Early submission bonuses
+            -   [TODO] Workshop attendance timing
+        -   [TODO] Team-based bonuses:
+            -   [TODO] Team size scaling factors
+            -   [TODO] Cross-team collaboration multipliers
+            -   [TODO] Mentor-mentee relationship points
+        -   [TODO] Quality-based multipliers:
+            -   [TODO] Code quality scores
+            -   [TODO] Documentation completeness
+            -   [TODO] Project complexity factors
+    -   [TODO] Implement point calculation logic for different achievements
+-   [TODO] Backend: Scoring API Endpoints
+    -   [TODO] `POST /scores` - Record new scores/points
+    -   [TODO] `GET /scores/{user_id}` - Get user's score history
+    -   [TODO] `GET /scores/team/{team_id}` - Get team's score history
+    -   [TODO] `GET /scores/hackathon/{hackathon_id}` - Get all scores for a hackathon
+    -   [TODO] `GET /achievements` - List available achievements
+    -   [TODO] `GET /achievements/{user_id}` - Get user's earned achievements
+    -   [TODO] `GET /achievements/team/{team_id}` - Get team's earned achievements
+    -   [TODO] `GET /scores/leaderboard` - Get current leaderboard
+    -   [TODO] `GET /scores/statistics` - Get scoring statistics and trends
+-   [TODO] Frontend: Score Display & Management
+    -   [TODO] Add score display to user/team profiles
+    -   [TODO] Create score history view with detailed breakdown
+    -   [TODO] Implement score update notifications
+    -   [TODO] Add admin interface for score management:
+        -   [TODO] Achievement configuration panel
+            -   [TODO] Create/edit achievement types
+            -   [TODO] Set point values and conditions
+            -   [TODO] Define achievement triggers
+            -   [TODO] Configure achievement visibility
+        -   [TODO] Score adjustment tools
+            -   [TODO] Manual point adjustments with audit log
+            -   [TODO] Bulk score updates for specific achievements
+            -   [TODO] Score recalculation for specific events
+            -   [TODO] Import/export score data
+        -   [TODO] Achievement management
+            -   [TODO] Award/revoke achievements manually
+            -   [TODO] View achievement distribution
+            -   [TODO] Generate achievement reports
+            -   [TODO] Track achievement progress
+        -   [TODO] Scoring rules management
+            -   [TODO] Configure scoring multipliers
+            -   [TODO] Set time-based bonus rules
+            -   [TODO] Define team size bonus rules
+            -   [TODO] Set quality-based multipliers
+        -   [TODO] Audit and moderation
+            -   [TODO] View score change history
+            -   [TODO] Review disputed scores
+            -   [TODO] Handle score appeals
+            -   [TODO] Generate audit reports
+-   [TODO] Integration with Existing Features
+    -   [TODO] Link scoring system with team management
+        -   [TODO] Team role-based score permissions
+        -   [TODO] Team leader score management tools
+    -   [TODO] Integrate with hackathon management
+        -   [TODO] Hackathon-specific achievement rules
+        -   [TODO] Custom scoring rules per hackathon
+    -   [TODO] Connect with user profiles
+        -   [TODO] Display achievements on profiles
+        -   [TODO] Show score history and trends
+    -   [TODO] Notification system integration
+        -   [TODO] Achievement earned notifications
+        -   [TODO] Score milestone alerts
+        -   [TODO] Leaderboard position changes
+
+## Leaderboards
+
+-   [TODO] Backend: Leaderboard System
+    -   [TODO] Create `Leaderboard` model and caching mechanism
+    -   [TODO] Implement real-time leaderboard updates
+    -   [TODO] Add support for different leaderboard types (overall, hackathon-specific, team-based)
+-   [TODO] Backend: Leaderboard API Endpoints
+    -   [TODO] `GET /leaderboards` - Get available leaderboards
+    -   [TODO] `GET /leaderboards/{type}` - Get specific leaderboard type
+    -   [TODO] `GET /leaderboards/hackathon/{hackathon_id}` - Get hackathon-specific leaderboard
+-   [TODO] Frontend: Leaderboard Interface
+    -   [TODO] Create dedicated leaderboard page with filters
+    -   [TODO] Implement real-time updates for live events
+    -   [TODO] Add visual indicators for position changes
+    -   [TODO] Create leaderboard widgets for dashboard/homepage
+    -   [TODO] Add export functionality for leaderboard data
+
+## Judging Module Integration
+
+-   [TODO] Judges can view submitted projects for a hackathon they are assigned to.
+-   [TODO] Judges can submit scores based on defined criteria.
+-   (Requires further planning of the Judging models and workflow if not already detailed)
+
+## Social Features
+
+-   [TODO] Friends list system.
+-   [TODO] Basic messaging system (user-to-user, or within teams).
+
+## Notifications
+
+-   [TODO] Notifications for important events (e.g., registration confirmation, deadline reminders, new messages).
 
 ## Technical Debt / Refinements
 

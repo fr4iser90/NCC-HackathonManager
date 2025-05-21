@@ -263,22 +263,39 @@ pkgs.mkShell {
       
       # Method 1: lsof (most common)
       if command -v lsof &>/dev/null; then
-        pids=$(lsof -t -i ":$port" 2>/dev/null)
+        # Exclude Firefox processes
+        pids=$(lsof -t -i ":$port" 2>/dev/null | while read pid; do
+          if ! ps -p "$pid" -o comm= | grep -q "firefox"; then
+            echo "$pid"
+          fi
+        done)
       fi
       
       # Method 2: netstat if lsof found nothing
       if [ -z "$pids" ] && command -v netstat &>/dev/null; then
-        pids=$(netstat -tulpn 2>/dev/null | grep ":$port " | awk '{print $7}' | cut -d'/' -f1 | grep -v "-" | sort -u)
+        pids=$(netstat -tulpn 2>/dev/null | grep ":$port " | awk '{print $7}' | cut -d'/' -f1 | grep -v "-" | sort -u | while read pid; do
+          if ! ps -p "$pid" -o comm= | grep -q "firefox"; then
+            echo "$pid"
+          fi
+        done)
       fi
       
       # Method 3: ss (modern netstat replacement)
       if [ -z "$pids" ] && command -v ss &>/dev/null; then
-        pids=$(ss -tulpn 2>/dev/null | grep ":$port " | awk '{print $7}' | cut -d',' -f2 | cut -d'=' -f2 | grep -v "-" | sort -u)
+        pids=$(ss -tulpn 2>/dev/null | grep ":$port " | awk '{print $7}' | cut -d',' -f2 | cut -d'=' -f2 | grep -v "-" | sort -u | while read pid; do
+          if ! ps -p "$pid" -o comm= | grep -q "firefox"; then
+            echo "$pid"
+          fi
+        done)
       fi
       
       # Method 4: fuser (another approach)
       if [ -z "$pids" ] && command -v fuser &>/dev/null; then
-        pids=$(fuser -n tcp "$port" 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i+0>0) print $i}')
+        pids=$(fuser -n tcp "$port" 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i+0>0) print $i}' | while read pid; do
+          if ! ps -p "$pid" -o comm= | grep -q "firefox"; then
+            echo "$pid"
+          fi
+        done)
       fi
       
       echo "$pids"
@@ -323,14 +340,17 @@ pkgs.mkShell {
       local killed=false
       
       if [ -n "$pids" ]; then
-        echo "Found process(es) on port $port: $pids"
+        echo "Found process(es) on port $port (excluding Firefox): $pids"
         
         # Try normal kill first unless force is specified
         if [ "$force" != "force" ]; then
           echo "Attempting graceful termination..."
           for pid in $pids; do
-            kill "$pid" 2>/dev/null
-            killed=true
+            # Double check it's not Firefox before killing
+            if ! ps -p "$pid" -o comm= | grep -q "firefox"; then
+              kill "$pid" 2>/dev/null
+              killed=true
+            fi
           done
           
           # Give processes time to terminate
@@ -341,8 +361,11 @@ pkgs.mkShell {
         if [ "$force" = "force" ] || is_port_in_use "$port"; then
           echo "Using force termination (kill -9)..."
           for pid in $pids; do
-            kill -9 "$pid" 2>/dev/null
-            killed=true
+            # Double check it's not Firefox before force killing
+            if ! ps -p "$pid" -o comm= | grep -q "firefox"; then
+              kill -9 "$pid" 2>/dev/null
+              killed=true
+            fi
           done
           sleep 1
         fi
@@ -356,7 +379,7 @@ pkgs.mkShell {
           return 0
         fi
       else
-        echo "No process found using port $port"
+        echo "No process found using port $port (excluding Firefox)"
         if is_port_in_use "$port"; then
           echo "WARNING: Port $port appears to be in use, but couldn't identify the process"
           return 1
