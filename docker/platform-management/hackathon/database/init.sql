@@ -133,6 +133,7 @@ CREATE TABLE projects.projects (
     repository_url VARCHAR(255),
     status VARCHAR(50) NOT NULL DEFAULT 'draft',
     resources JSONB,
+    hackathon_id UUID NOT NULL REFERENCES hackathons.hackathons(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -12,6 +12,7 @@ from app.models.project import Project as ProjectModel
 from app.models.team import Team as TeamModel, TeamMember as TeamMemberModel, TeamMemberRole
 from app.models.judging import Criterion as CriterionModel, Score as ScoreModel # SQLAlchemy models
 from app.schemas.judging import CriterionCreate, ScoreCreate, ScoreUpdate # Pydantic schemas
+from app.models.hackathon import Hackathon
 
 # Assuming conftest.py provides:
 # client, db_session, admin_user_data, auth_headers_for_admin_user,
@@ -22,13 +23,21 @@ from app.schemas.judging import CriterionCreate, ScoreCreate, ScoreUpdate # Pyda
 
 @pytest.fixture(scope="function")
 def created_team_for_judging(
-    client: TestClient, auth_headers_for_regular_user: Dict[str, str], unique_id: uuid.UUID, db_session: Session
+    client: TestClient, 
+    auth_headers_for_regular_user: Dict[str, str], 
+    unique_id: uuid.UUID, 
+    db_session: Session,
+    test_hackathon: Hackathon,
 ) -> TeamModel:
     team_name = f"JudgingTeam_{unique_id}"
     response = client.post(
         "/teams/",
-        headers=auth_headers_for_regular_user, # A regular user creates a team
-        json={"name": team_name, "description": "Team for judging tests"}
+        headers=auth_headers_for_regular_user,
+        json={
+            "name": team_name, 
+            "description": "Team for judging tests",
+            "hackathon_id": test_hackathon.id
+        }
     )
     assert response.status_code == status.HTTP_201_CREATED
     team_data = response.json()
@@ -39,16 +48,18 @@ def created_team_for_judging(
 @pytest.fixture(scope="function")
 def created_project_for_judging(
     client: TestClient,
-    auth_headers_for_regular_user: Dict[str, str], # Regular user (team owner) creates the project
+    auth_headers_for_regular_user: Dict[str, str],
     created_team_for_judging: TeamModel,
     unique_id: uuid.UUID,
-    db_session: Session
+    db_session: Session,
+    test_hackathon: Hackathon,
 ) -> ProjectModel:
     project_name = f"JudgingProject_{unique_id}"
     project_payload = {
         "name": project_name,
         "description": "Project to be judged",
-        "team_id": str(created_team_for_judging.id)
+        "team_id": str(created_team_for_judging.id),
+        "hackathon_id": test_hackathon.id
     }
     response = client.post(
         "/projects/",

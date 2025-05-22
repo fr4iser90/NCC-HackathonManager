@@ -39,7 +39,7 @@ class ProjectTemplateRead(ProjectTemplateBase):
 class ProjectBase(BaseModel):
     name: str = Field(..., max_length=255)
     description: Optional[str] = None
-    # team_id: uuid.UUID # Removed, project is linked via HackathonRegistration
+    hackathon_id: uuid.UUID
     project_template_id: Optional[uuid.UUID] = None
     status: ProjectStatus = ProjectStatus.DRAFT
 

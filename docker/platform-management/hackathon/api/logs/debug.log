@@ -1,0 +1,327 @@
+2025-05-23 00:41:10,882 - hackathon_api - INFO - Request 139852241977616 started: POST /users/login
+2025-05-23 00:41:11,078 - hackathon_api - INFO - Request 139852241977616 completed: 200 in 0.1960s
+2025-05-23 00:41:11,080 - hackathon_api - INFO - Request 139852242037376 started: POST /projects/templates/
+2025-05-23 00:41:11,088 - hackathon_api - INFO - Request 139852242037376 completed: 201 in 0.0081s
+2025-05-23 00:41:11,286 - hackathon_api - INFO - Request 139852231906208 started: POST /users/login
+2025-05-23 00:41:11,475 - hackathon_api - INFO - Request 139852231906208 completed: 200 in 0.1890s
+2025-05-23 00:41:11,477 - hackathon_api - INFO - Request 139852231904048 started: POST /projects/templates/
+2025-05-23 00:41:11,481 - hackathon_api - INFO - Request 139852231904048 completed: 403 in 0.0036s
+2025-05-23 00:41:11,680 - hackathon_api - INFO - Request 139852232443664 started: POST /users/login
+2025-05-23 00:41:11,869 - hackathon_api - INFO - Request 139852232443664 completed: 200 in 0.1893s
+2025-05-23 00:41:12,058 - hackathon_api - INFO - Request 139852232446208 started: POST /users/login
+2025-05-23 00:41:12,247 - hackathon_api - INFO - Request 139852232446208 completed: 200 in 0.1894s
+2025-05-23 00:41:12,249 - hackathon_api - INFO - Request 139852232448224 started: POST /projects/templates/
+2025-05-23 00:41:12,255 - hackathon_api - INFO - Request 139852232448224 completed: 201 in 0.0057s
+2025-05-23 00:41:12,257 - hackathon_api - INFO - Request 139852232446352 started: GET /projects/templates/
+2025-05-23 00:41:12,260 - hackathon_api - INFO - Request 139852232446352 completed: 200 in 0.0024s
+2025-05-23 00:41:12,463 - hackathon_api - INFO - Request 139852232446976 started: POST /users/login
+2025-05-23 00:41:12,659 - hackathon_api - INFO - Request 139852232446976 completed: 200 in 0.1958s
+2025-05-23 00:41:12,662 - hackathon_api - INFO - Request 139852232444096 started: POST /teams/
+2025-05-23 00:41:12,668 - hackathon_api - INFO - Request 139852232444096 completed: 422 in 0.0052s
+2025-05-23 00:41:12,925 - hackathon_api - INFO - Request 139852232461488 started: POST /users/login
+2025-05-23 00:41:13,114 - hackathon_api - INFO - Request 139852232461488 completed: 200 in 0.1891s
+2025-05-23 00:41:13,302 - hackathon_api - INFO - Request 139852232463936 started: POST /users/login
+2025-05-23 00:41:13,490 - hackathon_api - INFO - Request 139852232463936 completed: 200 in 0.1877s
+2025-05-23 00:41:13,493 - hackathon_api - INFO - Request 139852232469600 started: POST /teams/
+2025-05-23 00:41:13,496 - hackathon_api - INFO - Request 139852232469600 completed: 422 in 0.0032s
+2025-05-23 00:41:13,513 - hackathon_api - INFO - Request 139852232447936 started: POST /users/register
+2025-05-23 00:41:13,706 - hackathon_api - INFO - Request 139852232447936 completed: 201 in 0.1932s
+2025-05-23 00:41:13,709 - hackathon_api - INFO - Request 139852231910912 started: POST /users/login
+2025-05-23 00:41:13,897 - hackathon_api - INFO - Request 139852231910912 completed: 200 in 0.1878s
+2025-05-23 00:41:14,083 - hackathon_api - INFO - Request 139852231866752 started: POST /users/login
+2025-05-23 00:41:14,273 - hackathon_api - INFO - Request 139852231866752 completed: 200 in 0.1892s
+2025-05-23 00:41:14,276 - hackathon_api - INFO - Request 139852232447456 started: POST /teams/
+2025-05-23 00:41:14,279 - hackathon_api - INFO - Request 139852232447456 completed: 422 in 0.0034s
+2025-05-23 00:41:14,483 - hackathon_api - INFO - Request 139852232467968 started: POST /users/login
+2025-05-23 00:41:14,670 - hackathon_api - INFO - Request 139852232467968 completed: 200 in 0.1871s
+2025-05-23 00:41:14,673 - hackathon_api - INFO - Request 139852232471088 started: POST /teams/
+2025-05-23 00:41:14,676 - hackathon_api - INFO - Request 139852232471088 completed: 422 in 0.0029s
+2025-05-23 00:41:14,878 - hackathon_api - INFO - Request 139852232545184 started: POST /users/login
+2025-05-23 00:41:15,065 - hackathon_api - INFO - Request 139852232545184 completed: 200 in 0.1862s
+2025-05-23 00:41:15,067 - hackathon_api - INFO - Request 139852232543600 started: POST /projects/
+2025-05-23 00:41:15,072 - hackathon_api - ERROR - Request 139852232543600 failed in 0.0047s: 'ProjectCreate' object has no attribute 'team_id'
+2025-05-23 00:41:15,530 - hackathon_api - INFO - Request 139852232453648 started: POST /users/login
+2025-05-23 00:41:15,718 - hackathon_api - INFO - Request 139852232453648 completed: 200 in 0.1883s
+2025-05-23 00:41:15,722 - hackathon_api - INFO - Request 139852232446544 started: POST /teams/
+2025-05-23 00:41:15,725 - hackathon_api - INFO - Request 139852232446544 completed: 422 in 0.0032s
+2025-05-23 00:41:15,926 - hackathon_api - INFO - Request 139852232456672 started: POST /users/login
+2025-05-23 00:41:16,115 - hackathon_api - INFO - Request 139852232456672 completed: 200 in 0.1890s
+2025-05-23 00:41:16,119 - hackathon_api - INFO - Request 139852232587936 started: POST /teams/
+2025-05-23 00:41:16,122 - hackathon_api - INFO - Request 139852232587936 completed: 422 in 0.0031s
+2025-05-23 00:41:16,322 - hackathon_api - INFO - Request 139852232574256 started: POST /users/login
+2025-05-23 00:41:16,508 - hackathon_api - INFO - Request 139852232574256 completed: 200 in 0.1862s
+2025-05-23 00:41:16,511 - hackathon_api - INFO - Request 139852232578624 started: POST /teams/
+2025-05-23 00:41:16,515 - hackathon_api - INFO - Request 139852232578624 completed: 422 in 0.0035s
+2025-05-23 00:41:16,715 - hackathon_api - INFO - Request 139852231905584 started: POST /users/login
+2025-05-23 00:41:16,901 - hackathon_api - INFO - Request 139852231905584 completed: 200 in 0.1865s
+2025-05-23 00:41:17,087 - hackathon_api - INFO - Request 139852231983184 started: POST /users/login
+2025-05-23 00:41:17,273 - hackathon_api - INFO - Request 139852231983184 completed: 200 in 0.1863s
+2025-05-23 00:41:17,276 - hackathon_api - INFO - Request 139852231988944 started: POST /teams/
+2025-05-23 00:41:17,280 - hackathon_api - INFO - Request 139852231988944 completed: 422 in 0.0036s
+2025-05-23 00:41:17,297 - hackathon_api - INFO - Request 139852232588704 started: POST /users/register
+2025-05-23 00:41:17,486 - hackathon_api - INFO - Request 139852232588704 completed: 201 in 0.1891s
+2025-05-23 00:41:17,489 - hackathon_api - INFO - Request 139852232579920 started: POST /users/login
+2025-05-23 00:41:17,677 - hackathon_api - INFO - Request 139852232579920 completed: 200 in 0.1874s
+2025-05-23 00:41:17,862 - hackathon_api - INFO - Request 139852232473104 started: POST /users/login
+2025-05-23 00:41:18,050 - hackathon_api - INFO - Request 139852232473104 completed: 200 in 0.1875s
+2025-05-23 00:41:18,053 - hackathon_api - INFO - Request 139852232581024 started: POST /teams/
+2025-05-23 00:41:18,056 - hackathon_api - INFO - Request 139852232581024 completed: 422 in 0.0036s
+2025-05-23 00:41:18,073 - hackathon_api - INFO - Request 139852232575840 started: POST /users/register
+2025-05-23 00:41:18,262 - hackathon_api - INFO - Request 139852232575840 completed: 201 in 0.1890s
+2025-05-23 00:41:18,265 - hackathon_api - INFO - Request 139852232549216 started: POST /users/login
+2025-05-23 00:41:18,453 - hackathon_api - INFO - Request 139852232549216 completed: 200 in 0.1873s
+2025-05-23 00:41:18,640 - hackathon_api - INFO - Request 139852231989328 started: POST /users/login
+2025-05-23 00:41:18,825 - hackathon_api - INFO - Request 139852231989328 completed: 200 in 0.1854s
+2025-05-23 00:41:18,828 - hackathon_api - INFO - Request 139852232556224 started: POST /teams/
+2025-05-23 00:41:18,831 - hackathon_api - INFO - Request 139852232556224 completed: 422 in 0.0027s
+2025-05-23 00:41:19,031 - hackathon_api - INFO - Request 139852231992784 started: POST /users/login
+2025-05-23 00:41:19,217 - hackathon_api - INFO - Request 139852231992784 completed: 200 in 0.1860s
+2025-05-23 00:41:19,219 - hackathon_api - INFO - Request 139852231994032 started: PUT /projects/d879c578-a8f6-43ec-ba9d-42758885b60e
+2025-05-23 00:41:19,225 - hackathon_api - INFO - Request 139852231994032 completed: 404 in 0.0053s
+2025-05-23 00:41:19,418 - hackathon_api - INFO - Request 139852232087008 started: POST /users/login
+2025-05-23 00:41:19,605 - hackathon_api - INFO - Request 139852232087008 completed: 200 in 0.1872s
+2025-05-23 00:41:19,608 - hackathon_api - INFO - Request 139852232472480 started: POST /teams/
+2025-05-23 00:41:19,612 - hackathon_api - INFO - Request 139852232472480 completed: 422 in 0.0037s
+2025-05-23 00:41:19,812 - hackathon_api - INFO - Request 139852232576080 started: POST /users/login
+2025-05-23 00:41:19,998 - hackathon_api - INFO - Request 139852232576080 completed: 200 in 0.1856s
+2025-05-23 00:41:20,183 - hackathon_api - INFO - Request 139852232443280 started: POST /users/login
+2025-05-23 00:41:20,369 - hackathon_api - INFO - Request 139852232443280 completed: 200 in 0.1854s
+2025-05-23 00:41:20,372 - hackathon_api - INFO - Request 139852231987936 started: POST /teams/
+2025-05-23 00:41:20,376 - hackathon_api - INFO - Request 139852231987936 completed: 422 in 0.0037s
+2025-05-23 00:41:20,393 - hackathon_api - INFO - Request 139852231991872 started: POST /users/register
+2025-05-23 00:41:20,582 - hackathon_api - INFO - Request 139852231991872 completed: 201 in 0.1889s
+2025-05-23 00:41:20,585 - hackathon_api - INFO - Request 139852231991008 started: POST /users/login
+2025-05-23 00:41:20,770 - hackathon_api - INFO - Request 139852231991008 completed: 200 in 0.1858s
+2025-05-23 00:41:20,956 - hackathon_api - INFO - Request 139852231903760 started: POST /users/login
+2025-05-23 00:41:21,142 - hackathon_api - INFO - Request 139852231903760 completed: 200 in 0.1858s
+2025-05-23 00:41:21,145 - hackathon_api - INFO - Request 139852231997584 started: POST /teams/
+2025-05-23 00:41:21,148 - hackathon_api - INFO - Request 139852231997584 completed: 422 in 0.0031s
+2025-05-23 00:41:21,165 - hackathon_api - INFO - Request 139852232085664 started: POST /users/register
+2025-05-23 00:41:21,355 - hackathon_api - INFO - Request 139852232085664 completed: 201 in 0.1893s
+2025-05-23 00:41:21,357 - hackathon_api - INFO - Request 139852232089792 started: POST /users/login
+2025-05-23 00:41:21,544 - hackathon_api - INFO - Request 139852232089792 completed: 200 in 0.1869s
+2025-05-23 00:41:21,730 - hackathon_api - INFO - Request 139852232094112 started: POST /users/login
+2025-05-23 00:41:21,915 - hackathon_api - INFO - Request 139852232094112 completed: 200 in 0.1855s
+2025-05-23 00:41:21,919 - hackathon_api - INFO - Request 139852232088736 started: POST /teams/
+2025-05-23 00:41:21,922 - hackathon_api - INFO - Request 139852232088736 completed: 422 in 0.0027s
+2025-05-23 00:41:21,940 - hackathon_api - INFO - Request 139852232453648 started: POST /users/register
+2025-05-23 00:41:22,127 - hackathon_api - INFO - Request 139852232453648 completed: 201 in 0.1872s
+2025-05-23 00:41:22,131 - hackathon_api - INFO - Request 139852232089552 started: POST /users/login
+2025-05-23 00:41:22,316 - hackathon_api - INFO - Request 139852232089552 completed: 200 in 0.1857s
+2025-05-23 00:41:22,504 - hackathon_api - INFO - Request 139852232093776 started: POST /users/login
+2025-05-23 00:41:22,690 - hackathon_api - INFO - Request 139852232093776 completed: 200 in 0.1859s
+2025-05-23 00:41:22,694 - hackathon_api - INFO - Request 139852232091232 started: POST /teams/
+2025-05-23 00:41:22,697 - hackathon_api - INFO - Request 139852232091232 completed: 422 in 0.0029s
+2025-05-23 00:41:22,898 - hackathon_api - INFO - Request 139852232580160 started: POST /users/login
+2025-05-23 00:41:23,085 - hackathon_api - INFO - Request 139852232580160 completed: 200 in 0.1871s
+2025-05-23 00:41:23,087 - hackathon_api - INFO - Request 139852232577856 started: DELETE /projects/b5e130da-8ccb-430b-9814-86aafe26eab6
+2025-05-23 00:41:23,092 - hackathon_api - INFO - Request 139852232577856 completed: 404 in 0.0046s
+2025-05-23 00:42:49,221 - hackathon_api - INFO - Request 140703506352272 started: POST /users/login
+2025-05-23 00:42:49,414 - hackathon_api - INFO - Request 140703506352272 completed: 200 in 0.1929s
+2025-05-23 00:42:49,416 - hackathon_api - INFO - Request 140703506674464 started: POST /projects/templates/
+2025-05-23 00:42:49,426 - hackathon_api - INFO - Request 140703506674464 completed: 201 in 0.0092s
+2025-05-23 00:42:49,622 - hackathon_api - INFO - Request 140703506470752 started: POST /users/login
+2025-05-23 00:42:49,810 - hackathon_api - INFO - Request 140703506470752 completed: 200 in 0.1877s
+2025-05-23 00:42:49,812 - hackathon_api - INFO - Request 140703506469504 started: POST /projects/templates/
+2025-05-23 00:42:49,816 - hackathon_api - INFO - Request 140703506469504 completed: 403 in 0.0037s
+2025-05-23 00:42:50,010 - hackathon_api - INFO - Request 140703506224848 started: POST /users/login
+2025-05-23 00:42:50,199 - hackathon_api - INFO - Request 140703506224848 completed: 200 in 0.1889s
+2025-05-23 00:42:50,387 - hackathon_api - INFO - Request 140703506464992 started: POST /users/login
+2025-05-23 00:42:50,576 - hackathon_api - INFO - Request 140703506464992 completed: 200 in 0.1889s
+2025-05-23 00:42:50,578 - hackathon_api - INFO - Request 140703505128368 started: POST /projects/templates/
+2025-05-23 00:42:50,582 - hackathon_api - INFO - Request 140703505128368 completed: 201 in 0.0047s
+2025-05-23 00:42:50,585 - hackathon_api - INFO - Request 140703506464944 started: GET /projects/templates/
+2025-05-23 00:42:50,587 - hackathon_api - INFO - Request 140703506464944 completed: 200 in 0.0020s
+2025-05-23 00:42:50,782 - hackathon_api - INFO - Request 140703506479440 started: POST /users/login
+2025-05-23 00:42:50,970 - hackathon_api - INFO - Request 140703506479440 completed: 200 in 0.1879s
+2025-05-23 00:42:50,973 - hackathon_api - INFO - Request 140703506227488 started: POST /teams/
+2025-05-23 00:42:50,978 - hackathon_api - INFO - Request 140703506227488 completed: 422 in 0.0049s
+2025-05-23 00:42:51,223 - hackathon_api - INFO - Request 140703506229888 started: POST /users/login
+2025-05-23 00:42:51,411 - hackathon_api - INFO - Request 140703506229888 completed: 200 in 0.1875s
+2025-05-23 00:42:51,598 - hackathon_api - INFO - Request 140703506226240 started: POST /users/login
+2025-05-23 00:42:51,785 - hackathon_api - INFO - Request 140703506226240 completed: 200 in 0.1871s
+2025-05-23 00:42:51,789 - hackathon_api - INFO - Request 140703506944784 started: POST /teams/
+2025-05-23 00:42:51,791 - hackathon_api - INFO - Request 140703506944784 completed: 422 in 0.0027s
+2025-05-23 00:42:51,808 - hackathon_api - INFO - Request 140703506948864 started: POST /users/register
+2025-05-23 00:42:51,998 - hackathon_api - INFO - Request 140703506948864 completed: 201 in 0.1898s
+2025-05-23 00:42:52,001 - hackathon_api - INFO - Request 140703506950304 started: POST /users/login
+2025-05-23 00:42:52,188 - hackathon_api - INFO - Request 140703506950304 completed: 200 in 0.1872s
+2025-05-23 00:42:52,376 - hackathon_api - INFO - Request 140703506809872 started: POST /users/login
+2025-05-23 00:42:52,562 - hackathon_api - INFO - Request 140703506809872 completed: 200 in 0.1857s
+2025-05-23 00:42:52,565 - hackathon_api - INFO - Request 140703506947232 started: POST /teams/
+2025-05-23 00:42:52,569 - hackathon_api - INFO - Request 140703506947232 completed: 422 in 0.0036s
+2025-05-23 00:42:52,770 - hackathon_api - INFO - Request 140703506809392 started: POST /users/login
+2025-05-23 00:42:52,969 - hackathon_api - INFO - Request 140703506809392 completed: 200 in 0.1986s
+2025-05-23 00:42:52,972 - hackathon_api - INFO - Request 140703506817024 started: POST /teams/
+2025-05-23 00:42:52,975 - hackathon_api - INFO - Request 140703506817024 completed: 422 in 0.0037s
+2025-05-23 00:42:53,177 - hackathon_api - INFO - Request 140703506810976 started: POST /users/login
+2025-05-23 00:42:53,365 - hackathon_api - INFO - Request 140703506810976 completed: 200 in 0.1884s
+2025-05-23 00:42:53,374 - hackathon_api - INFO - Request 140703506219712 started: POST /projects/
+2025-05-23 00:42:53,384 - hackathon_api - INFO - Request 140703506219712 completed: 201 in 0.0100s
+2025-05-23 00:42:53,588 - hackathon_api - INFO - Request 140703507171088 started: POST /users/login
+2025-05-23 00:42:53,773 - hackathon_api - INFO - Request 140703507171088 completed: 200 in 0.1850s
+2025-05-23 00:42:53,776 - hackathon_api - INFO - Request 140703507176848 started: POST /teams/
+2025-05-23 00:42:53,779 - hackathon_api - INFO - Request 140703507176848 completed: 422 in 0.0024s
+2025-05-23 00:42:53,980 - hackathon_api - INFO - Request 140703506225232 started: POST /users/login
+2025-05-23 00:42:54,167 - hackathon_api - INFO - Request 140703506225232 completed: 200 in 0.1866s
+2025-05-23 00:42:54,170 - hackathon_api - INFO - Request 140703506876080 started: POST /teams/
+2025-05-23 00:42:54,175 - hackathon_api - INFO - Request 140703506876080 completed: 422 in 0.0047s
+2025-05-23 00:42:54,375 - hackathon_api - INFO - Request 140703506223456 started: POST /users/login
+2025-05-23 00:42:54,562 - hackathon_api - INFO - Request 140703506223456 completed: 200 in 0.1871s
+2025-05-23 00:42:54,565 - hackathon_api - INFO - Request 140703506816112 started: POST /teams/
+2025-05-23 00:42:54,568 - hackathon_api - INFO - Request 140703506816112 completed: 422 in 0.0031s
+2025-05-23 00:42:54,772 - hackathon_api - INFO - Request 140703506878336 started: POST /users/login
+2025-05-23 00:42:54,961 - hackathon_api - INFO - Request 140703506878336 completed: 200 in 0.1896s
+2025-05-23 00:42:55,149 - hackathon_api - INFO - Request 140703506880304 started: POST /users/login
+2025-05-23 00:42:55,337 - hackathon_api - INFO - Request 140703506880304 completed: 200 in 0.1883s
+2025-05-23 00:42:55,340 - hackathon_api - INFO - Request 140703506886352 started: POST /teams/
+2025-05-23 00:42:55,344 - hackathon_api - INFO - Request 140703506886352 completed: 422 in 0.0033s
+2025-05-23 00:42:55,361 - hackathon_api - INFO - Request 140703492906192 started: POST /users/register
+2025-05-23 00:42:55,550 - hackathon_api - INFO - Request 140703492906192 completed: 201 in 0.1888s
+2025-05-23 00:42:55,552 - hackathon_api - INFO - Request 140703492901488 started: POST /users/login
+2025-05-23 00:42:55,740 - hackathon_api - INFO - Request 140703492901488 completed: 200 in 0.1871s
+2025-05-23 00:42:55,927 - hackathon_api - INFO - Request 140703492906720 started: POST /users/login
+2025-05-23 00:42:56,116 - hackathon_api - INFO - Request 140703492906720 completed: 200 in 0.1894s
+2025-05-23 00:42:56,119 - hackathon_api - INFO - Request 140703492909504 started: POST /teams/
+2025-05-23 00:42:56,122 - hackathon_api - INFO - Request 140703492909504 completed: 422 in 0.0029s
+2025-05-23 00:42:56,140 - hackathon_api - INFO - Request 140703506225856 started: POST /users/register
+2025-05-23 00:42:56,336 - hackathon_api - INFO - Request 140703506225856 completed: 201 in 0.1953s
+2025-05-23 00:42:56,339 - hackathon_api - INFO - Request 140703492904704 started: POST /users/login
+2025-05-23 00:42:56,524 - hackathon_api - INFO - Request 140703492904704 completed: 200 in 0.1858s
+2025-05-23 00:42:56,711 - hackathon_api - INFO - Request 140703506817744 started: POST /users/login
+2025-05-23 00:42:56,900 - hackathon_api - INFO - Request 140703506817744 completed: 200 in 0.1890s
+2025-05-23 00:42:56,903 - hackathon_api - INFO - Request 140703492904992 started: POST /teams/
+2025-05-23 00:42:56,906 - hackathon_api - INFO - Request 140703492904992 completed: 422 in 0.0030s
+2025-05-23 00:42:57,108 - hackathon_api - INFO - Request 140703506228352 started: POST /users/login
+2025-05-23 00:42:57,297 - hackathon_api - INFO - Request 140703506228352 completed: 200 in 0.1886s
+2025-05-23 00:42:57,299 - hackathon_api - INFO - Request 140703506876176 started: PUT /projects/ae1610e8-5b34-42fb-83a9-7b67631e8749
+2025-05-23 00:42:57,304 - hackathon_api - INFO - Request 140703506876176 completed: 404 in 0.0052s
+2025-05-23 00:42:57,499 - hackathon_api - INFO - Request 140703507173824 started: POST /users/login
+2025-05-23 00:42:57,688 - hackathon_api - INFO - Request 140703507173824 completed: 200 in 0.1891s
+2025-05-23 00:42:57,691 - hackathon_api - INFO - Request 140703506883808 started: POST /teams/
+2025-05-23 00:42:57,695 - hackathon_api - INFO - Request 140703506883808 completed: 422 in 0.0038s
+2025-05-23 00:42:57,898 - hackathon_api - INFO - Request 140703506881792 started: POST /users/login
+2025-05-23 00:42:58,089 - hackathon_api - INFO - Request 140703506881792 completed: 200 in 0.1909s
+2025-05-23 00:42:58,275 - hackathon_api - INFO - Request 140703492932384 started: POST /users/login
+2025-05-23 00:42:58,462 - hackathon_api - INFO - Request 140703492932384 completed: 200 in 0.1872s
+2025-05-23 00:42:58,465 - hackathon_api - INFO - Request 140703492938864 started: POST /teams/
+2025-05-23 00:42:58,468 - hackathon_api - INFO - Request 140703492938864 completed: 422 in 0.0032s
+2025-05-23 00:42:58,485 - hackathon_api - INFO - Request 140703492937952 started: POST /users/register
+2025-05-23 00:42:58,679 - hackathon_api - INFO - Request 140703492937952 completed: 201 in 0.1938s
+2025-05-23 00:42:58,683 - hackathon_api - INFO - Request 140703506882128 started: POST /users/login
+2025-05-23 00:42:58,873 - hackathon_api - INFO - Request 140703506882128 completed: 200 in 0.1900s
+2025-05-23 00:42:59,060 - hackathon_api - INFO - Request 140703506879056 started: POST /users/login
+2025-05-23 00:42:59,249 - hackathon_api - INFO - Request 140703506879056 completed: 200 in 0.1881s
+2025-05-23 00:42:59,252 - hackathon_api - INFO - Request 140703506879488 started: POST /teams/
+2025-05-23 00:42:59,254 - hackathon_api - INFO - Request 140703506879488 completed: 422 in 0.0026s
+2025-05-23 00:42:59,272 - hackathon_api - INFO - Request 140703506875600 started: POST /users/register
+2025-05-23 00:42:59,461 - hackathon_api - INFO - Request 140703506875600 completed: 201 in 0.1890s
+2025-05-23 00:42:59,464 - hackathon_api - INFO - Request 140703492901104 started: POST /users/login
+2025-05-23 00:42:59,650 - hackathon_api - INFO - Request 140703492901104 completed: 200 in 0.1864s
+2025-05-23 00:42:59,837 - hackathon_api - INFO - Request 140703492907584 started: POST /users/login
+2025-05-23 00:43:00,023 - hackathon_api - INFO - Request 140703492907584 completed: 200 in 0.1868s
+2025-05-23 00:43:00,027 - hackathon_api - INFO - Request 140703492942176 started: POST /teams/
+2025-05-23 00:43:00,030 - hackathon_api - INFO - Request 140703492942176 completed: 422 in 0.0032s
+2025-05-23 00:43:00,049 - hackathon_api - INFO - Request 140703506226192 started: POST /users/register
+2025-05-23 00:43:00,239 - hackathon_api - INFO - Request 140703506226192 completed: 201 in 0.1904s
+2025-05-23 00:43:00,243 - hackathon_api - INFO - Request 140703492939776 started: POST /users/login
+2025-05-23 00:43:00,431 - hackathon_api - INFO - Request 140703492939776 completed: 200 in 0.1885s
+2025-05-23 00:43:00,618 - hackathon_api - INFO - Request 140703492944720 started: POST /users/login
+2025-05-23 00:43:00,806 - hackathon_api - INFO - Request 140703492944720 completed: 200 in 0.1880s
+2025-05-23 00:43:00,809 - hackathon_api - INFO - Request 140703492936608 started: POST /teams/
+2025-05-23 00:43:00,812 - hackathon_api - INFO - Request 140703492936608 completed: 422 in 0.0031s
+2025-05-23 00:43:01,014 - hackathon_api - INFO - Request 140703493048272 started: POST /users/login
+2025-05-23 00:43:01,203 - hackathon_api - INFO - Request 140703493048272 completed: 200 in 0.1898s
+2025-05-23 00:43:01,205 - hackathon_api - INFO - Request 140703493049088 started: DELETE /projects/cd01d210-fba9-4c93-9b0d-91b5ff6c3c9f
+2025-05-23 00:43:01,210 - hackathon_api - INFO - Request 140703493049088 completed: 404 in 0.0045s
+2025-05-23 00:43:18,427 - hackathon_api - INFO - Request 140406703950928 started: POST /users/login
+2025-05-23 00:43:18,624 - hackathon_api - INFO - Request 140406703950928 completed: 200 in 0.1967s
+2025-05-23 00:43:18,626 - hackathon_api - INFO - Request 140406703953184 started: POST /projects/templates/
+2025-05-23 00:43:18,636 - hackathon_api - INFO - Request 140406703953184 completed: 201 in 0.0095s
+2025-05-23 00:43:18,835 - hackathon_api - INFO - Request 140406704150944 started: POST /users/login
+2025-05-23 00:43:19,026 - hackathon_api - INFO - Request 140406704150944 completed: 200 in 0.1912s
+2025-05-23 00:43:19,028 - hackathon_api - INFO - Request 140406704151136 started: POST /projects/templates/
+2025-05-23 00:43:19,031 - hackathon_api - INFO - Request 140406704151136 completed: 403 in 0.0035s
+2025-05-23 00:43:19,229 - hackathon_api - INFO - Request 140406702003776 started: POST /users/login
+2025-05-23 00:43:19,418 - hackathon_api - INFO - Request 140406702003776 completed: 200 in 0.1891s
+2025-05-23 00:43:19,607 - hackathon_api - INFO - Request 140406702002096 started: POST /users/login
+2025-05-23 00:43:19,797 - hackathon_api - INFO - Request 140406702002096 completed: 200 in 0.1897s
+2025-05-23 00:43:19,799 - hackathon_api - INFO - Request 140406702008432 started: POST /projects/templates/
+2025-05-23 00:43:19,803 - hackathon_api - INFO - Request 140406702008432 completed: 201 in 0.0041s
+2025-05-23 00:43:19,805 - hackathon_api - INFO - Request 140406702010256 started: GET /projects/templates/
+2025-05-23 00:43:19,807 - hackathon_api - INFO - Request 140406702010256 completed: 200 in 0.0023s
+2025-05-23 00:43:20,004 - hackathon_api - INFO - Request 140406701998496 started: POST /users/login
+2025-05-23 00:43:20,193 - hackathon_api - INFO - Request 140406701998496 completed: 200 in 0.1895s
+2025-05-23 00:43:20,203 - hackathon_api - INFO - Request 140406704146288 started: POST /teams/
+2025-05-23 00:43:20,221 - hackathon_api - INFO - Request 140406704146288 completed: 201 in 0.0175s
+2025-05-23 00:43:20,229 - hackathon_api - INFO - Request 140406702144304 started: POST /projects/
+2025-05-23 00:43:20,243 - hackathon_api - INFO - Request 140406702144304 completed: 201 in 0.0142s
+2025-05-23 00:43:20,442 - hackathon_api - INFO - Request 140406690612528 started: POST /users/login
+2025-05-23 00:43:20,631 - hackathon_api - INFO - Request 140406690612528 completed: 200 in 0.1891s
+2025-05-23 00:43:20,823 - hackathon_api - INFO - Request 140406690617808 started: POST /users/login
+2025-05-23 00:43:21,011 - hackathon_api - INFO - Request 140406690617808 completed: 200 in 0.1881s
+2025-05-23 00:43:21,016 - hackathon_api - INFO - Request 140406690615504 started: POST /teams/
+2025-05-23 00:43:21,023 - hackathon_api - INFO - Request 140406690615504 completed: 201 in 0.0075s
+2025-05-23 00:43:21,027 - hackathon_api - INFO - Request 140406690625776 started: POST /projects/
+2025-05-23 00:43:21,031 - hackathon_api - INFO - Request 140406690625776 completed: 422 in 0.0036s
+2025-05-23 00:43:21,089 - hackathon_api - INFO - Request 140406690807888 started: POST /users/register
+2025-05-23 00:43:21,281 - hackathon_api - INFO - Request 140406690807888 completed: 201 in 0.1924s
+2025-05-23 00:43:21,284 - hackathon_api - INFO - Request 140406690808656 started: POST /users/login
+2025-05-23 00:43:21,476 - hackathon_api - INFO - Request 140406690808656 completed: 200 in 0.1916s
+2025-05-23 00:43:21,664 - hackathon_api - INFO - Request 140406690821520 started: POST /users/login
+2025-05-23 00:43:21,857 - hackathon_api - INFO - Request 140406690821520 completed: 200 in 0.1931s
+2025-05-23 00:43:21,862 - hackathon_api - INFO - Request 140406690816336 started: POST /teams/
+2025-05-23 00:43:21,869 - hackathon_api - INFO - Request 140406690816336 completed: 201 in 0.0071s
+2025-05-23 00:43:21,873 - hackathon_api - INFO - Request 140406690612480 started: POST /projects/
+2025-05-23 00:43:21,876 - hackathon_api - INFO - Request 140406690612480 completed: 422 in 0.0031s
+2025-05-23 00:43:22,082 - hackathon_api - INFO - Request 140406691382480 started: POST /users/login
+2025-05-23 00:43:22,273 - hackathon_api - INFO - Request 140406691382480 completed: 200 in 0.1905s
+2025-05-23 00:43:22,278 - hackathon_api - INFO - Request 140406691384544 started: POST /teams/
+2025-05-23 00:43:22,286 - hackathon_api - INFO - Request 140406691384544 completed: 201 in 0.0085s
+2025-05-23 00:43:22,476 - hackathon_api - INFO - Request 140406691387712 started: POST /users/login
+2025-05-23 00:43:22,664 - hackathon_api - INFO - Request 140406691387712 completed: 200 in 0.1881s
+2025-05-23 00:43:22,666 - hackathon_api - INFO - Request 140406690811296 started: POST /projects/templates/
+2025-05-23 00:43:22,671 - hackathon_api - INFO - Request 140406690811296 completed: 201 in 0.0047s
+2025-05-23 00:43:22,675 - hackathon_api - INFO - Request 140406690816480 started: POST /projects/
+2025-05-23 00:43:22,684 - hackathon_api - INFO - Request 140406690816480 completed: 201 in 0.0087s
+2025-05-23 00:43:22,879 - hackathon_api - INFO - Request 140406690812016 started: POST /users/login
+2025-05-23 00:43:23,067 - hackathon_api - INFO - Request 140406690812016 completed: 200 in 0.1882s
+2025-05-23 00:43:23,071 - hackathon_api - INFO - Request 140406690615072 started: POST /projects/
+2025-05-23 00:43:23,077 - hackathon_api - INFO - Request 140406690615072 completed: 201 in 0.0059s
+2025-05-23 00:43:23,279 - hackathon_api - INFO - Request 140406690619872 started: POST /users/login
+2025-05-23 00:43:23,485 - hackathon_api - INFO - Request 140406690619872 completed: 200 in 0.2061s
+2025-05-23 00:43:23,491 - hackathon_api - INFO - Request 140406690624576 started: POST /teams/
+2025-05-23 00:43:23,500 - hackathon_api - INFO - Request 140406690624576 completed: 201 in 0.0089s
+2025-05-23 00:43:23,504 - hackathon_api - INFO - Request 140406691697184 started: POST /projects/
+2025-05-23 00:43:23,508 - hackathon_api - INFO - Request 140406691697184 completed: 422 in 0.0039s
+2025-05-23 00:43:23,712 - hackathon_api - INFO - Request 140406691702704 started: POST /users/login
+2025-05-23 00:43:23,903 - hackathon_api - INFO - Request 140406691702704 completed: 200 in 0.1903s
+2025-05-23 00:43:23,908 - hackathon_api - INFO - Request 140406691707312 started: POST /teams/
+2025-05-23 00:43:23,917 - hackathon_api - INFO - Request 140406691707312 completed: 201 in 0.0091s
+2025-05-23 00:43:23,921 - hackathon_api - INFO - Request 140406691120096 started: POST /projects/
+2025-05-23 00:43:23,925 - hackathon_api - INFO - Request 140406691120096 completed: 422 in 0.0039s
+2025-05-23 00:43:24,128 - hackathon_api - INFO - Request 140406691700640 started: POST /users/login
+2025-05-23 00:43:24,317 - hackathon_api - INFO - Request 140406691700640 completed: 200 in 0.1890s
+2025-05-23 00:43:24,322 - hackathon_api - INFO - Request 140406690623568 started: POST /teams/
+2025-05-23 00:43:24,331 - hackathon_api - INFO - Request 140406690623568 completed: 201 in 0.0088s
+2025-05-23 00:43:24,335 - hackathon_api - INFO - Request 140406690816480 started: POST /projects/
+2025-05-23 00:43:24,339 - hackathon_api - INFO - Request 140406690816480 completed: 422 in 0.0035s
+2025-05-23 00:43:24,543 - hackathon_api - INFO - Request 140406690615408 started: POST /users/login
+2025-05-23 00:43:24,731 - hackathon_api - INFO - Request 140406690615408 completed: 200 in 0.1883s
+2025-05-23 00:43:24,920 - hackathon_api - INFO - Request 140406691123936 started: POST /users/login
+2025-05-23 00:43:25,107 - hackathon_api - INFO - Request 140406691123936 completed: 200 in 0.1870s
+2025-05-23 00:43:25,112 - hackathon_api - INFO - Request 140406691131088 started: POST /teams/
+2025-05-23 00:43:25,119 - hackathon_api - INFO - Request 140406691131088 completed: 201 in 0.0077s
+2025-05-23 00:43:25,123 - hackathon_api - INFO - Request 140406691133104 started: POST /projects/
+2025-05-23 00:43:25,126 - hackathon_api - INFO - Request 140406691133104 completed: 422 in 0.0030s
+2025-05-23 00:43:25,144 - hackathon_api - INFO - Request 140406691198208 started: POST /users/register
+2025-05-23 00:43:25,337 - hackathon_api - INFO - Request 140406691198208 completed: 201 in 0.1922s
+2025-05-23 00:43:25,339 - hackathon_api - INFO - Request 140406691187648 started: POST /users/login
+2025-05-23 00:43:25,528 - hackathon_api - INFO - Request 140406691187648 completed: 200 in 0.1887s
+2025-05-23 00:43:25,715 - hackathon_api - INFO - Request 140406691194128 started: POST /users/login
+2025-05-23 00:43:25,903 - hackathon_api - INFO - Request 140406691194128 completed: 200 in 0.1880s
+2025-05-23 00:43:25,908 - hackathon_api - INFO - Request 140406691199792 started: POST /teams/
+2025-05-23 00:43:25,916 - hackathon_api - INFO - Request 140406691199792 completed: 201 in 0.0083s
+2025-05-23 00:43:25,920 - hackathon_api - INFO - Request 140406691189136 started: POST /projects/
+2025-05-23 00:43:25,923 - hackathon_api - INFO - Request 140406691189136 completed: 422 in 0.0034s
+2025-05-23 00:43:25,941 - hackathon_api - INFO - Request 140406691127344 started: POST /users/register

@@ -13,6 +13,7 @@ from app.models.submission import Submission as SubmissionModel, SubmissionConte
 from app.schemas.team import TeamCreate
 from app.schemas.project import ProjectCreate
 from app.schemas.submission import SubmissionCreate, SubmissionUpdate
+from app.models.hackathon import Hackathon
 
 # Fixtures for users (assuming these are in conftest.py or similar setup)
 # We'll use created_regular_user, created_second_regular_user, created_third_regular_user, created_admin_user
@@ -115,8 +116,13 @@ def test_team(
     db_session: Session,
     team_owner_user: UserModel,
     auth_headers_team_owner: dict,
+    test_hackathon: Hackathon,
 ) -> TeamModel:
-    team_data = TeamCreate(name="Submission Test Team", description="A team for submission testing")
+    team_data = TeamCreate(
+        name="Submission Test Team", 
+        description="A team for submission testing",
+        hackathon_id=test_hackathon.id
+    )
     response = client.post("/teams/", json=jsonable_encoder(team_data), headers=auth_headers_team_owner)
     assert response.status_code == status.HTTP_201_CREATED
     team_id_str = response.json()["id"]
@@ -128,15 +134,16 @@ def test_project(
     client: TestClient,
     db_session: Session,
     test_team: TeamModel,
-    team_owner_user: UserModel, # Owner of the team creates the project
+    team_owner_user: UserModel,
     auth_headers_team_owner: dict,
+    test_hackathon: Hackathon,
 ) -> ProjectModel:
     project_data = ProjectCreate(
         name="Submission Test Project",
         description="A project for submission testing",
         team_id=test_team.id,
+        hackathon_id=test_hackathon.id
     )
-    # Team owner creates the project
     response = client.post(
         "/projects/",
         json=jsonable_encoder(project_data),

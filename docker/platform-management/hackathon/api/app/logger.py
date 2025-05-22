@@ -5,7 +5,8 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 # Create logs directory if it doesn't exist
-logs_dir = Path("/app/logs")
+# Use local directory for tests, /app for production
+logs_dir = Path("logs") if os.getenv("TESTING") else Path("/app/logs")
 logs_dir.mkdir(exist_ok=True, parents=True)
 
 # Configure logger

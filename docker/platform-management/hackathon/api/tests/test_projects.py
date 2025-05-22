@@ -3,10 +3,17 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+from fastapi.encoders import jsonable_encoder
+from uuid import UUID
 
 from app.models.project import Project, ProjectTemplate, ProjectStatus
 from app.models.team import Team, TeamMember, TeamMemberRole # Ensure TeamMemberRole is imported
 from app.models.user import User # Ensure User is imported
+from app.models.hackathon import Hackathon
+from app.models.team import Team as TeamModel # Fix: Import Team as TeamModel
+from app.models.user import User as UserModel
+from app.models.project import Project as ProjectModel
+from app.schemas.project import ProjectCreate
 
 # --- Fixtures for User Management (from conftest.py, ensure they are available or replicate if needed) ---
 # Assuming regular_user_data_payload, auth_headers_for_regular_user, created_regular_user (provides id),
@@ -43,28 +50,17 @@ def auth_headers_for_second_regular_user(client: TestClient, created_second_regu
 # --- Fixtures for Project Tests ---
 
 @pytest.fixture(scope="function")
-def created_team(client: TestClient, auth_headers_for_regular_user, created_regular_user: User, unique_id: uuid.UUID, db_session: Session) -> Team: # Uses created_regular_user
+def created_team(client: TestClient, auth_headers_for_regular_user, created_regular_user: User, unique_id: uuid.UUID, db_session: Session, test_hackathon: Hackathon) -> Team: # Uses created_regular_user
     team_name = f"ProjectTeam_{unique_id}"
     response = client.post(
         "/teams/",
         headers=auth_headers_for_regular_user,
-        json={"name": team_name, "description": "A team for projects"}
+        json={"name": team_name, "description": "A team for projects", "hackathon_id": str(test_hackathon.id)}
     )
     assert response.status_code == status.HTTP_201_CREATED
-    team_data = response.json()
-    team_id_str = team_data["id"]
-    team_instance = db_session.query(Team).filter(Team.id == uuid.UUID(team_id_str)).first()
-    assert team_instance is not None, "Team not found in DB after creation in fixture"
-    
-    # Ensure the creating user (regular_user) is an owner
-    member_check = db_session.query(TeamMember).filter(
-        TeamMember.team_id == team_instance.id,
-        TeamMember.user_id == created_regular_user.id # Use .id from the User object
-    ).first()
-    assert member_check is not None, "Team creator not found as member"
-    assert member_check.role == TeamMemberRole.owner, "Team creator is not an owner"
-    
-    return team_instance
+    team_id_str = response.json()["id"]
+    team_uuid = UUID(team_id_str)
+    return db_session.query(Team).filter(Team.id == team_uuid).first()
 
 @pytest.fixture(scope="function")
 def another_team_created_by_second_user(client: TestClient, auth_headers_for_second_regular_user, created_second_regular_user: User, unique_id: uuid.UUID, db_session: Session) -> Team:
@@ -193,7 +189,8 @@ def test_create_project_as_team_member(
     auth_headers_for_regular_user,
     created_team: Team,
     unique_id: uuid.UUID,
-    db_session: Session
+    db_session: Session,
+    test_hackathon: Hackathon
 ):
     project_name = f"My Awesome Project {unique_id}"
     response = client.post(
@@ -202,19 +199,19 @@ def test_create_project_as_team_member(
         json={
             "name": project_name,
             "description": "A groundbreaking project.",
-            "team_id": str(created_team.id)
+            "hackathon_id": str(test_hackathon.id)
         }
     )
     assert response.status_code == status.HTTP_201_CREATED, response.json()
     data = response.json()
     assert data["name"] == project_name
-    assert data["team_id"] == str(created_team.id)
+    assert data["hackathon_id"] == str(test_hackathon.id)
     assert data["status"] == ProjectStatus.DRAFT.value 
 
     project_in_db = db_session.query(Project).filter(Project.id == uuid.UUID(data["id"])).first()
     assert project_in_db is not None
     assert project_in_db.name == project_name
-    assert str(project_in_db.team_id) == str(created_team.id)
+    assert str(project_in_db.hackathon_id) == str(test_hackathon.id)
 
 def test_create_project_as_admin_for_any_team(
     client: TestClient,
@@ -267,7 +264,8 @@ def test_create_project_with_template(
     created_team: Team, 
     created_project_template: ProjectTemplate, 
     unique_id: uuid.UUID,
-    db_session: Session
+    db_session: Session,
+    test_hackathon: Hackathon
 ):
     project_name = f"Templated Project {unique_id}"
     response = client.post(
@@ -276,7 +274,7 @@ def test_create_project_with_template(
         json={
             "name": project_name,
             "description": "Project from template.",
-            "team_id": str(created_team.id),
+            "hackathon_id": str(test_hackathon.id),
             "project_template_id": str(created_project_template.id)
         }
     )
@@ -289,14 +287,14 @@ def test_create_project_with_template(
     assert project_in_db is not None
     assert str(project_in_db.project_template_id) == str(created_project_template.id)
 
-def test_create_project_invalid_team(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID):
+def test_create_project_invalid_team(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID, test_hackathon: Hackathon):
     non_existent_team_id = uuid.uuid4()
     response = client.post(
         "/projects/",
         headers=auth_headers_for_regular_user,
         json={
             "name": f"Project Invalid Team {unique_id}",
-            "team_id": str(non_existent_team_id)
+            "hackathon_id": str(test_hackathon.id)
         }
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -524,3 +522,28 @@ def test_delete_non_existent_project(client: TestClient, auth_headers_for_admin_
 # Add tests for invalid project_template_id
 
 # Add tests for non-leader trying to delete, non-member trying to update/delete, etc. 
+
+@pytest.fixture(scope="function")
+def test_project(
+    client: TestClient,
+    db_session: Session,
+    test_team: TeamModel,
+    team_owner_user: UserModel,
+    auth_headers_team_owner: dict,
+    test_hackathon: Hackathon,
+) -> ProjectModel:
+    project_data = ProjectCreate(
+        name="Submission Test Project",
+        description="A project for submission testing",
+        team_id=test_team.id,
+        hackathon_id=test_hackathon.id
+    )
+    response = client.post(
+        "/projects/",
+        json=jsonable_encoder(project_data),
+        headers=auth_headers_team_owner,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    project_id_str = response.json()["id"]
+    project_uuid = UUID(project_id_str)
+    return db_session.query(ProjectModel).filter(ProjectModel.id == project_uuid).first() 

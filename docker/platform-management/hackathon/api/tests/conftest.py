@@ -2,6 +2,10 @@ import os
 import pytest
 import uuid
 from typing import Generator, Dict, Any, Optional
+from datetime import datetime, timedelta
+
+# Set TESTING environment variable
+os.environ["TESTING"] = "1"
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text, StaticPool, event
@@ -13,6 +17,8 @@ from app.main import app
 from app.database import Base, get_db
 from app.models.user import User
 from app.auth import get_password_hash
+from app.models.hackathon import Hackathon
+from app.schemas.hackathon import HackathonStatus, HackathonMode
 
 # --- Test Database Setup (SQLite in-memory for speed) ---
 # For full compatibility with PostgreSQL features (like schemas), a test PostgreSQL DB would be better.
@@ -155,4 +161,26 @@ def auth_headers_for_judge_user(client: TestClient, judge_user_data: Dict[str, A
 # If a generic authenticated user is needed by some tests without specific role focus,
 # it can use the regular_user_data and auth_headers_for_regular_user.
 # Example test: def test_some_feature(client, auth_headers_for_regular_user):
-# pass 
+# pass
+
+@pytest.fixture(scope="function")
+def test_hackathon(db_session: Session, unique_id: uuid.UUID) -> Hackathon:
+    """Creates a test hackathon for testing."""
+    hackathon = Hackathon(
+        id=unique_id,
+        name=f"Test Hackathon {unique_id}",
+        description="A test hackathon for running tests",
+        start_date=datetime.now(),
+        end_date=datetime.now() + timedelta(days=7),
+        status=HackathonStatus.ACTIVE,
+        mode=HackathonMode.TEAM_RECOMMENDED,
+        max_team_size=4,
+        min_team_size=1,
+        is_public=True,
+        allow_individuals=True,
+        allow_multiple_projects_per_team=True
+    )
+    db_session.add(hackathon)
+    db_session.commit()
+    db_session.refresh(hackathon)
+    return hackathon 

@@ -3,10 +3,13 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+from fastapi.encoders import jsonable_encoder
+from uuid import UUID
 
 from app.models.team import Team, TeamMember # SQLAlchemy models
 from app.schemas.team import TeamMemberRole # Enum for DB checks/assertions if needed
 from app.models.user import User as UserModel # For user creation in fixtures
+from app.models.hackathon import Hackathon # Added for Hackathon model
 
 # --- Team Creation Tests ---
 def test_create_team(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID, db_session: Session):
@@ -351,3 +354,22 @@ def test_remove_non_existent_member(client: TestClient, created_team_id: str, au
     response = client.delete(f"/teams/{created_team_id}/members/{non_existent_member_id}", headers=auth_headers_for_regular_user)
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "Member to remove not found in this team." 
+
+@pytest.fixture(scope="function")
+def test_team(
+    client: TestClient,
+    db_session: Session,
+    team_owner_user: UserModel,
+    auth_headers_team_owner: dict,
+    test_hackathon: Hackathon,
+) -> Team:
+    team_data = TeamCreate(
+        name="Submission Test Team", 
+        description="A team for submission testing",
+        hackathon_id=test_hackathon.id
+    )
+    response = client.post("/teams/", json=jsonable_encoder(team_data), headers=auth_headers_team_owner)
+    assert response.status_code == status.HTTP_201_CREATED
+    team_id_str = response.json()["id"]
+    team_uuid = UUID(team_id_str)
+    return db_session.query(Team).filter(Team.id == team_uuid).first() 

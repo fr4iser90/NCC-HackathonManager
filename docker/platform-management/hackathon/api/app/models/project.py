@@ -33,19 +33,18 @@ class Project(Base):
     __table_args__ = {"schema": "projects"}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    # team_id is removed, project is now linked via HackathonRegistration
     project_template_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("projects.templates.id"), nullable=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     status: Mapped[ProjectStatus] = mapped_column(SQLEnum(ProjectStatus, name="project_status_enum", create_type=False), nullable=False, default=ProjectStatus.DRAFT)
     repository_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    # hackathon_id is removed, project is now linked via HackathonRegistration
+    hackathon_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hackathons.hackathons.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
-    # team relationship is removed
     template = relationship("ProjectTemplate", foreign_keys=[project_template_id], back_populates="projects")
     submissions = relationship("Submission", back_populates="project", cascade="all, delete-orphan")
+    hackathon = relationship("Hackathon", back_populates="projects")
 
     # New relationship to HackathonRegistration (one-to-one as project_id is unique in HackathonRegistration)
     registration: Mapped[Optional["HackathonRegistration"]] = relationship(

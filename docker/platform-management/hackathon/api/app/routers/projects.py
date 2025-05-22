@@ -73,23 +73,11 @@ async def create_project(
     """
     Create a new project. User must be a member of the specified team.
     """
-    # Verify team exists
-    team = db.query(Team).filter(Team.id == project_in.team_id).first()
-    if not team:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+    # Verify hackathon exists
+    hackathon = db.query(Hackathon).filter(Hackathon.id == project_in.hackathon_id).first()
+    if not hackathon:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hackathon not found")
 
-    # Verify current user is a member of the team (or admin)
-    # Re-using logic of get_team_member_or_admin manually for this payload-dependent check:
-    is_admin = current_user.role == "admin"
-    membership = None
-    if not is_admin:
-        membership = db.query(TeamMember).filter(
-            TeamMember.team_id == project_in.team_id,
-            TeamMember.user_id == current_user.id
-        ).first()
-        if not membership:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not a member of the specified team and not an admin.")
-    
     # Verify project template exists if provided
     db_template = None
     if project_in.project_template_id:

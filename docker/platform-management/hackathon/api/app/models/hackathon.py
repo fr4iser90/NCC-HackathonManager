@@ -61,6 +61,7 @@ class Hackathon(Base):
         cascade="all, delete-orphan",
         lazy="selectin"
     )
+    projects = relationship("Project", back_populates="hackathon")
 
 # Pydantic Schemas (HackathonBase, HackathonCreate, HackathonUpdate, HackathonRead)
 # and HackathonStatus enum have been moved to app.schemas.hackathon.py
