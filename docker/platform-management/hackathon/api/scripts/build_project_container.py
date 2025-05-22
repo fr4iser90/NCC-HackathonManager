@@ -14,9 +14,9 @@ from app.logger import get_logger
 logger = get_logger("build_project_container")
 
 TEMPLATES = {
-    "nodejs": "../../templates/web-nodejs/Dockerfile",
-    "python": "../../templates/web-python/Dockerfile",
-    "react-native": "../../templates/mobile-react-native/Dockerfile",
+    "nodejs": "templates/web-nodejs/Dockerfile",
+    "python": "templates/web-python/Dockerfile",
+    "react-native": "templates/mobile-react-native/Dockerfile",
 }
 
 STACK_HINTS = {
