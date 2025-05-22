@@ -57,14 +57,17 @@ CREATE TABLE hackathons.hackathons (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Teams schema
+-- Teams schema (All teams are hackathon-specific)
 CREATE TABLE teams.teams (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL UNIQUE,
+    hackathon_id UUID REFERENCES hackathons.hackathons(id) ON DELETE CASCADE NOT NULL,
+    name VARCHAR(255) NOT NULL,
     description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    is_open BOOLEAN NOT NULL DEFAULT TRUE
+    is_open BOOLEAN NOT NULL DEFAULT TRUE,
+    status VARCHAR(50) NOT NULL DEFAULT 'active',
+    UNIQUE(hackathon_id, name)
 );
 
 CREATE TABLE teams.members (
@@ -73,6 +76,43 @@ CREATE TABLE teams.members (
     role VARCHAR(50) NOT NULL DEFAULT 'member',
     joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (team_id, user_id)
+);
+
+CREATE TABLE teams.team_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
+    hackathon_id UUID REFERENCES hackathons.hackathons(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    status VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    archived_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE teams.member_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    team_history_id UUID REFERENCES teams.team_history(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    role VARCHAR(50) NOT NULL,
+    joined_at TIMESTAMPTZ NOT NULL,
+    left_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE teams.join_requests (
+    team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (team_id, user_id)
+);
+
+CREATE TABLE teams.invites (
+    team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
+    email VARCHAR(255) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    token VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (team_id, email)
 );
 
 -- Projects schema
@@ -108,9 +148,6 @@ CREATE TABLE projects.submissions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_submissions_project_id ON projects.submissions(project_id);
-CREATE INDEX idx_submissions_user_id ON projects.submissions(user_id);
-
 -- Judging schema
 CREATE TABLE judging.criteria (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -134,13 +171,6 @@ CREATE TABLE judging.scores (
     UNIQUE (project_id, criteria_id, judge_id)
 );
 
--- Create indexes
-CREATE INDEX idx_users_email ON auth.users(email);
-CREATE INDEX idx_sessions_token ON auth.sessions(token);
-CREATE INDEX idx_teams_name ON teams.teams(name);
-CREATE INDEX idx_scores_project ON judging.scores(project_id);
-CREATE INDEX idx_hackathons_name ON hackathons.hackathons(name);
-
 CREATE TABLE hackathons.hackathon_registrations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     hackathon_id UUID REFERENCES hackathons.hackathons(id) ON DELETE CASCADE NOT NULL,
@@ -148,18 +178,30 @@ CREATE TABLE hackathons.hackathon_registrations (
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
     registered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    status VARCHAR(50) NOT NULL DEFAULT 'registered', -- e.g., registered, withdrawn
+    status VARCHAR(50) NOT NULL DEFAULT 'registered',
     CONSTRAINT chk_participant_type CHECK (
         (user_id IS NOT NULL AND team_id IS NULL) OR
         (user_id IS NULL AND team_id IS NOT NULL)
     )
 );
 
+-- Create indexes
+CREATE INDEX idx_users_email ON auth.users(email);
+CREATE INDEX idx_sessions_token ON auth.sessions(token);
+CREATE INDEX idx_teams_hackathon_id ON teams.teams(hackathon_id);
+CREATE INDEX idx_teams_name ON teams.teams(name);
+CREATE INDEX idx_scores_project ON judging.scores(project_id);
+CREATE INDEX idx_hackathons_name ON hackathons.hackathons(name);
+CREATE INDEX idx_team_history_hackathon_id ON teams.team_history(hackathon_id);
+CREATE INDEX idx_team_history_team_id ON teams.team_history(team_id);
+CREATE INDEX idx_member_history_team_history_id ON teams.member_history(team_history_id);
+CREATE INDEX idx_member_history_user_id ON teams.member_history(user_id);
+CREATE INDEX idx_join_requests_team ON teams.join_requests(team_id);
+CREATE INDEX idx_invites_team ON teams.invites(team_id);
 CREATE INDEX idx_hackathon_registrations_hackathon_id ON hackathons.hackathon_registrations(hackathon_id);
 CREATE INDEX idx_hackathon_registrations_project_id ON hackathons.hackathon_registrations(project_id);
 CREATE INDEX idx_hackathon_registrations_user_id ON hackathons.hackathon_registrations(user_id);
 CREATE INDEX idx_hackathon_registrations_team_id ON hackathons.hackathon_registrations(team_id);
-
 
 -- Create functions
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -195,24 +237,3 @@ CREATE TRIGGER update_hackathons_updated_at
     BEFORE UPDATE ON hackathons.hackathons
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at();
-
--- New tables
-CREATE TABLE teams.join_requests (
-    team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (team_id, user_id)
-);
-
-CREATE TABLE teams.invites (
-    team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
-    email VARCHAR(255) NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending',
-    token VARCHAR(255) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (team_id, email)
-);
-
-CREATE INDEX idx_join_requests_team ON teams.join_requests(team_id);
-CREATE INDEX idx_invites_team ON teams.invites(team_id);

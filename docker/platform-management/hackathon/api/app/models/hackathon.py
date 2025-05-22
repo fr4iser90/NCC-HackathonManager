@@ -12,6 +12,7 @@ from app.schemas.hackathon import HackathonStatus, HackathonMode # Import Hackat
 # from .team import Team # This will cause circular import if Team also imports Hackathon.
 if TYPE_CHECKING:
     from .hackathon_registration import HackathonRegistration # Import for relationship
+    from .team import Team
 
 class Hackathon(Base):
     __tablename__ = "hackathons"
@@ -52,6 +53,11 @@ class Hackathon(Base):
     # Relationship to the new HackathonRegistration table
     registrations: Mapped[List["HackathonRegistration"]] = relationship(
         back_populates="hackathon", 
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )
+    teams: Mapped[List["Team"]] = relationship(
+        back_populates="hackathon",
         cascade="all, delete-orphan",
         lazy="selectin"
     )

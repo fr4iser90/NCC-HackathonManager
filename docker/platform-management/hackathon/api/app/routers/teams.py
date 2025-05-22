@@ -8,8 +8,9 @@ import logging
 
 from app.database import get_db
 from app.models.user import User
-from app.models.team import Team, TeamMember, JoinRequest, JoinRequestStatus, TeamInvite, TeamInviteStatus # SQLAlchemy models
-from app.schemas.team import TeamCreate, TeamRead, TeamUpdate, TeamMemberRole, JoinRequestRead, TeamInviteRead # Pydantic schemas
+from app.models.team import Team, TeamMember, JoinRequest, JoinRequestStatus, TeamInvite, TeamInviteStatus, TeamStatus
+from app.models.hackathon import Hackathon
+from app.schemas.team import TeamCreate, TeamRead, TeamUpdate, TeamMemberRole, JoinRequestRead, TeamInviteRead
 from app.auth import (
     get_current_user, 
     get_team_owner_or_admin,
@@ -32,10 +33,23 @@ def list_my_join_requests(db: Session = Depends(get_db), current_user: User = De
 @router.post("/", response_model=TeamRead, status_code=status.HTTP_201_CREATED)
 def create_team(team_in: TeamCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
-    Create a new team. The creator becomes the team leader.
+    Create a new team for a specific hackathon. The creator becomes the team leader.
     """
+    # Verify hackathon exists and is active
+    hackathon = db.query(Hackathon).filter(Hackathon.id == team_in.hackathon_id).first()
+    if not hackathon:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hackathon not found")
+    if hackathon.status != "active":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot create team for inactive hackathon")
+
     try:
-        db_team = Team(name=team_in.name, description=team_in.description, is_open=team_in.is_open)
+        db_team = Team(
+            name=team_in.name,
+            description=team_in.description,
+            is_open=team_in.is_open,
+            hackathon_id=team_in.hackathon_id,
+            status=TeamStatus.active
+        )
         db.add(db_team)
         db.flush()  # Flush to get the db_team.id
 
@@ -48,19 +62,22 @@ def create_team(team_in: TeamCreate, db: Session = Depends(get_db), current_user
         db.commit()
         db.refresh(db_team)
         return db_team
-    except IntegrityError: # Catches unique constraint violation for team name
+    except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Team name already exists."
+            detail="Team name already exists for this hackathon."
         )
 
 @router.get("/", response_model=List[TeamRead], dependencies=[Depends(get_current_user)])
-def list_teams(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def list_teams(hackathon_id: uuid.UUID, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """
-    List all teams.
+    List all teams for a specific hackathon.
     """
-    teams = db.query(Team).offset(skip).limit(limit).all()
+    teams = db.query(Team).filter(
+        Team.hackathon_id == hackathon_id,
+        Team.status == TeamStatus.active
+    ).offset(skip).limit(limit).all()
     return teams
 
 @router.get("/{team_id}", response_model=TeamRead)
@@ -88,6 +105,11 @@ def update_team(
     if not db_team: # Should be caught by dependency, but good practice
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
 
+    # Verify hackathon is still active
+    hackathon = db.query(Hackathon).filter(Hackathon.id == db_team.hackathon_id).first()
+    if not hackathon or hackathon.status != "active":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot update team for inactive hackathon")
+
     update_data = team_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_team, field, value)
@@ -101,7 +123,7 @@ def update_team(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Team name already exists or other integrity violation."
+            detail="Team name already exists for this hackathon or other integrity violation."
         )
 
 @router.delete("/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -115,8 +137,9 @@ def delete_team(
     if not db_team: # Should be caught by dependency, but good practice
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
     
-    # Cascade delete for TeamMembers is handled by SQLAlchemy relationship config
-    db.delete(db_team)
+    # Instead of deleting, mark as disbanded
+    db_team.status = TeamStatus.disbanded
+    db.add(db_team)
     db.commit()
     return
 
@@ -128,6 +151,11 @@ def join_team(team_id: uuid.UUID, db: Session = Depends(get_db), current_user: U
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+    
+    # Verify hackathon is active
+    hackathon = db.query(Hackathon).filter(Hackathon.id == team.hackathon_id).first()
+    if not hackathon or hackathon.status != "active":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot join team for inactive hackathon")
 
     existing_member = db.query(TeamMember).filter(
         TeamMember.team_id == team_id, TeamMember.user_id == current_user.id
@@ -154,22 +182,22 @@ def leave_team(
 ):
     """
     Allow the current user to leave a team they are a member of.
-    If the owner leaves, and is the sole owner, specific logic in ensure_is_team_member might apply
-    or further logic here could decide on team deletion/owner reassignment.
+    If the owner leaves, and is the sole owner, the team is marked as disbanded.
     """
-    # Check if the user leaving is the sole owner.
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+
+    # Check if the user leaving is the sole owner
     if membership_to_delete.role == TeamMemberRole.owner:
         owner_count = db.query(TeamMember).filter(
             TeamMember.team_id == team_id,
             TeamMember.role == TeamMemberRole.owner
         ).count()
         if owner_count <= 1:
-            # This could be a place to enforce that a team must have an owner,
-            # or trigger team deletion if the last owner leaves.
-            # For now, we allow it, but this can be a point of future enhancement.
-            # Consider raising an error or promoting another member if team shouldn't be ownerless.
-            # raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot leave team as the sole owner. Delete the team or transfer ownership.")
-            pass # Allowing sole owner to leave for now. Team becomes ownerless.
+            # Mark team as disbanded if last owner leaves
+            team.status = TeamStatus.disbanded
+            db.add(team)
 
     db.delete(membership_to_delete)
     db.commit()
@@ -187,20 +215,38 @@ def remove_team_member(
     """
     Remove a member from a team. 
     Allowed if the current user is the team owner, an admin, or the user themselves.
-    Prevents owner from removing themselves if they are the sole owner (use /leave or delete team).
+    If removing the last owner, the team is marked as disbanded.
     """
-    # The dependency already performed all necessary auth checks and found the membership_to_delete.
-    # Special check from dependency: if owner tries to remove self as last owner, it would have raised an error.
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+
+    # Check if removing the last owner
+    if membership_to_delete.role == TeamMemberRole.owner:
+        owner_count = db.query(TeamMember).filter(
+            TeamMember.team_id == team_id,
+            TeamMember.role == TeamMemberRole.owner
+        ).count()
+        if owner_count <= 1:
+            # Mark team as disbanded if removing last owner
+            team.status = TeamStatus.disbanded
+            db.add(team)
     
     db.delete(membership_to_delete)
     db.commit()
-    return 
+    return
 
 @router.post("/{team_id}/request-join", status_code=201)
 def request_join(team_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Verify hackathon is active
+    hackathon = db.query(Hackathon).filter(Hackathon.id == team.hackathon_id).first()
+    if not hackathon or hackathon.status != "active":
+        raise HTTPException(status_code=400, detail="Cannot request to join team for inactive hackathon")
+
     if not team.is_open:
         raise HTTPException(status_code=400, detail="Team is closed. Only invited users can join.")
     existing = db.query(JoinRequest).filter_by(team_id=team_id, user_id=current_user.id).first()
@@ -213,10 +259,15 @@ def request_join(team_id: uuid.UUID, db: Session = Depends(get_db), current_user
 
 @router.get("/{team_id}/join-requests", response_model=List[JoinRequestRead])
 def list_join_requests(team_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Only owner/admin can see
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Verify hackathon is active
+    hackathon = db.query(Hackathon).filter(Hackathon.id == team.hackathon_id).first()
+    if not hackathon or hackathon.status != "active":
+        raise HTTPException(status_code=400, detail="Cannot view join requests for inactive hackathon")
+
     owner = db.query(TeamMember).filter_by(team_id=team_id, user_id=current_user.id, role=TeamMemberRole.owner).first()
     if not owner and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -227,6 +278,12 @@ def accept_join_request(team_id: uuid.UUID, user_id: uuid.UUID, db: Session = De
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Verify hackathon is active
+    hackathon = db.query(Hackathon).filter(Hackathon.id == team.hackathon_id).first()
+    if not hackathon or hackathon.status != "active":
+        raise HTTPException(status_code=400, detail="Cannot accept join request for inactive hackathon")
+
     owner = db.query(TeamMember).filter_by(team_id=team_id, user_id=current_user.id, role=TeamMemberRole.owner).first()
     if not owner and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -243,6 +300,12 @@ def reject_join_request(team_id: uuid.UUID, user_id: uuid.UUID, db: Session = De
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Verify hackathon is active
+    hackathon = db.query(Hackathon).filter(Hackathon.id == team.hackathon_id).first()
+    if not hackathon or hackathon.status != "active":
+        raise HTTPException(status_code=400, detail="Cannot reject join request for inactive hackathon")
+
     owner = db.query(TeamMember).filter_by(team_id=team_id, user_id=current_user.id, role=TeamMemberRole.owner).first()
     if not owner and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -258,20 +321,35 @@ def invite_user(team_id: uuid.UUID, email: str, db: Session = Depends(get_db), c
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Verify hackathon is active
+    hackathon = db.query(Hackathon).filter(Hackathon.id == team.hackathon_id).first()
+    if not hackathon or hackathon.status != "active":
+        raise HTTPException(status_code=400, detail="Cannot invite users for inactive hackathon")
+
     owner = db.query(TeamMember).filter_by(team_id=team_id, user_id=current_user.id, role=TeamMemberRole.owner).first()
     if not owner and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
+    existing = db.query(TeamInvite).filter_by(team_id=team_id, email=email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Invite already exists")
     token = secrets.token_urlsafe(32)
     invite = TeamInvite(team_id=team_id, email=email, token=token)
     db.add(invite)
     db.commit()
-    return {"detail": "Invite sent.", "token": token}
+    return {"detail": "Invite sent."}
 
 @router.get("/{team_id}/invites", response_model=List[TeamInviteRead])
 def list_invites(team_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Verify hackathon is active
+    hackathon = db.query(Hackathon).filter(Hackathon.id == team.hackathon_id).first()
+    if not hackathon or hackathon.status != "active":
+        raise HTTPException(status_code=400, detail="Cannot view invites for inactive hackathon")
+
     owner = db.query(TeamMember).filter_by(team_id=team_id, user_id=current_user.id, role=TeamMemberRole.owner).first()
     if not owner and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -279,39 +357,70 @@ def list_invites(team_id: uuid.UUID, db: Session = Depends(get_db), current_user
 
 @router.post("/{team_id}/invites/{email}/accept", status_code=200)
 def accept_invite(team_id: uuid.UUID, email: str, token: str, db: Session = Depends(get_db)):
-    invite = db.query(TeamInvite).filter_by(team_id=team_id, email=email, status=TeamInviteStatus.pending).first()
-    if not invite or invite.token != token:
-        raise HTTPException(status_code=404, detail="Invite not found or invalid token")
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Verify hackathon is active
+    hackathon = db.query(Hackathon).filter(Hackathon.id == team.hackathon_id).first()
+    if not hackathon or hackathon.status != "active":
+        raise HTTPException(status_code=400, detail="Cannot accept invite for inactive hackathon")
+
+    invite = db.query(TeamInvite).filter_by(team_id=team_id, email=email, token=token, status=TeamInviteStatus.pending).first()
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invite not found")
     invite.status = TeamInviteStatus.accepted
-    # Find user by email
-    user = db.query(User).filter_by(email=email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    db.add(TeamMember(team_id=team_id, user_id=user.id, role=TeamMemberRole.member))
     db.commit()
     return {"detail": "Invite accepted."}
 
 @router.post("/{team_id}/invites/{email}/reject", status_code=200)
 def reject_invite(team_id: uuid.UUID, email: str, token: str, db: Session = Depends(get_db)):
-    invite = db.query(TeamInvite).filter_by(team_id=team_id, email=email, status=TeamInviteStatus.pending).first()
-    if not invite or invite.token != token:
-        raise HTTPException(status_code=404, detail="Invite not found or invalid token")
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Verify hackathon is active
+    hackathon = db.query(Hackathon).filter(Hackathon.id == team.hackathon_id).first()
+    if not hackathon or hackathon.status != "active":
+        raise HTTPException(status_code=400, detail="Cannot reject invite for inactive hackathon")
+
+    invite = db.query(TeamInvite).filter_by(team_id=team_id, email=email, token=token, status=TeamInviteStatus.pending).first()
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invite not found")
     invite.status = TeamInviteStatus.rejected
     db.commit()
     return {"detail": "Invite rejected."}
 
 @router.delete("/{team_id}/join-requests/me", status_code=204)
 def revoke_own_join_request(team_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    req = db.query(JoinRequest).filter_by(team_id=team_id, user_id=current_user.id).first()
-    if not req:
-        raise HTTPException(status_code=404, detail="No join request found for this team and user.")
-    db.delete(req)
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Verify hackathon is active
+    hackathon = db.query(Hackathon).filter(Hackathon.id == team.hackathon_id).first()
+    if not hackathon or hackathon.status != "active":
+        raise HTTPException(status_code=400, detail="Cannot revoke join request for inactive hackathon")
+
+    join_req = db.query(JoinRequest).filter_by(team_id=team_id, user_id=current_user.id, status=JoinRequestStatus.pending).first()
+    if not join_req:
+        raise HTTPException(status_code=404, detail="Join request not found")
+    db.delete(join_req)
     db.commit()
     return
 
 @router.get("/{team_id}/join-requests/me", response_model=JoinRequestRead)
 def get_own_join_request(team_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    req = db.query(JoinRequest).filter_by(team_id=team_id, user_id=current_user.id, status=JoinRequestStatus.pending).first()
-    if not req:
-        raise HTTPException(status_code=404, detail="No pending join request found.")
-    return req 
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Verify hackathon is active
+    hackathon = db.query(Hackathon).filter(Hackathon.id == team.hackathon_id).first()
+    if not hackathon or hackathon.status != "active":
+        raise HTTPException(status_code=400, detail="Cannot view join request for inactive hackathon")
+
+    join_req = db.query(JoinRequest).filter_by(team_id=team_id, user_id=current_user.id).first()
+    if not join_req:
+        raise HTTPException(status_code=404, detail="Join request not found")
+    return join_req 

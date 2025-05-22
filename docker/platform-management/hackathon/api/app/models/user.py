@@ -33,4 +33,12 @@ class User(Base):
         lazy="selectin"
     )
 
+    # Relationship to TeamMember
+    team_memberships: Mapped[List["TeamMember"]] = relationship(
+        "TeamMember",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )
+
 # Pydantic Schemas (UserCreate, UserRead, UserUpdate) have been moved to app.schemas.user.py

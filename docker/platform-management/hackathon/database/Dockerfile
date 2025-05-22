@@ -6,9 +6,10 @@ COPY init.sql /docker-entrypoint-initdb.d/
 # Set locale
 ENV LANG en_US.utf8
 
-# Add non-root user (Postgres image already uses 'postgres' user by default)
+# PostgreSQL image requires the postgres user for system operations
 USER postgres
 
-# Add HEALTHCHECK
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD pg_isready -U postgres || exit 1
+# Add HEALTHCHECK using environment variables
+HEALTHCHECK --interval=5s --timeout=5s --start-period=10s --retries=5 \
+  CMD pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1
+

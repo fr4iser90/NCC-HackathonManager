@@ -1,7 +1,7 @@
 # models/team.py
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional # TYPE_CHECKING removed
+from typing import List, Optional
 import enum
 
 from sqlalchemy import Column, String, DateTime, ForeignKey, Enum as SQLEnum
@@ -10,32 +10,32 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from app.database import Base
 from app.schemas.team import TeamMemberRole
-# We will use string literals for forward references to avoid direct imports for relationships.
+
+class TeamStatus(str, enum.Enum):
+    active = "active"
+    archived = "archived"
+    disbanded = "disbanded"
 
 class Team(Base):
     __tablename__ = "teams"
     __table_args__ = {"schema": "teams"}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    hackathon_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hackathons.hackathons.id", ondelete="CASCADE"), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     is_open: Mapped[bool] = mapped_column(default=True, nullable=False)
+    status: Mapped[TeamStatus] = mapped_column(SQLEnum(TeamStatus), default=TeamStatus.active, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
+    # Relationships
+    hackathon = relationship("Hackathon", back_populates="teams")
     members = relationship("TeamMember", back_populates="team", cascade="all, delete-orphan", lazy="selectin")
     join_requests = relationship("JoinRequest", back_populates="team", cascade="all, delete-orphan", lazy="selectin")
     invites = relationship("TeamInvite", back_populates="team", cascade="all, delete-orphan", lazy="selectin")
-
-    # New relationship to HackathonRegistration using string literal for type hint
-    hackathon_registrations: Mapped[List["HackathonRegistration"]] = relationship(
-        "HackathonRegistration", # String literal for the class name
-        back_populates="team", 
-        cascade="all, delete-orphan",
-        lazy="selectin"
-    )
-
-# The _TeamRelationships helper class and the old participated_hackathons relationship are no longer needed.
+    history = relationship("TeamHistory", back_populates="team", cascade="all, delete-orphan", lazy="selectin")
+    hackathon_registrations = relationship("HackathonRegistration", back_populates="team", cascade="all, delete-orphan", lazy="selectin")
 
 class TeamMember(Base):
     __tablename__ = "members"
@@ -43,11 +43,42 @@ class TeamMember(Base):
 
     team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.teams.id"), primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("auth.users.id"), primary_key=True)
-    role: Mapped[TeamMemberRole] = mapped_column(SQLEnum(TeamMemberRole, name="team_member_role_enum", create_type=False), nullable=False, default=TeamMemberRole.member)
+    role: Mapped[TeamMemberRole] = mapped_column(SQLEnum(TeamMemberRole), default=TeamMemberRole.member, nullable=False)
     joined_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     team = relationship("Team", back_populates="members")
-    user = relationship("User", lazy="selectin") # Added lazy="selectin" for consistency
+    user = relationship("User", back_populates="team_memberships")
+
+class TeamHistory(Base):
+    __tablename__ = "team_history"
+    __table_args__ = {"schema": "teams"}
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.teams.id", ondelete="CASCADE"))
+    hackathon_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hackathons.hackathons.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    status: Mapped[TeamStatus] = mapped_column(SQLEnum(TeamStatus), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    archived_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    team = relationship("Team", back_populates="history")
+    hackathon = relationship("Hackathon")
+    member_history = relationship("MemberHistory", back_populates="team_history", cascade="all, delete-orphan")
+
+class MemberHistory(Base):
+    __tablename__ = "member_history"
+    __table_args__ = {"schema": "teams"}
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    team_history_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.team_history.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("auth.users.id", ondelete="CASCADE"))
+    role: Mapped[TeamMemberRole] = mapped_column(SQLEnum(TeamMemberRole), nullable=False)
+    joined_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    left_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    team_history = relationship("TeamHistory", back_populates="member_history")
+    user = relationship("User")
 
 class JoinRequestStatus(str, enum.Enum):
     pending = "pending"
@@ -60,16 +91,17 @@ class JoinRequest(Base):
 
     team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.teams.id"), primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("auth.users.id"), primary_key=True)
-    status: Mapped[JoinRequestStatus] = mapped_column(SQLEnum(JoinRequestStatus, name="join_request_status_enum", create_type=False), default=JoinRequestStatus.pending, nullable=False)
+    status: Mapped[JoinRequestStatus] = mapped_column(SQLEnum(JoinRequestStatus), default=JoinRequestStatus.pending, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     team = relationship("Team", back_populates="join_requests")
-    user = relationship("User", lazy="selectin") # Added lazy="selectin"
+    user = relationship("User")
 
 class TeamInviteStatus(str, enum.Enum):
     pending = "pending"
     accepted = "accepted"
     rejected = "rejected"
+    expired = "expired"
 
 class TeamInvite(Base):
     __tablename__ = "invites"
@@ -77,7 +109,7 @@ class TeamInvite(Base):
 
     team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.teams.id"), primary_key=True)
     email: Mapped[str] = mapped_column(String(255), primary_key=True)
-    status: Mapped[TeamInviteStatus] = mapped_column(SQLEnum(TeamInviteStatus, name="team_invite_status_enum", create_type=False), default=TeamInviteStatus.pending, nullable=False)
+    status: Mapped[TeamInviteStatus] = mapped_column(SQLEnum(TeamInviteStatus), default=TeamInviteStatus.pending, nullable=False)
     token: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 

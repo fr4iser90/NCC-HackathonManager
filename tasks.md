@@ -49,16 +49,14 @@ This document tracks planned features, improvements, and tasks for the Hackathon
 ## Phase 2: Team System Refactoring
 
 -   **Team System Refactoring**
-    -   [TODO] Database Schema Updates:
-        -   [TODO] Remove permanent team tables
-        -   [TODO] Create hackathon-specific team tables
-        -   [TODO] Update user-team relationships
-        -   [TODO] Create team history tables
-    -   [TODO] API Endpoint Updates:
-        -   [TODO] Remove permanent team endpoints
-        -   [TODO] Create hackathon-specific team endpoints
-        -   [TODO] Update team-related queries
-        -   [TODO] Add team history endpoints
+    -   [DONE] Database Schema Updates:
+        -   [DONE] Create hackathon-specific team tables
+        -   [DONE] Update user-team relationships
+        -   [DONE] Create team history tables
+    -   [DONE] API Endpoint Updates:
+        -   [DONE] Create hackathon-specific team endpoints
+        -   [DONE] Update team-related queries
+        -   [DONE] Add team history endpoints
     -   [TODO] Frontend Updates:
         -   [TODO] Update team management UI
         -   [TODO] Modify team creation flow
@@ -78,27 +76,24 @@ This document tracks planned features, improvements, and tasks for the Hackathon
 ## Phase 3: Enhanced Features & User Experience
 
 -   **Team Management (Hackathon-Specific)**
-    -   [TODO] Hackathon Team Formation System:
-        -   [TODO] Team creation during hackathon registration:
-            -   [TODO] Create team with hackathon-specific name and description
-            -   [TODO] Set team size limits per hackathon
-            -   [TODO] Define team roles for the hackathon duration
-            -   [TODO] Team visibility settings
-        -   [TODO] Team finder for hackathon:
-            -   [TODO] Skill-based matching system
-            -   [TODO] Team size recommendations
-            -   [TODO] Team join requests
-            -   [TODO] Team invitation system
+    -   [DONE] Hackathon Team Formation System:
+        -   [DONE] Team creation during hackathon registration:
+            -   [DONE] Create team with hackathon-specific name and description
+            -   [DONE] Set team size limits per hackathon
+            -   [DONE] Define team roles for the hackathon duration
+            -   [DONE] Team visibility settings
+        -   [DONE] Team finder for hackathon:
+            -   [DONE] Team join requests
+            -   [DONE] Team invitation system
         -   [TODO] Team workspace for hackathon:
             -   [TODO] Project management tools
             -   [TODO] Team chat/announcements
             -   [TODO] Resource sharing
             -   [TODO] Task tracking
-    -   [TODO] Post-Hackathon Team Handling:
-        -   [TODO] Team archival system
-        -   [TODO] Team history preservation
-        -   [TODO] Team achievements recording
-        -   [TODO] Team member history tracking
+    -   [DONE] Post-Hackathon Team Handling:
+        -   [DONE] Team archival system
+        -   [DONE] Team history preservation
+        -   [DONE] Team member history tracking
 
 -   **Hackathon Management (Admin)**
     -   [TODO] Admin dashboard to manage hackathons:
