@@ -105,16 +105,19 @@ def build_image(project_path, tag):
     cmd = ["docker", "build", "-t", tag, project_path]
     logger.info(f"Starte Build: {' '.join(cmd)}")
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    output = []
     for line in proc.stdout:
-        # Still print Docker build output to console but also log it
-        print(line, end="")
-        logger.debug(line.strip())
+        # Capture output for return
+        output.append(line.strip())
+        # Log to console and logger
+        print(line, end="", flush=True)
+        logger.info(line.strip())
     proc.wait()
     if proc.returncode == 0:
         logger.info(f"Image erfolgreich gebaut: {tag}")
     else:
         logger.error(f"Build fehlgeschlagen (Exit {proc.returncode})")
-    return proc.returncode
+    return proc.returncode, "\n".join(output)
 
 def build_compose(project_path):
     compose_path = os.path.join(project_path, "docker-compose.yml")
@@ -122,24 +125,27 @@ def build_compose(project_path):
         compose_path = os.path.join(project_path, "docker-compose.yaml")
     if not os.path.exists(compose_path):
         logger.error("docker-compose.yml nicht gefunden!")
-        return 2
+        return 2, "docker-compose.yml nicht gefunden!"
     ok, msg = check_compose_security(compose_path)
     if not ok:
         logger.error(msg)
-        return 3
+        return 3, msg
     cmd = ["docker", "compose", "-f", compose_path, "build"]
     logger.info(f"Starte Compose-Build: {' '.join(cmd)}")
     proc = subprocess.Popen(cmd, cwd=project_path, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    output = []
     for line in proc.stdout:
-        # Still print Docker build output to console but also log it
-        print(line, end="")
-        logger.debug(line.strip())
+        # Capture output for return
+        output.append(line.strip())
+        # Log to console and logger
+        print(line, end="", flush=True)
+        logger.info(line.strip())
     proc.wait()
     if proc.returncode == 0:
         logger.info("Compose-Build erfolgreich!")
     else:
         logger.error(f"Compose-Build fehlgeschlagen (Exit {proc.returncode})")
-    return proc.returncode
+    return proc.returncode, "\n".join(output)
 
 def main():
     parser = argparse.ArgumentParser(description="Dockerize User Project")
@@ -151,27 +157,34 @@ def main():
     
     project_path = os.path.abspath(args.project_path)
     if not os.path.isdir(project_path):
-        logger.error(f"Projektpfad nicht gefunden: {project_path}")
+        error_msg = f"Projektpfad nicht gefunden: {project_path}"
+        logger.error(error_msg)
+        print(error_msg)
         exit(1)
 
     stack = detect_stack(project_path)
     if not stack:
-        logger.error("Konnte Stack nicht erkennen (Node.js, Python, React Native, Dockerfile, Compose)")
+        error_msg = "Konnte Stack nicht erkennen (Node.js, Python, React Native, Dockerfile, Compose)"
+        logger.error(error_msg)
+        print(error_msg)
         exit(2)
     logger.info(f"Erkannter Stack: {stack}")
 
     if stack == "dockerfile":
         logger.info("Verwende vorhandenes Dockerfile")
-        rc = build_image(project_path, args.tag)
+        rc, output = build_image(project_path, args.tag)
+        print(output)  # Print final output
         exit(rc)
     elif stack == "compose":
         logger.info("Verwende vorhandenes docker-compose.yml")
-        rc = build_compose(project_path)
+        rc, output = build_compose(project_path)
+        print(output)  # Print final output
         exit(rc)
     else:
         logger.info(f"Verwende {stack}-Template")
         ensure_dockerfile(project_path, stack)
-        rc = build_image(project_path, args.tag)
+        rc, output = build_image(project_path, args.tag)
+        print(output)  # Print final output
         exit(rc)
 
 if __name__ == "__main__":

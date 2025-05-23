@@ -2,6 +2,7 @@ import os
 
 STATIC_BASE_URL = "/static"
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "scripts")
 
 def avatar_url(filename: str | None) -> str:
     if filename and os.path.exists(os.path.join(STATIC_DIR, "avatars", filename)):

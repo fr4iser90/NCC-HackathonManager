@@ -94,7 +94,7 @@ export default function ProjectSubmitPage() {
         try {
           const data = JSON.parse(xhr.responseText);
           setStatus(data.status);
-          setLogs(data.logs);
+          setLogs(data.build_logs || data.logs || "");
         } catch (err) {
           setStatus("error");
           setError("Fehler beim Parsen der Serverantwort.");

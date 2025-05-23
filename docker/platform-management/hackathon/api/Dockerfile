@@ -30,6 +30,9 @@ COPY ./entrypoint.sh /app/entrypoint.sh
 # Create logs directory
 RUN mkdir -p /app/logs
 
+# Create tmp directory for builds with secure permissions
+RUN mkdir -p /app/tmp && chmod 755 /app/tmp
+
 # Set environment variables
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1

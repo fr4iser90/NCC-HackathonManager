@@ -9,6 +9,8 @@ import tempfile
 import zipfile
 import subprocess
 import shutil
+import sys
+import logging
 
 from app.database import get_db
 from datetime import datetime, timezone # Added datetime, timezone
@@ -30,8 +32,11 @@ from app.auth import (
     get_project_team_member_or_admin, # For update_project
     get_project_team_owner_or_admin # For delete_project
 )
+from app.static import STATIC_DIR, project_image_path as project_file_path, project_image_url as project_file_url, SCRIPTS_DIR # Import project file functions and SCRIPTS_DIR
 
-router = APIRouter(prefix="/projects", tags=["projects"])
+router = APIRouter(tags=["projects"])
+
+logger = logging.getLogger(__name__)
 
 # --- Project Template Endpoints (Admin-focused, basic implementation) ---
 @router.post("/templates/", response_model=ProjectTemplateRead, status_code=status.HTTP_201_CREATED, tags=["project-templates"])
@@ -212,14 +217,13 @@ async def submit_project_version(
     if not file.filename.endswith('.zip'):
         raise HTTPException(status_code=400, detail="Only ZIP files are allowed")
 
-    # Create upload directory if it doesn't exist
-    upload_dir = os.path.join("uploads", "projects", str(project_id))
-    os.makedirs(upload_dir, exist_ok=True)
-
     # Generate unique filename
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     filename = f"version_{timestamp}_{uuid.uuid4()}.zip"
-    file_path = os.path.join(upload_dir, filename)
+    
+    # Use the static file system
+    file_path = project_file_path(filename)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
     try:
         # Save file
@@ -231,18 +235,73 @@ async def submit_project_version(
             id=uuid.uuid4(),
             project_id=project_id,
             version_number=len(project.versions) + 1,
-            file_path=file_path,
+            file_path=filename,  # Store just the filename, not the full path
             version_notes=version_notes,
             submitted_by=current_user.id,
-            status="pending"
+            status="pending"  # Start with pending instead of building
         )
         db.add(version)
         db.commit()
         db.refresh(version)
 
-        # Update project status
-        project.status = "building"
-        db.commit()
+        # Extract ZIP file to a temporary directory
+        temp_dir = tempfile.mkdtemp()
+        try:
+            with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                zip_ref.extractall(temp_dir)
+
+            # Start build process
+            build_script = os.path.join(SCRIPTS_DIR, "build_project_container.py")
+            tag = f"hackathon-project-{project_id}-{version.id}"
+            
+            logger.info(f"Starting build process with script: {build_script}")
+            logger.info(f"Build tag: {tag}")
+            logger.info(f"Project path: {temp_dir}")
+            
+            # Run build script directly (not in background)
+            try:
+                process = subprocess.run(
+                    [sys.executable, build_script, "--project-path", temp_dir, "--tag", tag],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    check=False  # Don't raise exception on non-zero exit
+                )
+                
+                # Log the output immediately
+                build_output = process.stdout if process.stdout else "No output from build process"
+                logger.info(f"Build output:\n{build_output}")
+                
+                if process.returncode == 0:
+                    version.status = "built"
+                    project.status = "built"
+                    logger.info("Build completed successfully")
+                else:
+                    version.status = "failed"
+                    project.status = "failed"
+                    logger.error(f"Build failed with return code: {process.returncode}")
+                
+                version.build_logs = build_output
+                db.commit()
+                db.refresh(version)
+                db.refresh(project)
+                # Always return the version object, even on failure
+                return version
+
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"Build process error: {error_msg}")
+                version.status = "failed"
+                project.status = "failed"
+                version.build_logs = error_msg
+                db.commit()
+                db.refresh(version)
+                db.refresh(project)
+                return version
+
+        finally:
+            # Clean up temporary directory
+            shutil.rmtree(temp_dir)
 
         return version
 
