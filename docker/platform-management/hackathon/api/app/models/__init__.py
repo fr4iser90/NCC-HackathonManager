@@ -2,25 +2,29 @@
 # It's also a good place to ensure all models are imported so SQLAlchemy can discover them.
 
 from .user import User
-from .team import Team, TeamMember, JoinRequest, TeamInvite
+from .session import Session
+from .project import Project, ProjectTemplate, ProjectVersion
+from .team import Team, TeamMember, TeamHistory, MemberHistory, JoinRequest, TeamInvite
 from .hackathon import Hackathon
-from .project import Project, ProjectTemplate
-from .submission import Submission
-from .judging import Criterion, Score # Corrected import names
 from .hackathon_registration import HackathonRegistration
+from .judging import Criterion, Score
+from .submission import Submission
 
 __all__ = [
     "User",
+    "Session",
+    "Project",
+    "ProjectTemplate",
+    "ProjectVersion",
     "Team",
     "TeamMember",
+    "TeamHistory",
+    "MemberHistory",
     "JoinRequest",
     "TeamInvite",
     "Hackathon",
-    "Project",
-    "ProjectTemplate",
-    "Submission",
-    "Criterion", # Corrected class name
-    "Score",     # Corrected class name
-    # "JudgeAssignment", # This class was not found in judging.py, removing for now
     "HackathonRegistration",
+    "Criterion",
+    "Score",
+    "Submission"
 ]

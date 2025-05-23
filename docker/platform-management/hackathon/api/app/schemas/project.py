@@ -9,13 +9,40 @@ from pydantic import BaseModel, Field
 from .team import TeamRead
 
 class ProjectStatus(str, enum.Enum):
-    PENDING = "pending"
+    # Basis-Status
     DRAFT = "draft"
     ACTIVE = "active"
-    SUBMITTED = "submitted"
     COMPLETED = "completed"
     ARCHIVED = "archived"
     FAILED = "failed"
+    
+    # Deployment-Status
+    BUILDING = "building"
+    BUILT = "built"
+    DEPLOYING = "deploying"
+    DEPLOYED = "deployed"
+
+class ProjectStorageType(str, enum.Enum):
+    # Code-Speicherung
+    GITHUB = "github"
+    GITLAB = "gitlab"
+    BITBUCKET = "bitbucket"
+    LOCAL = "local"
+    
+    # Deployment-Typen
+    SERVER = "server"
+    DOCKER = "docker"
+    KUBERNETES = "kubernetes"
+    CLOUD = "cloud"
+    
+    # Archive-Typen
+    ARCHIVE = "archive"
+    DOCKER_ARCHIVE = "docker_archive"
+    BACKUP = "backup"
+    
+    # Kombinationen
+    HYBRID = "hybrid"
+    DOCKER_HYBRID = "docker_hybrid"
 
 # Pydantic Schemas for ProjectTemplate
 class ProjectTemplateBase(BaseModel):
@@ -42,25 +69,90 @@ class ProjectBase(BaseModel):
     hackathon_id: uuid.UUID
     project_template_id: Optional[uuid.UUID] = None
     status: ProjectStatus = ProjectStatus.DRAFT
+    storage_type: ProjectStorageType = ProjectStorageType.GITHUB
+    
+    # Optional URLs
+    github_url: Optional[str] = None
+    gitlab_url: Optional[str] = None
+    bitbucket_url: Optional[str] = None
+    server_url: Optional[str] = None
+    docker_url: Optional[str] = None
+    kubernetes_url: Optional[str] = None
+    cloud_url: Optional[str] = None
+    archive_url: Optional[str] = None
+    docker_archive_url: Optional[str] = None
+    backup_url: Optional[str] = None
+    
+    # Docker-spezifische Felder
+    docker_image: Optional[str] = None
+    docker_tag: Optional[str] = None
+    docker_registry: Optional[str] = None
 
 class ProjectCreate(ProjectBase):
-    project_template_id: Optional[uuid.UUID] = None # Ensure this is explicit, matches model
+    pass
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=255)
     description: Optional[str] = None
     status: Optional[ProjectStatus] = None
-    # team_id: Optional[uuid.UUID] = None # Removed
-    project_template_id: Optional[uuid.UUID] = None # Added for admin update
-    repository_url: Optional[str] = Field(None, max_length=255) # Added for admin update
+    storage_type: Optional[ProjectStorageType] = None
+    project_template_id: Optional[uuid.UUID] = None
+    
+    # Optional URLs
+    github_url: Optional[str] = None
+    gitlab_url: Optional[str] = None
+    bitbucket_url: Optional[str] = None
+    server_url: Optional[str] = None
+    docker_url: Optional[str] = None
+    kubernetes_url: Optional[str] = None
+    cloud_url: Optional[str] = None
+    archive_url: Optional[str] = None
+    docker_archive_url: Optional[str] = None
+    backup_url: Optional[str] = None
+    
+    # Docker-spezifische Felder
+    docker_image: Optional[str] = None
+    docker_tag: Optional[str] = None
+    docker_registry: Optional[str] = None
 
-class ProjectRead(ProjectBase): # ProjectBase no longer has team_id
+class ProjectRead(ProjectBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
-    # team: Optional[TeamRead] = None # Removed, team info is via HackathonRegistration if applicable
-    template: Optional[ProjectTemplateRead] = None # Populated template details
-    # If we want to show registration details directly on a project, we'd add a field here
-    # for HackathonRegistrationRead, but it might be better to access it via the hackathon.
+    build_status: Optional[str] = None
+    last_build_date: Optional[datetime] = None
+    last_deploy_date: Optional[datetime] = None
+    template: Optional[ProjectTemplateRead] = None
 
     model_config = {"from_attributes": True}
+
+class ProjectVersionStatus(str, enum.Enum):
+    PENDING = "pending"
+    BUILDING = "building"
+    BUILT = "built"
+    FAILED = "failed"
+    DEPLOYED = "deployed"
+
+class ProjectVersionBase(BaseModel):
+    version_notes: Optional[str] = None
+
+class ProjectVersionCreate(ProjectVersionBase):
+    pass
+
+class ProjectVersionUpdate(ProjectVersionBase):
+    status: Optional[ProjectVersionStatus] = None
+    build_logs: Optional[str] = None
+
+class ProjectVersionRead(ProjectVersionBase):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    version_number: int
+    file_path: str
+    submitted_by: uuid.UUID
+    status: ProjectVersionStatus
+    build_logs: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

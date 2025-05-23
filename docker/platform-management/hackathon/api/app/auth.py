@@ -4,7 +4,7 @@ from typing import Optional, Dict, Union
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
-# from fastapi.security import OAuth2PasswordBearer # Not defined here
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
@@ -14,8 +14,8 @@ from app.models.submission import Submission
 import uuid
 from pydantic import BaseModel
 
-# Import oauth2_scheme from app.security_schemes.py
-from app.security_schemes import oauth2_scheme
+# Define OAuth2 scheme here instead of in a separate file
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
 
 # Pydantic model for token data
 class TokenData(BaseModel):
@@ -26,7 +26,6 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-# oauth2_scheme is now imported
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)

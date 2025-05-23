@@ -8,15 +8,16 @@ CREATE SCHEMA IF NOT EXISTS hackathons;
 -- Auth schema
 CREATE TABLE auth.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) NOT NULL UNIQUE,
-    username VARCHAR(100) NOT NULL UNIQUE,
-    hashed_password VARCHAR(255) NOT NULL,
-    full_name VARCHAR(255),
+    email VARCHAR(100) NOT NULL UNIQUE,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    hashed_password VARCHAR(100) NOT NULL,
+    full_name VARCHAR(100),
     role VARCHAR(50) NOT NULL DEFAULT 'participant',
-    github_id VARCHAR(100),
+    github_id VARCHAR(100) UNIQUE,
+    avatar_url VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    avatar_url VARCHAR(255)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE auth.sessions (
@@ -100,15 +101,18 @@ CREATE TABLE teams.member_history (
 
 CREATE TABLE teams.join_requests (
     team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    sender_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    recipient_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (team_id, user_id)
+    PRIMARY KEY (team_id, sender_id)
 );
 
 CREATE TABLE teams.invites (
     team_id UUID REFERENCES teams.teams(id) ON DELETE CASCADE,
     email VARCHAR(255) NOT NULL,
+    sender_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    recipient_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     token VARCHAR(255) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -130,10 +134,40 @@ CREATE TABLE projects.projects (
     project_template_id UUID REFERENCES projects.templates(id),
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    repository_url VARCHAR(255),
     status VARCHAR(50) NOT NULL DEFAULT 'draft',
-    resources JSONB,
+    
+    -- Neue Felder für Storage und Deployment
+    storage_type VARCHAR(50) NOT NULL DEFAULT 'github',
+    
+    -- Repository URLs
+    github_url VARCHAR(255),
+    gitlab_url VARCHAR(255),
+    bitbucket_url VARCHAR(255),
+    
+    -- Deployment URLs
+    server_url VARCHAR(255),
+    docker_url VARCHAR(255),
+    kubernetes_url VARCHAR(255),
+    cloud_url VARCHAR(255),
+    
+    -- Archive URLs
+    archive_url VARCHAR(255),
+    docker_archive_url VARCHAR(255),
+    backup_url VARCHAR(255),
+    
+    -- Docker-spezifische Felder
+    docker_image VARCHAR(255),
+    docker_tag VARCHAR(100),
+    docker_registry VARCHAR(255),
+    
+    -- Deployment-Status
+    build_status VARCHAR(50),
+    last_build_date TIMESTAMPTZ,
+    last_deploy_date TIMESTAMPTZ,
+    
+    -- Bestehende Felder
     hackathon_id UUID NOT NULL REFERENCES hackathons.hackathons(id),
+    owner_id UUID NOT NULL REFERENCES auth.users(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -186,6 +220,20 @@ CREATE TABLE hackathons.hackathon_registrations (
     )
 );
 
+-- Create project versions table
+CREATE TABLE projects.project_versions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id UUID NOT NULL REFERENCES projects.projects(id) ON DELETE CASCADE,
+    version_number INTEGER NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    version_notes TEXT,
+    submitted_by UUID NOT NULL REFERENCES auth.users(id),
+    status VARCHAR(50) DEFAULT 'pending',
+    build_logs TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes
 CREATE INDEX idx_users_email ON auth.users(email);
 CREATE INDEX idx_sessions_token ON auth.sessions(token);
@@ -203,6 +251,8 @@ CREATE INDEX idx_hackathon_registrations_hackathon_id ON hackathons.hackathon_re
 CREATE INDEX idx_hackathon_registrations_project_id ON hackathons.hackathon_registrations(project_id);
 CREATE INDEX idx_hackathon_registrations_user_id ON hackathons.hackathon_registrations(user_id);
 CREATE INDEX idx_hackathon_registrations_team_id ON hackathons.hackathon_registrations(team_id);
+CREATE INDEX idx_project_versions_project_id ON projects.project_versions(project_id);
+CREATE INDEX idx_project_versions_submitted_by ON projects.project_versions(submitted_by);
 
 -- Create functions
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -236,5 +286,10 @@ CREATE TRIGGER update_scores_updated_at
 
 CREATE TRIGGER update_hackathons_updated_at
     BEFORE UPDATE ON hackathons.hackathons
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER update_project_versions_updated_at
+    BEFORE UPDATE ON projects.project_versions
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at();

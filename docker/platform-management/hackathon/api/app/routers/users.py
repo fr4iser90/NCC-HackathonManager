@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile, File
 from sqlalchemy.orm import Session
-from app.models.user import User # SQLAlchemy model
+from app.models.user import User, UserRole # SQLAlchemy model
 from app.schemas.user import UserCreate, UserRead, UserUpdate # Pydantic schemas
 from app.database import get_db
 from app.auth import get_password_hash, verify_password, create_access_token, get_current_user, get_current_user_or_admin_for_profile_update
@@ -20,7 +20,7 @@ router = APIRouter()
 
 # Dependency for admin check (can be refined later)
 async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != "admin":
+    if current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to access this resource."
@@ -37,7 +37,8 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
         hashed_password=get_password_hash(user_in.password),
         full_name=user_in.full_name,
         username=user_in.username,
-        role="participant"
+        github_id=user_in.github_id,
+        role=UserRole.PARTICIPANT
     )
     db.add(user)
     db.commit()

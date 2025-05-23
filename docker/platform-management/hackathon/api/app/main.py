@@ -65,7 +65,7 @@ app.include_router(hackathons_router, prefix="/hackathons", tags=["hackathons"])
 app.include_router(projects_router, prefix="/projects", tags=["projects"])
 app.include_router(teams_router, prefix="/teams", tags=["teams"])
 app.include_router(judging_router, prefix="/judging", tags=["judging"])
-app.include_router(submissions_router, tags=["submissions"])
+app.include_router(submissions_router, prefix="/submissions", tags=["submissions"])
 app.include_router(ping_router, prefix="/ping", tags=["ping"])
 
 # Define oauth2_scheme AFTER all routers are included in the app

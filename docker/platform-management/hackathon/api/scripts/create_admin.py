@@ -8,7 +8,7 @@ import uuid
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.database import SessionLocal, engine, Base # Assuming Base might be needed if models are not yet created
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.auth import get_password_hash # Use your existing password hashing
 
 def ensure_admin_user():
@@ -17,7 +17,8 @@ def ensure_admin_user():
     admin_email = os.getenv("ADMIN_EMAIL")
     admin_username = os.getenv("ADMIN_USERNAME")
     admin_password = os.getenv("ADMIN_PASSWORD")
-    admin_full_name = os.getenv("ADMIN_FULL_NAME") # Optional
+    admin_full_name = os.getenv("ADMIN_FULL_NAME")
+    admin_github_id = os.getenv("ADMIN_GITHUB_ID")
 
     if not all([admin_email, admin_username, admin_password]):
         print("Error: ADMIN_EMAIL, ADMIN_USERNAME, and ADMIN_PASSWORD environment variables must be set.")
@@ -31,15 +32,15 @@ def ensure_admin_user():
         if existing_user:
             print(f"Admin user with email '{admin_email}' or username '{admin_username}' already exists.")
             updated = False
-            if existing_user.role != "admin":
+            if existing_user.role != UserRole.ADMIN:
                 print(f"Updating role for user '{existing_user.email}' to 'admin'.")
-                existing_user.role = "admin"
+                existing_user.role = UserRole.ADMIN
                 updated = True
             
-            # Optionally, update password if a specific env var is set, e.g., ADMIN_FORCE_PASSWORD_UPDATE=true
-            # For simplicity, we are not doing that here, just ensuring the role.
-            # If you want to update the password, you'd add logic similar to the old script
-            # but triggered by an environment variable.
+            if admin_github_id and existing_user.github_id != admin_github_id:
+                print(f"Updating GitHub ID for user '{existing_user.email}'.")
+                existing_user.github_id = admin_github_id
+                updated = True
 
             if updated:
                 db.commit()
@@ -59,7 +60,9 @@ def ensure_admin_user():
             username=admin_username,
             full_name=admin_full_name if admin_full_name else None,
             hashed_password=hashed_password,
-            role="admin"
+            role=UserRole.ADMIN,
+            github_id=admin_github_id,
+            is_active=True
         )
         db.add(new_admin_user)
         db.commit()

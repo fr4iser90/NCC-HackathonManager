@@ -32,6 +32,7 @@ class Team(Base):
     # Relationships
     hackathon = relationship("Hackathon", back_populates="teams")
     members = relationship("TeamMember", back_populates="team", cascade="all, delete-orphan", lazy="selectin")
+    users = relationship("User", secondary="teams.members", back_populates="teams", viewonly=True)
     join_requests = relationship("JoinRequest", back_populates="team", cascade="all, delete-orphan", lazy="selectin")
     invites = relationship("TeamInvite", back_populates="team", cascade="all, delete-orphan", lazy="selectin")
     history = relationship("TeamHistory", back_populates="team", cascade="all, delete-orphan", lazy="selectin")
@@ -90,12 +91,14 @@ class JoinRequest(Base):
     __table_args__ = {"schema": "teams"}
 
     team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.teams.id"), primary_key=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("auth.users.id"), primary_key=True)
+    sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("auth.users.id"), primary_key=True)
+    recipient_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("auth.users.id"), nullable=False)
     status: Mapped[JoinRequestStatus] = mapped_column(SQLEnum(JoinRequestStatus), default=JoinRequestStatus.pending, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     team = relationship("Team", back_populates="join_requests")
-    user = relationship("User")
+    sender = relationship("User", foreign_keys=[sender_id], back_populates="sent_join_requests")
+    recipient = relationship("User", foreign_keys=[recipient_id], back_populates="received_join_requests")
 
 class TeamInviteStatus(str, enum.Enum):
     pending = "pending"
@@ -109,11 +112,15 @@ class TeamInvite(Base):
 
     team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.teams.id"), primary_key=True)
     email: Mapped[str] = mapped_column(String(255), primary_key=True)
+    sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("auth.users.id"), nullable=False)
+    recipient_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("auth.users.id"), nullable=True)
     status: Mapped[TeamInviteStatus] = mapped_column(SQLEnum(TeamInviteStatus), default=TeamInviteStatus.pending, nullable=False)
     token: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     team = relationship("Team", back_populates="invites")
+    sender = relationship("User", foreign_keys=[sender_id], back_populates="sent_invites")
+    recipient = relationship("User", foreign_keys=[recipient_id], back_populates="received_invites")
 
 # Pydantic Schemas (TeamBase, TeamCreate, TeamUpdate, TeamMemberRead, TeamRead)
 # and TeamMemberRole enum have been moved to app.schemas.team.py

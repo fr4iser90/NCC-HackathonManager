@@ -7,7 +7,7 @@ from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.database import SessionLocal
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.team import Team, TeamMember, TeamMemberRole, JoinRequest, JoinRequestStatus, TeamStatus
 from app.models.team import TeamInvite, TeamInviteStatus
 from app.models.project import Project
@@ -15,15 +15,16 @@ from app.models.judging import Criterion, Score
 from app.auth import get_password_hash
 from app.models.hackathon import Hackathon
 from app.schemas.hackathon import HackathonStatus, HackathonMode
-from app.schemas.project import ProjectStatus
+from app.schemas.project import ProjectStatus, ProjectStorageType
 from app.models.hackathon_registration import HackathonRegistration
 
 # --- Testdaten ---
 USERS = [
-    {"email": "admin@example.com", "username": "admin", "role": "admin", "password": "adminpass"},
-    {"email": "judge@example.com", "username": "judge", "role": "judge", "password": "judgepass"},
-    {"email": "user1@example.com", "username": "user1", "role": "user", "password": "userpass1"},
-    {"email": "user2@example.com", "username": "user2", "role": "user", "password": "userpass2"},
+    {"email": "admin@example.com", "username": "admin", "role": UserRole.ADMIN, "password": "adminpass", "github_id": "admin-github"},
+    {"email": "judge@example.com", "username": "judge", "role": UserRole.JUDGE, "password": "judgepass", "github_id": "judge-github"},
+    {"email": "mentor@example.com", "username": "mentor", "role": UserRole.MENTOR, "password": "mentorpass", "github_id": "mentor-github"},
+    {"email": "user1@example.com", "username": "user1", "role": UserRole.PARTICIPANT, "password": "userpass1", "github_id": "user1-github"},
+    {"email": "user2@example.com", "username": "user2", "role": UserRole.PARTICIPANT, "password": "userpass2", "github_id": "user2-github"},
 ]
 
 # Teams are now defined per hackathon
@@ -55,7 +56,7 @@ HACKATHONS = [
         "banner_image_url": "https://example.com/banner1.png",
         "rules_url": "https://example.com/rules1.pdf",
         "sponsor": "Company X",
-        "prizes": "1st: 1000€, 2nd: 500€",
+        "prizes": "1st: 1000Points, 2nd: 500Points",
         "contact_email": "orga@hackathon.com",
         "allow_individuals": True,
         "allow_multiple_projects_per_team": False,
@@ -101,7 +102,9 @@ def main():
                     email=u["email"],
                     username=u["username"],
                     hashed_password=get_password_hash(u["password"]),
-                    role=u["role"]
+                    role=u["role"],
+                    github_id=u.get("github_id"),
+                    is_active=True
                 )
                 db.add(user)
                 db.commit()
@@ -188,18 +191,63 @@ def main():
         # Projects for different hackathons
         project_defs = [
             {
-                "name": "Test Project 1", 
-                "description": "Demo project 1", 
+                "name": "Docker Web App", 
+                "description": "Full stack web application in Docker", 
                 "status": ProjectStatus.ACTIVE,
-                "hackathon": hackathon_objs["Solo Hackathon"],
-                "user_id": user_objs["user1"].id  # Für Solo Hackathon
+                "storage_type": ProjectStorageType.DOCKER_HYBRID,
+                "hackathon": hackathon_objs["Team Hackathon"],
+                "team_id": team_objs["Team Hackathon_Open Team"].id,
+                "owner_id": user_objs["admin"].id,
+                "github_url": "https://github.com/hackathon/webapp1",
+                "docker_url": "https://docker.hackathon.com/webapp1",
+                "docker_image": "hackathon/webapp1",
+                "docker_tag": "latest",
+                "docker_registry": "hackathon-registry.com"
             },
             {
-                "name": "Test Project 2", 
-                "description": "Demo project 2", 
-                "status": ProjectStatus.DRAFT,
+                "name": "Kubernetes Microservice", 
+                "description": "Microservice running on K8s", 
+                "status": ProjectStatus.DEPLOYED,
+                "storage_type": ProjectStorageType.KUBERNETES,
                 "hackathon": hackathon_objs["Team Hackathon"],
-                "team_id": team_objs["Team Hackathon_Open Team"].id  # Für Team Hackathon
+                "team_id": team_objs["Team Hackathon_Closed Team"].id,
+                "owner_id": user_objs["judge"].id,
+                "kubernetes_url": "https://k8s.hackathon.com/microservice1",
+                "docker_image": "hackathon/microservice1",
+                "docker_tag": "v1.0.0"
+            },
+            {
+                "name": "Cloud Native App", 
+                "description": "Deployed to cloud", 
+                "status": ProjectStatus.DEPLOYED,
+                "storage_type": ProjectStorageType.CLOUD,
+                "hackathon": hackathon_objs["Solo Hackathon"],
+                "user_id": user_objs["user1"].id,
+                "owner_id": user_objs["user1"].id,
+                "cloud_url": "https://app.hackathon.com",
+                "github_url": "https://github.com/hackathon/cloudapp1"
+            },
+            {
+                "name": "Archived Docker Project", 
+                "description": "Docker image archived", 
+                "status": ProjectStatus.ARCHIVED,
+                "storage_type": ProjectStorageType.DOCKER_ARCHIVE,
+                "hackathon": hackathon_objs["Hackathon Completed"],
+                "team_id": team_objs["Team Hackathon_Open Team"].id,
+                "owner_id": user_objs["admin"].id,
+                "docker_archive_url": "https://storage.hackathon.com/docker/archived1.tar",
+                "docker_image": "hackathon/archived1",
+                "docker_tag": "archive"
+            },
+            {
+                "name": "GitLab Project", 
+                "description": "Stored on GitLab", 
+                "status": ProjectStatus.ACTIVE,
+                "storage_type": ProjectStorageType.GITLAB,
+                "hackathon": hackathon_objs["Team Hackathon"],
+                "team_id": team_objs["Team Hackathon_Closed Team"].id,
+                "owner_id": user_objs["judge"].id,
+                "gitlab_url": "https://gitlab.com/hackathon/project1"
             }
         ]
 
@@ -210,7 +258,22 @@ def main():
                 name=p_def["name"],
                 description=p_def["description"],
                 status=p_def["status"],
-                hackathon_id=p_def["hackathon"].id  # Direkte Verknüpfung mit Hackathon
+                hackathon_id=p_def["hackathon"].id,
+                storage_type=p_def["storage_type"],
+                owner_id=p_def["owner_id"],
+                github_url=p_def.get("github_url"),
+                gitlab_url=p_def.get("gitlab_url"),
+                bitbucket_url=p_def.get("bitbucket_url"),
+                server_url=p_def.get("server_url"),
+                docker_url=p_def.get("docker_url"),
+                kubernetes_url=p_def.get("kubernetes_url"),
+                cloud_url=p_def.get("cloud_url"),
+                archive_url=p_def.get("archive_url"),
+                docker_archive_url=p_def.get("docker_archive_url"),
+                backup_url=p_def.get("backup_url"),
+                docker_image=p_def.get("docker_image"),
+                docker_tag=p_def.get("docker_tag"),
+                docker_registry=p_def.get("docker_registry")
             )
             db.add(project)
             db.commit()
@@ -220,8 +283,8 @@ def main():
             registration = HackathonRegistration(
                 hackathon_id=p_def["hackathon"].id,
                 project_id=project.id,
-                user_id=p_def.get("user_id"),  # Optional für Solo-Projekte
-                team_id=p_def.get("team_id"),  # Optional für Team-Projekte
+                user_id=p_def.get("user_id"),
+                team_id=p_def.get("team_id"),
                 status="registered"
             )
             db.add(registration)
@@ -252,7 +315,7 @@ def main():
 
         # --- Judging Scores (user: judge bewertet project 1) ---
         judge = user_objs["judge"]
-        project = project_objs["Test Project 1"]
+        project = project_objs["Docker Web App"]
         for crit in crit_objs.values():
             score = db.query(Score).filter_by(judge_id=judge.id, project_id=project.id, criteria_id=crit.id).first()
             if not score:
