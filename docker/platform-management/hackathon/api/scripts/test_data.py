@@ -187,47 +187,45 @@ def main():
         project_objs = {}
         # Projects for different hackathons
         project_defs = [
-            {"name": "Test Project 1", "description": "Demo project 1", "status": "ACTIVE", "hackathon": hackathon_objs["Solo Hackathon"], "assignee_username": "user1"},
-            {"name": "Test Project 2", "description": "Demo project 2", "status": "DRAFT", "hackathon": hackathon_objs["Team Hackathon"], "assignee_team_name": "Open Team"},
-            {"name": "Free Project", "description": "No hackathon", "status": "DRAFT", "hackathon": None},
+            {
+                "name": "Test Project 1", 
+                "description": "Demo project 1", 
+                "status": ProjectStatus.ACTIVE,
+                "hackathon": hackathon_objs["Solo Hackathon"],
+                "user_id": user_objs["user1"].id  # Für Solo Hackathon
+            },
+            {
+                "name": "Test Project 2", 
+                "description": "Demo project 2", 
+                "status": ProjectStatus.DRAFT,
+                "hackathon": hackathon_objs["Team Hackathon"],
+                "team_id": team_objs["Team Hackathon_Open Team"].id  # Für Team Hackathon
+            }
         ]
+
         for p_def in project_defs:
-            project = db.query(Project).filter_by(name=p_def["name"]).first()
-            if not project:
-                project = Project(
-                    id=uuid.uuid4(),
-                    name=p_def["name"],
-                    description=p_def["description"],
-                    status=p_def["status"],
-                )
-                db.add(project)
-                db.commit()
-                db.refresh(project)
+            # Erstelle das Projekt
+            project = Project(
+                id=uuid.uuid4(),
+                name=p_def["name"],
+                description=p_def["description"],
+                status=p_def["status"],
+                hackathon_id=p_def["hackathon"].id  # Direkte Verknüpfung mit Hackathon
+            )
+            db.add(project)
+            db.commit()
+            db.refresh(project)
 
-                # Create HackathonRegistration if hackathon is specified
-                if p_def["hackathon"]:
-                    hackathon_obj = p_def["hackathon"]
-                    user_id_for_reg = None
-                    team_id_for_reg = None
-
-                    if hackathon_obj.mode == HackathonMode.SOLO_ONLY and p_def.get("assignee_username"):
-                        user_id_for_reg = user_objs[p_def["assignee_username"]].id
-                    elif p_def.get("assignee_team_name"): # For team-based or flexible hackathons
-                        team_id_for_reg = team_objs[f"{hackathon_obj.name}_{p_def['assignee_team_name']}"].id
-                    
-                    # Ensure either user_id or team_id is set for registration
-                    if user_id_for_reg or team_id_for_reg:
-                        registration = HackathonRegistration(
-                            hackathon_id=hackathon_obj.id,
-                            project_id=project.id,
-                            user_id=user_id_for_reg,
-                            team_id=team_id_for_reg,
-                            status="registered" 
-                        )
-                        db.add(registration)
-                        db.commit()
-                    else:
-                        print(f"Warning: Could not determine participant for project '{project.name}' in hackathon '{hackathon_obj.name}'. Registration skipped.")
+            # Erstelle die Registration
+            registration = HackathonRegistration(
+                hackathon_id=p_def["hackathon"].id,
+                project_id=project.id,
+                user_id=p_def.get("user_id"),  # Optional für Solo-Projekte
+                team_id=p_def.get("team_id"),  # Optional für Team-Projekte
+                status="registered"
+            )
+            db.add(registration)
+            db.commit()
 
             project_objs[p_def["name"]] = project
         print(f"Projects: {[p.name for p in project_objs.values()]}")
