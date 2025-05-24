@@ -193,25 +193,27 @@ def update_project(
     project_id: uuid.UUID,
     project_in: ProjectUpdate,
     db: Session = Depends(get_db),
-    # Auth: current_user must be a member of the project's team or an admin
-    authorized_member: TeamMember = Depends(get_project_team_member_or_admin) 
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Update a project with new storage or deployment information.
-    """
     db_project = db.query(Project).filter(Project.id == project_id).first()
     if not db_project:
-        # This check is technically redundant due to get_project_team_member_or_admin,
-        # but kept for clarity / defense in depth.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-
-    # The dependency authorized_member already confirms user is part of team or admin.
-    # If admin and not direct member, authorized_member might be None, handled by dependency logic.
-
+    # Check hackathon status
+    hackathon = db.query(Hackathon).filter(Hackathon.id == db_project.hackathon_id).first()
+    if not hackathon or hackathon.status != HackathonStatus.ACTIVE:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Project cannot be edited: Hackathon is not active.")
+    # SOLO: Only owner can update
+    if not db_project.team_id:
+        if db_project.owner_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not the owner.")
+    else:
+        # TEAM: Only owner, admin, or member can update (no platform admin override)
+        team_member = db.query(TeamMember).filter(TeamMember.team_id == db_project.team_id, TeamMember.user_id == current_user.id).first()
+        if not team_member or team_member.role not in [TeamMemberRole.owner, TeamMemberRole.admin, TeamMemberRole.member]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not a permitted team member (owner, admin, or member).")
     update_data = project_in.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_project, key, value)
-
     try:
         db.add(db_project)
         db.commit()
@@ -225,22 +227,27 @@ def update_project(
 def delete_project(
     project_id: uuid.UUID,
     db: Session = Depends(get_db),
-    # Auth: current_user must be an owner of the project's team or an admin
-    authorized_owner_or_admin: TeamMember = Depends(get_project_team_owner_or_admin) 
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Delete a project. User must be an owner of the project's team or an admin.
-    """
     db_project = db.query(Project).filter(Project.id == project_id).first()
     if not db_project:
-        # Redundant check, dependency handles it.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-
-    # Dependency authorized_owner_or_admin ensures correct permissions.
-
+    # Check hackathon status
+    hackathon = db.query(Hackathon).filter(Hackathon.id == db_project.hackathon_id).first()
+    if not hackathon or hackathon.status != HackathonStatus.ACTIVE:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Project cannot be deleted: Hackathon is not active.")
+    # SOLO: Only owner can delete
+    if not db_project.team_id:
+        if db_project.owner_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not the owner.")
+    else:
+        # TEAM: Only owner, admin, or member can delete (no platform admin override)
+        team_member = db.query(TeamMember).filter(TeamMember.team_id == db_project.team_id, TeamMember.user_id == current_user.id).first()
+        if not team_member or team_member.role not in [TeamMemberRole.owner, TeamMemberRole.admin, TeamMemberRole.member]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not a permitted team member (owner, admin, or member).")
     db.delete(db_project)
     db.commit()
-    return 
+    return
 
 @router.post("/{project_id}/submit_version", response_model=ProjectVersionRead)
 async def submit_project_version_endpoint(
@@ -253,6 +260,12 @@ async def submit_project_version_endpoint(
     """
     Submit a new version of a project (synchronous, DB-based logging).
     """
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    hackathon = db.query(Hackathon).filter(Hackathon.id == project.hackathon_id).first()
+    if not hackathon or hackathon.status != HackathonStatus.ACTIVE:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Project version cannot be submitted: Hackathon is not active.")
     version = submit_project_version(db, project_id, file, version_notes, current_user)
     return ProjectVersionRead.model_validate(version)
 
