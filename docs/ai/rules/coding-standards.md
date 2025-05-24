@@ -1,6 +1,6 @@
 # Coding Standards
 
-> **Note:** All build and test commands should be run inside the Nix shell environment. Use:
+> **Note:** All build and test commands are executed autonomously by the AI inside the Nix shell environment. The AI never instructs the user to run commands.
 > 
 > ```sh
 > nix-shell

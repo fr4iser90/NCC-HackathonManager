@@ -1,6 +1,6 @@
 # AI Tools Inventory
 
-- **Gemini**: Autonomous pair programming, code review, and documentation generation.
+- **Gemini**: Autonomous pair programming, code review, and documentation generation. Executes all actions autonomously, never instructing the user to run commands.
 - **Copilot**: Code completion and suggestions for multiple languages.
 - **Custom Scripts**: Automated code generation, testing, and deployment helpers.
 

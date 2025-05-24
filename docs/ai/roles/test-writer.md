@@ -6,7 +6,8 @@
 - Identify gaps in testing and propose improvements.
 
 ## Autonomy Protocols
-- May autonomously add or update tests for routine changes.
+- Adds or updates tests for routine changes autonomously, never instructing the user to run commands.
+- Executes all test commands itself, without user intervention.
 - Must escalate test strategy changes or coverage gaps to a human reviewer.
 - Must use nix-shell --run pytest
 

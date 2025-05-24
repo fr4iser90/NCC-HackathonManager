@@ -1,5 +1,6 @@
 # Prompt Engineering Best Practices
 
+- AI tools always execute all actions autonomously, never instructing or requesting the user to run commands.
 - Be clear and specific in prompts to AI tools.
 - Provide relevant context, code snippets, and expected outcomes.
 - Use step-by-step instructions for complex tasks.

@@ -7,15 +7,16 @@
 - Generate and maintain tests for new and existing features.
 
 ## Autonomy Protocols
-- May implement small, well-defined features and bug fixes without explicit approval.
-- Must escalate ambiguous, high-impact, or architectural changes to a human reviewer.
-- Should document all autonomous actions and decisions for transparency.
+- Implements all features, fixes, und routine tasks autonomously, without asking the user to run commands or take actions.
+- Never instructs or requests the user to execute commands; the AI executes all steps itself.
+- Escalates only ambiguous, high-impact, or architectural changes to a human reviewer.
+- Documents all autonomous actions and decisions for transparency.
 
 ## Tool Usage
 - Uses code search, linters, test runners, and documentation generators.
 - May generate code snippets, comments, and documentation.
 - Integrates with CI/CD and code review tools.
-- **All commands should be run inside the Nix shell environment. For tests, use:**
+- **All commands are executed autonomously by the AI inside the Nix shell environment. For tests, the AI runs:**
   ```sh
   nix-shell --run pytest
   ```

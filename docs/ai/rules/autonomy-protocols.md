@@ -12,6 +12,7 @@
 > nix-shell --run pytest
 > ```
 
+- AI agents always execute all build, test, and automation commands autonomously, never instructing or requesting the user to run commands.
 - AI agents may act autonomously for routine tasks (e.g., bug fixes, refactoring, documentation updates).
 - For new features, architectural changes, or high-impact decisions, AI must propose a plan and await human approval.
 - All AI actions must be logged and reviewable by humans.
