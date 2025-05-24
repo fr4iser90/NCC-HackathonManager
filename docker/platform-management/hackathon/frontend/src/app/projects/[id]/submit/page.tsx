@@ -6,7 +6,12 @@ import { useApiClient } from "@/lib/useApiClient";
 
 export default function ProjectSubmitPage() {
   const params = useParams();
-  const projectId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : "";
+  const projectId =
+    params && typeof params.id === "string"
+      ? params.id
+      : params && Array.isArray(params.id)
+      ? params.id[0]
+      : "";
   const { data: session } = useSession();
   const apiFetch = useApiClient();
   const [file, setFile] = useState<File | null>(null);
@@ -72,7 +77,7 @@ export default function ProjectSubmitPage() {
 
       const data = await res.json();
       setStatus(data.status || "success");
-      setLogs(data.logs || "");
+      setLogs(data.build_logs || data.logs || "");
       setSuccess("Submission successful!");
     } catch (err: any) {
       setStatus("error");

@@ -20,15 +20,14 @@ from app.auth import get_password_hash
 from app.models.hackathon import Hackathon
 from app.schemas.hackathon import HackathonStatus, HackathonMode
 
-# --- Test Database Setup (SQLite in-memory for speed) ---
+# --- Test Database Setup (SQLite file-based for thread safety) ---
 # For full compatibility with PostgreSQL features (like schemas), a test PostgreSQL DB would be better.
 # This SQLite setup will not test schema-specific SQL directly.
-DATABASE_URL_TEST = "sqlite:///:memory:"
+DATABASE_URL_TEST = "sqlite:///./test.db"
 
 engine_test = create_engine(
     DATABASE_URL_TEST,
     connect_args={"check_same_thread": False}, # Needed for SQLite
-    poolclass=StaticPool, # Needed for SQLite
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine_test)
 
@@ -183,4 +182,4 @@ def test_hackathon(db_session: Session, unique_id: uuid.UUID) -> Hackathon:
     db_session.add(hackathon)
     db_session.commit()
     db_session.refresh(hackathon)
-    return hackathon 
+    return hackathon

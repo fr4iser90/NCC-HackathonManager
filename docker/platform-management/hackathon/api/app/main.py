@@ -82,6 +82,17 @@ def health_check():
     logger.info("Health check endpoint accessed")
     return {"status": "healthy"}
 
+@app.get("/logs/error")
+def get_error_log():
+    log_path = os.path.join(os.path.dirname(__file__), "../logs/error.log")
+    try:
+        with open(log_path, "r") as f:
+            lines = f.readlines()
+        # Return the last 50 lines
+        return {"error_log": "".join(lines[-50:])}
+    except Exception as e:
+        return {"error": str(e)}
+
 # Log application startup
 @app.on_event("startup")
 async def startup_event():

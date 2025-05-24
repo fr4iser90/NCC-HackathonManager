@@ -4,7 +4,7 @@ import enum
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any # TYPE_CHECKING removed
 
-from sqlalchemy import Column, String, DateTime, ForeignKey, Enum as SQLEnum, JSON
+from sqlalchemy import Column, String, DateTime, ForeignKey, Enum as SQLEnum, JSON, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
@@ -99,7 +99,7 @@ class ProjectVersion(Base):
     version_notes: Mapped[Optional[str]] = mapped_column(String)
     submitted_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("auth.users.id"), nullable=False)
     status: Mapped[ProjectVersionStatus] = mapped_column(SQLEnum(ProjectVersionStatus), default=ProjectVersionStatus.PENDING)
-    build_logs: Mapped[Optional[str]] = mapped_column(String)
+    build_logs: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
