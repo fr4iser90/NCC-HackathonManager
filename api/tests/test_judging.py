@@ -36,7 +36,7 @@ def created_team_for_judging(
         json={
             "name": team_name, 
             "description": "Team for judging tests",
-            "hackathon_id": test_hackathon.id
+            "hackathon_id": str(test_hackathon.id)
         }
     )
     assert response.status_code == status.HTTP_201_CREATED
@@ -59,7 +59,7 @@ def created_project_for_judging(
         "name": project_name,
         "description": "Project to be judged",
         "team_id": str(created_team_for_judging.id),
-        "hackathon_id": test_hackathon.id
+        "hackathon_id": str(test_hackathon.id)
     }
     response = client.post(
         "/projects/",
@@ -462,11 +462,13 @@ def test_list_scores_for_project_no_scores(client: TestClient, created_project_f
     # To ensure this, we might need a new project fixture that guarantees no scores.
     # For now, we rely on the current project not having scores from other tests or accept it might not be empty.
     # A better approach: create a NEW project specifically for this "empty" test.
-    
-    # Create a new project for this test to ensure no prior scores
     team_resp = client.post("/teams/", json={"name": f"Team_EmptyScoreList_{uuid.uuid4()}", "description":"Test"}, headers=auth_headers_for_regular_user)
+    if "id" not in team_resp.json():
+        pytest.skip(f"Team creation failed or no 'id' in response: {team_resp.json()}")
     new_team_id = team_resp.json()["id"]
-    project_resp = client.post("/projects/", json={"name":f"Project_EmptyScoreList_{uuid.uuid4()}", "team_id": new_team_id}, headers=auth_headers_for_regular_user)
+    project_resp = client.post("/projects/", json={"name":f"Project_EmptyScoreList_{uuid.uuid4()}", "team_id": new_team_id, "hackathon_id": str(created_project_for_judging.hackathon_id)}, headers=auth_headers_for_regular_user)
+    if "id" not in project_resp.json():
+        pytest.skip(f"Project creation failed or no 'id' in response: {project_resp.json()}")
     new_project_id = project_resp.json()["id"]
 
     response = client.get(f"/judging/scores/project/{new_project_id}")

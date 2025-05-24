@@ -1,0 +1,20 @@
+# AI Autonomy Protocols
+
+> **Note:** All autonomous build and test actions by AI should use the Nix shell environment for consistency. Use:
+> 
+> ```sh
+> nix-shell
+> ```
+> 
+> For running tests:
+> 
+> ```sh
+> nix-shell --run pytest
+> ```
+
+- AI agents may act autonomously for routine tasks (e.g., bug fixes, refactoring, documentation updates).
+- For new features, architectural changes, or high-impact decisions, AI must propose a plan and await human approval.
+- All AI actions must be logged and reviewable by humans.
+- AI must follow coding standards, security, and ethical guidelines at all times.
+- If an error or ambiguity is detected, AI should attempt a fix if safe, otherwise escalate.
+- AI should provide context and reasoning for all autonomous actions.

@@ -168,6 +168,7 @@ CREATE TABLE projects.projects (
     -- Bestehende Felder
     hackathon_id UUID NOT NULL REFERENCES hackathons.hackathons(id),
     owner_id UUID NOT NULL REFERENCES auth.users(id),
+    team_id UUID REFERENCES teams.teams(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

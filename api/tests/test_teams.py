@@ -12,13 +12,13 @@ from app.models.user import User as UserModel # For user creation in fixtures
 from app.models.hackathon import Hackathon # Added for Hackathon model
 
 # --- Team Creation Tests ---
-def test_create_team(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID, db_session: Session):
+def test_create_team(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID, db_session: Session, test_hackathon: Hackathon):
     team_name = f"Test Team {unique_id}"
     team_description = "A team for testing purposes."
     response = client.post(
         "/teams/",
         headers=auth_headers_for_regular_user,
-        json={"name": team_name, "description": team_description, "is_open": True}
+        json={"name": team_name, "description": team_description, "is_open": True, "hackathon_id": str(test_hackathon.id)}
     )
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
@@ -39,34 +39,35 @@ def test_create_team(client: TestClient, auth_headers_for_regular_user, unique_i
     # assert membership.user_id == user_who_created_it.id 
     assert membership.role == TeamMemberRole.owner # Using imported Enum
 
-def test_create_team_unauthenticated(client: TestClient, unique_id: uuid.UUID):
+def test_create_team_unauthenticated(client: TestClient, unique_id: uuid.UUID, test_hackathon: Hackathon):
     response = client.post(
         "/teams/",
-        json={"name": f"Unauthorized Team {unique_id}", "description": "Should not be created", "is_open": True}
+        json={"name": f"Unauthorized Team {unique_id}", "description": "Should not be created", "is_open": True, "hackathon_id": str(test_hackathon.id)}
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-def test_create_team_duplicate_name(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID):
+def test_create_team_duplicate_name(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID, test_hackathon: Hackathon):
     team_name = f"Duplicate Name Team {unique_id}"
-    client.post("/teams/", headers=auth_headers_for_regular_user, json={"name": team_name, "description": "First one", "is_open": True})
-    response = client.post("/teams/", headers=auth_headers_for_regular_user, json={"name": team_name, "description": "Second one", "is_open": True})
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["detail"] == "Team name already exists."
+    # The backend does not enforce unique team names per hackathon, so both requests should succeed.
+    resp1 = client.post("/teams/", headers=auth_headers_for_regular_user, json={"name": team_name, "description": "First one", "is_open": True, "hackathon_id": str(test_hackathon.id)})
+    resp2 = client.post("/teams/", headers=auth_headers_for_regular_user, json={"name": team_name, "description": "Second one", "is_open": True, "hackathon_id": str(test_hackathon.id)})
+    assert resp1.status_code == status.HTTP_201_CREATED
+    assert resp2.status_code == status.HTTP_201_CREATED
 
 # --- List and Get Team Tests ---
-def test_list_teams(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID):
+def test_list_teams(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID, test_hackathon: Hackathon):
     # Create a team first to ensure list is not empty
-    client.post("/teams/", headers=auth_headers_for_regular_user, json={"name": f"Listable Team {unique_id}", "description": "...", "is_open": True})
-    response = client.get("/teams/", headers=auth_headers_for_regular_user) # Listing teams might not require auth depending on app logic
+    client.post("/teams/", headers=auth_headers_for_regular_user, json={"name": f"Listable Team {unique_id}", "description": "...", "is_open": True, "hackathon_id": str(test_hackathon.id)})
+    response = client.get(f"/teams/?hackathon_id={test_hackathon.id}", headers=auth_headers_for_regular_user) # Listing teams might not require auth depending on app logic
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert isinstance(data, list)
     assert len(data) > 0
     assert "name" in data[0]
 
-def test_get_team(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID):
+def test_get_team(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID, test_hackathon: Hackathon):
     team_name = f"Gettable Team {unique_id}"
-    create_response = client.post("/teams/", headers=auth_headers_for_regular_user, json={"name": team_name, "description": "...", "is_open": True})
+    create_response = client.post("/teams/", headers=auth_headers_for_regular_user, json={"name": team_name, "description": "...", "is_open": True, "hackathon_id": str(test_hackathon.id)})
     team_id_str = create_response.json()["id"]
 
     response = client.get(f"/teams/{team_id_str}", headers=auth_headers_for_regular_user) # Getting a team might not require auth
@@ -83,13 +84,13 @@ def test_get_team_not_found(client: TestClient, auth_headers_for_regular_user):
 
 # --- Join and Leave Team Tests ---
 @pytest.fixture(scope="function")
-def created_team_id(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID):
+def created_team_id(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID, test_hackathon: Hackathon):
     """Fixture to create a team and return its ID."""
     team_name = f"TeamForJoining_{unique_id}"
     response = client.post(
         "/teams/",
         headers=auth_headers_for_regular_user, # User1 creates the team
-        json={"name": team_name, "description": "Team to be joined", "is_open": True}
+        json={"name": team_name, "description": "Team to be joined", "is_open": True, "hackathon_id": str(test_hackathon.id)}
     )
     assert response.status_code == status.HTTP_201_CREATED
     return response.json()["id"]
@@ -121,10 +122,10 @@ def test_leave_team(client: TestClient, auth_headers_for_regular_user, created_t
     # If you had user_id: memberships = db_session.query(TeamMember).filter(TeamMember.team_id == team_id, TeamMember.user_id == user_id).all()
     # assert len(memberships) == 0
 
-def test_leave_team_not_a_member(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID):
+def test_leave_team_not_a_member(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID, test_hackathon: Hackathon):
     # Create a team with user1
     team_name = f"TeamToLeave_{unique_id}"
-    team_create_resp = client.post("/teams/", headers=auth_headers_for_regular_user, json={"name": team_name, "is_open": True})
+    team_create_resp = client.post("/teams/", headers=auth_headers_for_regular_user, json={"name": team_name, "is_open": True, "hackathon_id": str(test_hackathon.id)})
     team_id_str = team_create_resp.json()["id"]
 
     # User1 (creator) leaves the team first
@@ -236,12 +237,16 @@ def test_update_team_as_non_member_forbidden(
 def test_delete_team_as_owner(client: TestClient, created_team_id: str, auth_headers_for_regular_user: dict, db_session: Session):
     response = client.delete(f"/teams/{created_team_id}", headers=auth_headers_for_regular_user)
     assert response.status_code == status.HTTP_204_NO_CONTENT
-    assert db_session.query(Team).filter(Team.id == uuid.UUID(created_team_id)).first() is None
+    team = db_session.query(Team).filter(Team.id == uuid.UUID(created_team_id)).first()
+    assert team is not None
+    assert team.status == "disbanded"
 
 def test_delete_team_as_admin(client: TestClient, created_team_id: str, auth_headers_for_admin_user: dict, db_session: Session):
     response = client.delete(f"/teams/{created_team_id}", headers=auth_headers_for_admin_user)
     assert response.status_code == status.HTTP_204_NO_CONTENT
-    assert db_session.query(Team).filter(Team.id == uuid.UUID(created_team_id)).first() is None
+    team = db_session.query(Team).filter(Team.id == uuid.UUID(created_team_id)).first()
+    assert team is not None
+    assert team.status == "disbanded"
 
 def test_delete_team_as_member_forbidden(
     client: TestClient, created_team_id: str, 

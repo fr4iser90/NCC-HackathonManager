@@ -87,6 +87,8 @@ class ProjectBase(BaseModel):
     docker_image: Optional[str] = None
     docker_tag: Optional[str] = None
     docker_registry: Optional[str] = None
+    # Team support
+    team_id: Optional[uuid.UUID] = None
 
 class ProjectCreate(ProjectBase):
     pass
@@ -114,6 +116,8 @@ class ProjectUpdate(BaseModel):
     docker_image: Optional[str] = None
     docker_tag: Optional[str] = None
     docker_registry: Optional[str] = None
+    # Team support
+    team_id: Optional[uuid.UUID] = None
 
 class ProjectRead(ProjectBase):
     id: uuid.UUID
@@ -123,6 +127,7 @@ class ProjectRead(ProjectBase):
     last_build_date: Optional[datetime] = None
     last_deploy_date: Optional[datetime] = None
     template: Optional[ProjectTemplateRead] = None
+    team: Optional[TeamRead] = None
 
     model_config = {"from_attributes": True}
 

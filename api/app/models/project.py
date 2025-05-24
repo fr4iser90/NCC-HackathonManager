@@ -70,6 +70,7 @@ class Project(Base):
     # Bestehende Felder
     hackathon_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hackathons.hackathons.id"), nullable=False)
     owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("auth.users.id"), nullable=False)
+    team_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("teams.teams.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
@@ -80,6 +81,7 @@ class Project(Base):
     registration = relationship("HackathonRegistration", back_populates="project")
     versions = relationship("ProjectVersion", back_populates="project", cascade="all, delete-orphan")
     owner = relationship("User", back_populates="projects", foreign_keys=[owner_id])
+    team = relationship("Team", backref="projects")
 
 class ProjectVersionStatus(str, enum.Enum):
     PENDING = "pending"

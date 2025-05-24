@@ -31,6 +31,8 @@ engine_test = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine_test)
 
+EXAMPLE_PROJECTS_DIR = os.path.join(os.path.dirname(__file__), "example_projects")
+
 # --- Schemas Used ---
 # Define the schemas used by your models here
 # This is important for SQLite testing, as we need to "simulate" schemas.

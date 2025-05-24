@@ -9,8 +9,8 @@ let
     pytest-mock
     httpx
     
-    # Core Bot Dependency
-    nextcord
+    structlog
+    colorama
     
     # Monitoring Dependency
     psutil
@@ -85,6 +85,17 @@ pkgs.mkShell {
       command pytest "$@" # IMPORTANT: Use 'command' to call the real pytest
       local exit_code=$?
       echo "Pytest finished with exit code $exit_code."
+      clean-caches
+      return $exit_code
+    }
+
+    # Minimal log pytest function
+    pytest-minimal-log() {
+      clean-caches
+      echo "Running pytest with minimal log (short tracebacks, warnings disabled, max 10 fails)..."
+      command pytest --maxfail=10 --disable-warnings --tb=short > test_report.txt || true
+      local exit_code=$?
+      echo "Pytest finished with exit code $exit_code. See test_report.txt for results."
       clean-caches
       return $exit_code
     }

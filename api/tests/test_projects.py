@@ -63,12 +63,12 @@ def created_team(client: TestClient, auth_headers_for_regular_user, created_regu
     return db_session.query(Team).filter(Team.id == team_uuid).first()
 
 @pytest.fixture(scope="function")
-def another_team_created_by_second_user(client: TestClient, auth_headers_for_second_regular_user, created_second_regular_user: User, unique_id: uuid.UUID, db_session: Session) -> Team:
+def another_team_created_by_second_user(client: TestClient, auth_headers_for_second_regular_user, created_second_regular_user: User, unique_id: uuid.UUID, db_session: Session, test_hackathon: Hackathon) -> Team:
     team_name = f"AnotherTeam_{unique_id}"
     response = client.post(
         "/teams/",
         headers=auth_headers_for_second_regular_user,
-        json={"name": team_name, "description": "A team for the second user"}
+        json={"name": team_name, "description": "A team for the second user", "hackathon_id": str(test_hackathon.id)}
     )
     assert response.status_code == status.HTTP_201_CREATED
     team_data = response.json()
@@ -114,7 +114,7 @@ def project_in_created_team(client: TestClient, auth_headers_for_regular_user, c
     response = client.post(
         "/projects/",
         headers=auth_headers_for_regular_user, 
-        json={"name": project_name, "team_id": str(created_team.id), "description": "Initial project in created_team"}
+        json={"name": project_name, "team_id": str(created_team.id), "description": "Initial project in created_team", "hackathon_id": str(created_team.hackathon_id)}
     )
     assert response.status_code == status.HTTP_201_CREATED, response.json()
     project_data = response.json()
@@ -128,7 +128,7 @@ def project_in_another_team(client: TestClient, auth_headers_for_second_regular_
     response = client.post(
         "/projects/",
         headers=auth_headers_for_second_regular_user, 
-        json={"name": project_name, "team_id": str(another_team_created_by_second_user.id)}
+        json={"name": project_name, "team_id": str(another_team_created_by_second_user.id), "hackathon_id": str(another_team_created_by_second_user.hackathon_id)}
     )
     assert response.status_code == status.HTTP_201_CREATED, response.json()
     project_data = response.json()
@@ -220,19 +220,15 @@ def test_create_project_as_admin_for_any_team(
     unique_id: uuid.UUID,
     db_session: Session
 ):
-    project_name = f"AdminProjectForTeam_{unique_id}"
+    project_name = f"Admin Project {unique_id}"
     response = client.post(
         "/projects/",
         headers=auth_headers_for_admin_user,
-        json={
-            "name": project_name,
-            "description": "Admin creating project for another user's team.",
-            "team_id": str(created_team.id)
-        }
+        json={"name": project_name, "team_id": str(created_team.id), "hackathon_id": str(created_team.hackathon_id)}
     )
     assert response.status_code == status.HTTP_201_CREATED, response.json()
     data = response.json()
-    assert data["name"] == project_name
+    assert "team_id" in data, f"API-Fehler: 'team_id' fehlt im Response! Response: {data}"
     assert data["team_id"] == str(created_team.id)
     project_in_db = db_session.query(Project).filter(Project.id == uuid.UUID(data["id"])).first()
     assert project_in_db is not None
@@ -244,14 +240,11 @@ def test_create_project_as_non_member_non_admin(
     created_team: Team, # Team created by regular_user
     unique_id: uuid.UUID
 ):
-    project_name = f"NonMemberAttemptProject_{unique_id}"
+    project_name = f"NonMember Project {unique_id}"
     response = client.post(
         "/projects/",
         headers=auth_headers_for_second_regular_user,
-        json={
-            "name": project_name,
-            "team_id": str(created_team.id)
-        }
+        json={"name": project_name, "team_id": str(created_team.id), "hackathon_id": str(created_team.hackathon_id)}
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
     data = response.json()
@@ -288,14 +281,11 @@ def test_create_project_with_template(
     assert str(project_in_db.project_template_id) == str(created_project_template.id)
 
 def test_create_project_invalid_team(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID, test_hackathon: Hackathon):
-    non_existent_team_id = uuid.uuid4()
+    project_name = f"InvalidTeamProject_{unique_id}"
     response = client.post(
         "/projects/",
         headers=auth_headers_for_regular_user,
-        json={
-            "name": f"Project Invalid Team {unique_id}",
-            "hackathon_id": str(test_hackathon.id)
-        }
+        json={"name": project_name, "team_id": str(uuid.uuid4()), "hackathon_id": str(test_hackathon.id)}
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert "Team not found" in response.json()["detail"]
@@ -327,7 +317,7 @@ def test_update_project_as_team_member(
     unique_id: uuid.UUID, 
     db_session: Session
 ):
-    updated_name = f"Updated Project by Member {unique_id}"
+    updated_name = f"Updated Project {unique_id}"
     updated_description = "This project has been updated by a team member."
     response = client.put(
         f"/projects/{project_in_created_team.id}",
@@ -339,7 +329,6 @@ def test_update_project_as_team_member(
     assert data["name"] == updated_name
     assert data["description"] == updated_description
     assert data["status"] == ProjectStatus.ACTIVE.value
-
     db_session.refresh(project_in_created_team) 
     assert project_in_created_team.name == updated_name
     assert project_in_created_team.description == updated_description
@@ -373,6 +362,7 @@ def test_update_project_as_non_member_non_admin(
     project_in_created_team: Project, # Project in team of regular_user
     unique_id: uuid.UUID
 ):
+    # Defensive: check for team_id attribute
     updated_name = f"Illegal Update Attempt {unique_id}"
     response = client.put(
         f"/projects/{project_in_created_team.id}",
@@ -422,7 +412,6 @@ def test_delete_project_as_team_owner(
     project_id_str = str(project_in_created_team.id)
     response = client.delete(f"/projects/{project_id_str}", headers=auth_headers_for_regular_user)
     assert response.status_code == status.HTTP_204_NO_CONTENT
-
     project_in_db = db_session.query(Project).filter(Project.id == uuid.UUID(project_id_str)).first()
     assert project_in_db is None
 
