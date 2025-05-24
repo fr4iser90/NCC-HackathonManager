@@ -1,6 +1,6 @@
 # CI/CD Setup
 
-All CI/CD pipelines should use the Nix shell environment to ensure consistent builds and tests.
+All CI/CD pipelines use the Nix shell environment to ensure consistent builds and tests.
 
 ## Example (GitHub Actions)
 
@@ -9,4 +9,6 @@ All CI/CD pipelines should use the Nix shell environment to ensure consistent bu
   run: nix-shell --run pytest
 ```
 
-Refer to `shell.nix` for available commands and environment setup.
+For local development without Nix, see `docs/setup/environment.md` (requirements.txt, npm install, Docker).
+
+Reference: `shell.nix` for available commands and environment setup.

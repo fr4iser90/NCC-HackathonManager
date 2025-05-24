@@ -9,19 +9,47 @@ from colorama import Fore, Style
 # Initialize colorama
 colorama.init()
 
+# Mapping for short log level tags
+def short_level_tag(level):
+    return {
+        "info": "[i]",
+        "debug": "[d]",
+        "warning": "[w]",
+        "error": "[e]",
+        "critical": "[c]"
+    }.get(level.lower(), f"[{level[:1].lower()}]")
+
+# Custom processor to inject short level tag
+
+def add_short_level_tag(logger, method_name, event_dict):
+    event_dict["short_level"] = short_level_tag(method_name)
+    return event_dict
+
+# Custom renderer for pretty output
+
+def custom_console_renderer(logger, method_name, event_dict):
+    ts = event_dict.get("timestamp", "")
+    lvl = event_dict.get("short_level", "")
+    msg = event_dict.get("event", "")
+    return f"{ts} {lvl} {msg}"
+
 def configure_logger():
     structlog.configure(
         processors=[
             structlog.processors.TimeStamper(fmt="%H:%M:%S"),
+            add_short_level_tag,
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
-            structlog.processors.JSONRenderer()
+            custom_console_renderer
         ],
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
         wrapper_class=structlog.BoundLogger,
         cache_logger_on_first_use=True,
     )
+
+# Call configure_logger on import so it's always set up
+configure_logger()
 
 def get_logger(name: str):
     return structlog.get_logger(name)

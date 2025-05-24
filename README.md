@@ -44,8 +44,8 @@ A modern, scalable platform for managing hackathon events, built with NixOS, Doc
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-org/hackathon-platform.git
-cd hackathon-platform
+git clone https://github.com/fr4iser90/NCC-HackathonManager
+cd NCC-HackathonManager
 ```
 
 2. Set up environment:
@@ -146,3 +146,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - FastAPI
 - Next.js
 - All contributors
+
+## Setup (with and without Nix)
+
+**Recommended:**
+- With Nix: `nix-shell` (all tools and commands as described in the docs)
+- Without Nix:
+  1. Python dependencies: `pip install -r requirements.txt`
+  2. Node dependencies: `cd frontend && npm install`
+  3. Start backend: `uvicorn api.app.main:app --reload` or via Docker
+
+**Note:** The CI/CD pipeline always uses Nix for maximum reproducibility.
+
+For more details: [docs/setup/environment.md](docs/setup/environment.md)
