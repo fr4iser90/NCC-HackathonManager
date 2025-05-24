@@ -49,3 +49,5 @@ next-env.d.ts
 # test reports
 test_report.txt
 test.db
+
+__pycache__/

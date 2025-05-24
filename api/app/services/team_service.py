@@ -6,6 +6,7 @@ from app.models.team import Team, TeamMember, JoinRequest, JoinRequestStatus, Te
 from app.models.hackathon import Hackathon
 from app.models.user import User
 from app.schemas.team import TeamCreate, TeamUpdate, TeamMemberRole
+from app.schemas.hackathon import HackathonStatus
 from fastapi import HTTPException, status
 import secrets
 import uuid
@@ -15,7 +16,7 @@ def create_team(db: Session, team_in: TeamCreate, current_user: User) -> Team:
     hackathon = db.query(Hackathon).filter(Hackathon.id == team_in.hackathon_id).first()
     if not hackathon:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hackathon not found")
-    if hackathon.status != "active":
+    if hackathon.status != HackathonStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot create team for inactive hackathon")
     try:
         db_team = Team(
@@ -46,7 +47,7 @@ def update_team(db: Session, team_id: uuid.UUID, team_in: TeamUpdate) -> Team:
     if not db_team:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
     hackathon = db.query(Hackathon).filter(Hackathon.id == db_team.hackathon_id).first()
-    if not hackathon or hackathon.status != "active":
+    if not hackathon or hackathon.status != HackathonStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot update team for inactive hackathon")
     update_data = team_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -66,7 +67,7 @@ def join_team(db: Session, team_id: uuid.UUID, current_user: User):
     if not team:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
     hackathon = db.query(Hackathon).filter(Hackathon.id == team.hackathon_id).first()
-    if not hackathon or hackathon.status != "active":
+    if not hackathon or hackathon.status != HackathonStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot join team for inactive hackathon")
     existing_member = db.query(TeamMember).filter(
         TeamMember.team_id == team_id, TeamMember.user_id == current_user.id
@@ -105,7 +106,7 @@ def request_join(db: Session, team_id: uuid.UUID, current_user: User):
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
     hackathon = db.query(Hackathon).filter(Hackathon.id == team.hackathon_id).first()
-    if not hackathon or hackathon.status != "active":
+    if not hackathon or hackathon.status != HackathonStatus.ACTIVE:
         raise HTTPException(status_code=400, detail="Cannot request to join team for inactive hackathon")
     if not team.is_open:
         raise HTTPException(status_code=400, detail="Team is closed. Only invited users can join.")
@@ -123,7 +124,7 @@ def accept_join_request(db: Session, team_id: uuid.UUID, user_id: uuid.UUID, cur
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
     hackathon = db.query(Hackathon).filter(Hackathon.id == team.hackathon_id).first()
-    if not hackathon or hackathon.status != "active":
+    if not hackathon or hackathon.status != HackathonStatus.ACTIVE:
         raise HTTPException(status_code=400, detail="Cannot accept join request for inactive hackathon")
     owner = db.query(TeamMember).filter_by(team_id=team_id, user_id=current_user.id, role=TeamMemberRole.owner).first()
     if not owner and current_user.role != "admin":

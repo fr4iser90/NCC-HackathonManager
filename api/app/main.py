@@ -68,10 +68,6 @@ app.include_router(judging_router, prefix="/judging", tags=["judging"])
 app.include_router(submissions_router, prefix="/submissions", tags=["submissions"])
 app.include_router(ping_router, prefix="/ping", tags=["ping"])
 
-# Define oauth2_scheme AFTER all routers are included in the app
-# This allows the tokenUrl to be resolvable against the app's routing table
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login") # REMOVED - defined in app.security_schemes.py
-
 # Initialize logger
 logger = get_logger("hackathon_api")
 

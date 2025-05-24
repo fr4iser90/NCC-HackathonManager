@@ -15,7 +15,8 @@ from app.auth import (
 )
 from app.models.project import Project # Required for project existence check
 
-router = APIRouter()
+
+router = APIRouter(tags=["submissions"])
 
 
 @router.post(

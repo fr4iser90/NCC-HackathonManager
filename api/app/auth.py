@@ -209,18 +209,23 @@ def get_project_team_member_or_admin(
     current_user: User = Depends(get_current_user)
 ) -> User:
     project = db.query(Project).filter(Project.id == project_id).first()
+    print(f"[DEBUG] get_project_team_member_or_admin: project_id={project_id}, user_id={current_user.id if current_user else None}")
     if not project:
+        print(f"[DEBUG] Project not found for id {project_id}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
+    print(f"[DEBUG] Project.team_id={project.team_id}")
     if current_user.role == "admin":
+        print(f"[DEBUG] User is admin")
         return current_user
 
     membership = db.query(TeamMember).filter(
         TeamMember.team_id == project.team_id,
         TeamMember.user_id == current_user.id
     ).first()
-
+    print(f"[DEBUG] Membership found: {membership}")
     if not membership:
+        print(f"[DEBUG] User is not a member of the project's team or an administrator.")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User is not a member of the project's team or an administrator."

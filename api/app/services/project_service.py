@@ -38,7 +38,8 @@ def create_project(db: Session, project_in: ProjectCreate, current_user: User) -
         docker_image=project_in.docker_image,
         docker_tag=project_in.docker_tag,
         docker_registry=project_in.docker_registry,
-        owner_id=current_user.id
+        owner_id=current_user.id,
+        team_id=project_in.team_id
     )
     db.add(db_project)
     db.commit()
