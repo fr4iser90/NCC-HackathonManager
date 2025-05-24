@@ -28,9 +28,9 @@ def list_my_join_requests(db: Session = Depends(get_db), current_user: User = De
     allowed = {JoinRequestStatus.pending, JoinRequestStatus.accepted, JoinRequestStatus.rejected}
     all_reqs = db.query(JoinRequest).filter(JoinRequest.user_id == current_user.id).all()
     filtered = [req for req in all_reqs if req.status in allowed]
-    logger.warning(f"DEBUG JOINREQUESTS COUNT: {len(filtered)}")
+    logger.debug(f"DEBUG JOINREQUESTS COUNT: {len(filtered)}")
     for req in filtered:
-        logger.warning(f"DEBUG JOINREQUEST: team_id={req.team_id} ({type(req.team_id)}), user_id={req.user_id} ({type(req.user_id)}), status={req.status} ({type(req.status)}), created_at={req.created_at} ({type(req.created_at)})")
+        logger.debug(f"DEBUG JOINREQUEST: team_id={req.team_id} ({type(req.team_id)}), user_id={req.user_id} ({type(req.user_id)}), status={req.status} ({type(req.status)}), created_at={req.created_at} ({type(req.created_at)})")
     return [JoinRequestRead.model_validate(req) for req in filtered]
 
 @router.post("/", response_model=TeamRead, status_code=status.HTTP_201_CREATED)

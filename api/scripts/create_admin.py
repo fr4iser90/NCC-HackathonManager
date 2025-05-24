@@ -1,6 +1,7 @@
 import os
 import sys
 import uuid
+import logging
 # from getpass import getpass # No longer needed for non-interactive
 
 # Adjust path to allow imports from the 'app' directory
@@ -11,8 +12,10 @@ from app.database import SessionLocal, engine, Base # Assuming Base might be nee
 from app.models.user import User, UserRole
 from app.auth import get_password_hash # Use your existing password hashing
 
+logger = logging.getLogger("create_admin")
+
 def ensure_admin_user():
-    print("Ensuring initial admin user...")
+    logger.info("Ensuring initial admin user...")
 
     admin_email = os.getenv("ADMIN_EMAIL")
     admin_username = os.getenv("ADMIN_USERNAME")
@@ -21,7 +24,7 @@ def ensure_admin_user():
     admin_github_id = os.getenv("ADMIN_GITHUB_ID")
 
     if not all([admin_email, admin_username, admin_password]):
-        print("Error: ADMIN_EMAIL, ADMIN_USERNAME, and ADMIN_PASSWORD environment variables must be set.")
+        logger.error("Error: ADMIN_EMAIL, ADMIN_USERNAME, and ADMIN_PASSWORD environment variables must be set.")
         sys.exit(1) # Exit with error code if critical env vars are missing
 
     db = SessionLocal()
@@ -30,27 +33,27 @@ def ensure_admin_user():
         existing_user = db.query(User).filter((User.email == admin_email) | (User.username == admin_username)).first()
 
         if existing_user:
-            print(f"Admin user with email '{admin_email}' or username '{admin_username}' already exists.")
+            logger.info(f"Admin user with email '{admin_email}' or username '{admin_username}' already exists.")
             updated = False
             if existing_user.role != UserRole.ADMIN:
-                print(f"Updating role for user '{existing_user.email}' to 'admin'.")
+                logger.info(f"Updating role for user '{existing_user.email}' to 'admin'.")
                 existing_user.role = UserRole.ADMIN
                 updated = True
             
             if admin_github_id and existing_user.github_id != admin_github_id:
-                print(f"Updating GitHub ID for user '{existing_user.email}'.")
+                logger.info(f"Updating GitHub ID for user '{existing_user.email}'.")
                 existing_user.github_id = admin_github_id
                 updated = True
 
             if updated:
                 db.commit()
-                print("User details updated.")
+                logger.info("User details updated.")
             else:
-                print("No changes made to existing admin user.")
+                logger.info("No changes made to existing admin user.")
             return # Exit if user exists
 
         # If user does not exist, create new one
-        print(f"Creating new admin user: Email='{admin_email}', Username='{admin_username}'")
+        logger.info(f"Creating new admin user: Email='{admin_email}', Username='{admin_username}'")
 
         hashed_password = get_password_hash(admin_password)
         
@@ -66,10 +69,10 @@ def ensure_admin_user():
         )
         db.add(new_admin_user)
         db.commit()
-        print(f"Admin user '{admin_email}' / '{admin_username}' created successfully!")
+        logger.info(f"Admin user '{admin_email}' / '{admin_username}' created successfully!")
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logger.error(f"An error occurred: {e}")
         db.rollback()
         sys.exit(1) # Exit with error code on failure
     finally:

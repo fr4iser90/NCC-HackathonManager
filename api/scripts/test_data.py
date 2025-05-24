@@ -2,6 +2,9 @@ import os
 import sys
 import uuid
 from datetime import datetime
+import logging
+
+logger = logging.getLogger("test_data")
 
 # Adjust path to allow imports from the 'app' directory
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -110,7 +113,7 @@ def main():
                 db.commit()
                 db.refresh(user)
             user_objs[u["username"]] = user
-        print(f"Users: {[u.email for u in user_objs.values()]}")
+        logger.info(f"Users: {[u.email for u in user_objs.values()]}")
 
         # --- Hackathons ---
         hackathon_objs = {}
@@ -145,7 +148,7 @@ def main():
                 db.commit()
                 db.refresh(hack)
             hackathon_objs[h["name"]] = hack
-        print(f"Hackathons: {[h.name for h in hackathon_objs.values()]}")
+        logger.info(f"Hackathons: {[h.name for h in hackathon_objs.values()]}")
 
         # --- Teams ---
         team_objs = {}
@@ -166,7 +169,7 @@ def main():
                     db.commit()
                     db.refresh(team)
                 team_objs[f"{hackathon_name}_{t['name']}"] = team
-        print(f"Teams: {[t.name for t in team_objs.values()]}")
+        logger.info(f"Teams: {[t.name for t in team_objs.values()]}")
 
         # --- Team Members ---
         # Admin is owner of Open Team in Team Hackathon
@@ -184,7 +187,7 @@ def main():
             if not exists:
                 db.add(TeamMember(team_id=team.id, user_id=user.id, role=role))
         db.commit()
-        print("Team members assigned.")
+        logger.info("Team members assigned.")
 
         # --- Projects ---
         project_objs = {}
@@ -291,7 +294,7 @@ def main():
             db.commit()
 
             project_objs[p_def["name"]] = project
-        print(f"Projects: {[p.name for p in project_objs.values()]}")
+        logger.info(f"Projects: {[p.name for p in project_objs.values()]}")
 
         # --- Judging Criteria ---
         crit_objs = {}
@@ -311,7 +314,7 @@ def main():
                 db.commit()
                 db.refresh(crit)
             crit_objs[c["name"]] = crit
-        print(f"Criteria: {[c.name for c in crit_objs.values()]}")
+        logger.info(f"Criteria: {[c.name for c in crit_objs.values()]}")
 
         # --- Judging Scores (user: judge bewertet project 1) ---
         judge = user_objs["judge"]
@@ -331,9 +334,9 @@ def main():
                 )
                 db.add(score)
         db.commit()
-        print("Judging scores created.")
+        logger.info("Judging scores created.")
 
-        print("Test data setup complete.")
+        logger.info("Test data setup complete.")
     finally:
         db.close()
 

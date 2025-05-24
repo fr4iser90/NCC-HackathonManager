@@ -50,28 +50,28 @@ def get_build_logs(
     import sys 
     import uuid
     
-    logger.info(f"ENTERING: get_build_logs for project_id='{project_id}', version_id='{version_id}'")
-    print(f"STDERR: ENTERING get_build_logs for project_id='{project_id}', version_id='{version_id}'", file=sys.stderr)
+    logger.debug(f"ENTERING: get_build_logs for project_id='{project_id}', version_id='{version_id}'")
+    # print(f"STDERR: ENTERING get_build_logs for project_id='{project_id}', version_id='{version_id}'", file=sys.stderr)
 
     try:
         project_uuid = uuid.UUID(project_id)
         version_uuid = uuid.UUID(version_id)
-        logger.info(f"UUIDs created: project_uuid='{project_uuid}', version_uuid='{version_uuid}'")
-        print(f"STDERR: UUIDs created: project_uuid='{project_uuid}', version_uuid='{version_uuid}'", file=sys.stderr)
+        logger.debug(f"UUIDs created: project_uuid='{project_uuid}', version_uuid='{version_uuid}'")
+        # print(f"STDERR: UUIDs created: project_uuid='{project_uuid}', version_uuid='{version_uuid}'", file=sys.stderr)
     except Exception as e:
         logger.error(f"Invalid UUID format: {e}", exc_info=True)
-        print(f"STDERR: Invalid UUID format: {e}", file=sys.stderr)
+        # print(f"STDERR: Invalid UUID format: {e}", file=sys.stderr)
         raise HTTPException(status_code=400, detail="Invalid UUID format")
 
     # Check if project exists
     project = db.query(Project).filter_by(id=project_uuid).first()
     if not project:
         logger.warning(f"Project not found for project_uuid='{project_uuid}'")
-        print(f"STDERR: Project not found for project_uuid='{project_uuid}'", file=sys.stderr)
+        # print(f"STDERR: Project not found for project_uuid='{project_uuid}'", file=sys.stderr)
         raise HTTPException(status_code=404, detail="Project not found")
     logger.info(f"Project found: {project.id}")
-    print(f"STDERR: Project found: {project.id}", file=sys.stderr)
-
+    # print(f"STDERR: Project found: {project.id}", file=sys.stderr)
+    
     # Check if user is a team member or admin
     # Assuming 'project.members' is the correct way to get team members for the project
     # This part might need adjustment based on your actual TeamMember model and relationship
@@ -81,10 +81,10 @@ def get_build_logs(
     
     if current_user.role != "admin" and not is_member: # Simplified for now, ensure project.members or equivalent is correct
         logger.warning(f"User {current_user.id} not authorized for project {project_id}")
-        print(f"STDERR: User {current_user.id} not authorized for project {project_id}", file=sys.stderr)
+        # print(f"STDERR: User {current_user.id} not authorized for project {project_id}", file=sys.stderr)
         raise HTTPException(status_code=403, detail="Not authorized")
     logger.info(f"User {current_user.id} authorized.")
-    print(f"STDERR: User {current_user.id} authorized.", file=sys.stderr)
+    # print(f"STDERR: User {current_user.id} authorized.", file=sys.stderr)
     
     # Get version by ID only, then check project_id
     version = db.query(ProjectVersion).filter_by(id=version_uuid).first()
@@ -92,29 +92,29 @@ def get_build_logs(
     version_id_from_db = getattr(version, 'id', None)
     version_project_id_from_db = getattr(version, 'project_id', None)
     
-    logger.info(f"DEBUG CHECK: version_found_in_db={bool(version)}, "
+    logger.debug(f"DEBUG CHECK: version_found_in_db={bool(version)}, "
                 f"version.id_from_db='{version_id_from_db}' (type: {type(version_id_from_db)}), "
                 f"version.project_id_from_db='{version_project_id_from_db}' (type: {type(version_project_id_from_db)}), "
                 f"path_version_uuid='{version_uuid}' (type: {type(version_uuid)}), "
                 f"path_project_uuid='{project_uuid}' (type: {type(project_uuid)})")
-    print(f"STDERR: DEBUG CHECK: version_found_in_db={bool(version)}, "
-          f"version.id_from_db='{version_id_from_db}', version.project_id_from_db='{version_project_id_from_db}', "
-          f"path_version_uuid='{version_uuid}', path_project_uuid='{project_uuid}'", file=sys.stderr)
+    # print(f"STDERR: DEBUG CHECK: version_found_in_db={bool(version)}, "
+    #       f"version.id_from_db='{version_id_from_db}', version.project_id_from_db='{version_project_id_from_db}', "
+    #       f"path_version_uuid='{version_uuid}', path_project_uuid='{project_uuid}'", file=sys.stderr)
 
     if not version:
         logger.warning(f"Version not found in DB for version_uuid='{version_uuid}'")
-        print(f"STDERR: Version not found in DB for version_uuid='{version_uuid}'", file=sys.stderr)
+        # print(f"STDERR: Version not found in DB for version_uuid='{version_uuid}'", file=sys.stderr)
         raise HTTPException(status_code=404, detail="Version not found (lookup by version_uuid failed)")
 
     if str(version.project_id) != str(project_uuid):
         logger.warning(f"Project ID mismatch: version.project_id='{version.project_id}' (type: {type(version.project_id)}) "
                        f"!= path_project_uuid='{project_uuid}' (type: {type(project_uuid)})")
-        print(f"STDERR: Project ID mismatch: version.project_id='{version.project_id}' != path_project_uuid='{project_uuid}'", file=sys.stderr)
+        # print(f"STDERR: Project ID mismatch: version.project_id='{version.project_id}' != path_project_uuid='{project_uuid}'", file=sys.stderr)
         raise HTTPException(status_code=404, detail="Version not found (project_id mismatch)")
         
     logger.info(f"Successfully found version '{version.id}' for project '{project.id}'. Returning build_logs.")
-    print(f"STDERR: Successfully found version '{version.id}' for project '{project.id}'. Returning build_logs.", file=sys.stderr)
-    print(f"STDERR: ACTUAL BUILD_LOGS VALUE: {repr(version.build_logs)}", file=sys.stderr)
+    # print(f"STDERR: Successfully found version '{version.id}' for project '{project.id}'. Returning build_logs.", file=sys.stderr)
+    # print(f"STDERR: ACTUAL BUILD_LOGS VALUE: {repr(version.build_logs)}", file=sys.stderr)
     return {"build_logs": version.build_logs or ""}
 
 # --- Project Template Endpoints (Admin-focused, basic implementation) ---
@@ -290,7 +290,7 @@ async def submit_project_version(
     """
     Submit a new version of a project (synchronous, DB-based logging).
     """
-    logger.info("DEBUG: Entered submit_project_version endpoint")
+    logger.debug("Entered submit_project_version endpoint")
     import uuid
     import shutil
     import os
@@ -340,18 +340,18 @@ async def submit_project_version(
         # Extract ZIP file to a temporary directory
         temp_dir = tempfile.mkdtemp()
         try:
-            logger.info("DEBUG: Before ZIP extraction...")
-            print("DEBUG: Before ZIP extraction...", flush=True)
+            logger.debug("Before ZIP extraction...")
+            # print("DEBUG: Before ZIP extraction...", flush=True)
             with zipfile.ZipFile(file_path, 'r') as zip_ref:
                 zip_ref.extractall(temp_dir)
-            logger.info("DEBUG: After ZIP extraction...")
-            print("DEBUG: After ZIP extraction...", flush=True)
+            logger.debug("After ZIP extraction...")
+            # print("DEBUG: After ZIP extraction...", flush=True)
 
             # Start build process synchronously
             build_script = os.path.join(SCRIPTS_DIR, "build_project_container.py")
             tag = f"hackathon-project-{project_id}-{version.id}"
 
-            print("DEBUG: Starting build process...", flush=True)
+            # print("DEBUG: Starting build process...", flush=True)
             process = subprocess.run(
                 [sys.executable, build_script, "--project-path", temp_dir, "--tag", tag],
                 stdout=subprocess.PIPE,
@@ -359,7 +359,7 @@ async def submit_project_version(
                 text=True,
                 check=False
             )
-            print("DEBUG: Build process finished.", flush=True)
+            # print("DEBUG: Build process finished.", flush=True)
 
             build_output = process.stdout if process.stdout else "No output from build process"
             if process.returncode == 0:

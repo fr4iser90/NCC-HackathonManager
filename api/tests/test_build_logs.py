@@ -1,6 +1,9 @@
 import os
 import io
 import pytest
+import logging
+
+logger = logging.getLogger("test_build_logs")
 
 example_zip_path = os.path.join(os.path.dirname(__file__), "example_projects", "magic-genie-explainer-main.zip", "VibeCoding-main.zip", "SimpleSecCheck-main.zip")
 
@@ -31,12 +34,12 @@ def test_build_logs_end_to_end(client, db_session, test_hackathon, created_regul
     file_obj = io.BytesIO(file_bytes)
     files = {"file": ("magic-genie-explainer-main.zip", file_obj, "application/zip")}
     data = {"project_id": str(project_id)}  # Pass as string
-    print("DEBUG: About to POST to /projects/{}/submit_version".format(project_id))
-    print("DEBUG: files =", files)
-    print("DEBUG: data =", data)
+    logger.debug("About to POST to /projects/{}/submit_version".format(project_id))
+    logger.debug("DEBUG: files =", files)
+    logger.debug("DEBUG: data =", data)
     res = client.post(f"/projects/{project_id}/submit_version", files=files, data=data, headers=auth_headers_for_regular_user)
-    print("DEBUG: POST response status_code =", res.status_code)
-    print("DEBUG: POST response text =", res.text)
+    logger.debug("DEBUG: POST response status_code =", res.status_code)
+    logger.debug("DEBUG: POST response text =", res.text)
     assert res.status_code == 200, f"Submit failed: {res.text}"
     resp = res.json()
     version_id = resp.get("version_id") or resp.get("id")
@@ -48,4 +51,4 @@ def test_build_logs_end_to_end(client, db_session, test_hackathon, created_regul
     logs_data = logs_res.json()
     logs = logs_data.get("build_logs", "")
     assert logs, "Build logs are empty"
-    print("Build logs:\n", logs)
+    logger.info("Build logs:\n%s", logs)

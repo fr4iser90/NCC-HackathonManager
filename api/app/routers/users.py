@@ -15,8 +15,10 @@ from app.schemas.team import TeamRead
 from app.schemas.project import ProjectRead
 from app.static import avatar_url, avatar_path
 from app.models.hackathon_registration import HackathonRegistration # Added import
+from app.logger import get_logger
 
 router = APIRouter()
+logger = get_logger("users_router")
 
 # Dependency for admin check (can be refined later)
 async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
@@ -167,17 +169,17 @@ def upload_avatar(
 ):
     # Nur Bilddateien erlauben (Content-Type und Magic Bytes)
     if not file.content_type.startswith("image/"):
-        print("[Avatar-Upload] Kein Bild-Content-Type:", file.content_type)
+        logger.warning("[Avatar-Upload] Kein Bild-Content-Type: %s", file.content_type)
         raise HTTPException(status_code=400, detail="Nur Bilddateien erlaubt.")
     contents = file.file.read()
     if len(contents) > 2 * 1024 * 1024:
-        print("[Avatar-Upload] Bild zu groß:", len(contents))
+        logger.warning("[Avatar-Upload] Bild zu groß: %s", len(contents))
         raise HTTPException(status_code=400, detail="Bild zu groß (max 2MB)")
     try:
         img = Image.open(io.BytesIO(contents))
         img.verify()  # Prüft, ob es ein echtes Bild ist
     except Exception as e:
-        print("[Avatar-Upload] Ungültige Bilddatei:", e)
+        logger.error("[Avatar-Upload] Ungültige Bilddatei: %s", e)
         raise HTTPException(status_code=400, detail="Ungültige Bilddatei.")
     img = Image.open(io.BytesIO(contents))
     min_side = min(img.size)
@@ -189,11 +191,11 @@ def upload_avatar(
     img = img.resize((256, 256))
     filename = f"{current_user.id}.png"
     file_path = avatar_path(filename)
-    print(f"[Avatar-Upload] Speichere Avatar nach: {file_path}")
+    logger.info("[Avatar-Upload] Speichere Avatar nach: %s", file_path)
     try:
         img.save(file_path, format="PNG")
     except Exception as e:
-        print(f"[Avatar-Upload] Fehler beim Speichern: {e}")
+        logger.error("[Avatar-Upload] Fehler beim Speichern: %s", e)
         raise HTTPException(status_code=500, detail="Fehler beim Speichern des Avatars.")
     avatar_url_value = avatar_url(filename)
     current_user.avatar_url = avatar_url_value

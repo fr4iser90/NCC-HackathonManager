@@ -3,6 +3,9 @@ import pytest
 import uuid
 from typing import Generator, Dict, Any, Optional
 from datetime import datetime, timedelta
+import logging
+
+logger = logging.getLogger("conftest")
 
 # Set TESTING environment variable
 os.environ["TESTING"] = "1"
@@ -141,7 +144,7 @@ def _get_auth_headers_helper(client: TestClient, user_data: Dict[str, Any]) -> D
         data={"email": user_data["email"], "password": user_data["password"]}
     )
     if response.status_code != status.HTTP_200_OK:
-        print(f"Login failed for user {user_data.get('email')} during auth header generation. Status: {response.status_code}, Response: {response.text}")
+        logger.warning(f"Login failed for user {user_data.get('email')} during auth header generation. Status: {response.status_code}, Response: {response.text}")
     assert response.status_code == status.HTTP_200_OK, "Failed to log in user for getting auth headers"
     tokens = response.json()
     return {"Authorization": f"Bearer {tokens['access_token']}"}
