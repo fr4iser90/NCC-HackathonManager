@@ -78,6 +78,7 @@ def submit_project_version(db: Session, project_id: str, file: UploadFile, versi
     )
     db.add(version)
     db.commit()
+    db.expire_all()
     db.refresh(version)
     temp_dir = tempfile.mkdtemp()
     try:
@@ -101,7 +102,22 @@ def submit_project_version(db: Session, project_id: str, file: UploadFile, versi
             project.status = "failed"
         version.build_logs = build_output
         db.commit()
+        db.expire_all()
+        db.refresh(version)
+    except zipfile.BadZipFile:
+        version.status = "failed"
+        version.build_logs = "Upload is not a valid ZIP file."
+        db.commit()
+        db.expire_all()
+        db.refresh(version)
+        raise HTTPException(status_code=400, detail="Uploaded file is not a valid ZIP archive.")
+    except Exception as e:
+        version.status = "failed"
+        version.build_logs = f"Build failed: {str(e)}"
+        db.commit()
+        db.expire_all()
+        db.refresh(version)
+        raise HTTPException(status_code=400, detail=f"Build failed: {str(e)}")
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
-    db.refresh(version)
     return version 

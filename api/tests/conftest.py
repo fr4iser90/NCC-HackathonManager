@@ -48,25 +48,23 @@ def setup_test_db_schemas():
         cursor.execute("CREATE SCHEMA IF NOT EXISTS hackathons;")
         cursor.close()
 
-@pytest.fixture(scope="function")
-def db_session(setup_test_db_schemas) -> Generator[Session, None, None]: # Ensure schema setup runs before session
-    Base.metadata.create_all(bind=engine_test) # Create tables for each test function
+@pytest.fixture(scope="session")
+def db_session(setup_test_db_schemas) -> Generator[Session, None, None]:
+    Base.metadata.create_all(bind=engine_test) # Create tables once for the session
     db = TestingSessionLocal()
     try:
         yield db
     finally:
         db.close()
-        Base.metadata.drop_all(bind=engine_test) # Drop tables after each test function
 
-@pytest.fixture(scope="function")
-def client(db_session: Session) -> TestClient:
-    """Override the get_db dependency to use the test database."""
+@pytest.fixture(scope="session")
+def client() -> TestClient:
     def override_get_db():
+        db = TestingSessionLocal()
         try:
-            yield db_session
+            yield db
         finally:
-            pass # Session is closed by db_session fixture
-
+            db.close()
     app.dependency_overrides[get_db] = override_get_db
     return TestClient(app)
 

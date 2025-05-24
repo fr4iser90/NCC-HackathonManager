@@ -87,32 +87,18 @@ def get_build_logs(
     logger.info(f"User {current_user.id} authorized.")
     # print(f"STDERR: User {current_user.id} authorized.", file=sys.stderr)
     
-    # Get version by ID only, then check project_id
-    version = db.query(ProjectVersion).filter_by(id=version_uuid).first()
-    
-    version_id_from_db = getattr(version, 'id', None)
-    version_project_id_from_db = getattr(version, 'project_id', None)
-    
-    logger.debug(f"DEBUG CHECK: version_found_in_db={bool(version)}, "
-                f"version.id_from_db='{version_id_from_db}' (type: {type(version_id_from_db)}), "
-                f"version.project_id_from_db='{version_project_id_from_db}' (type: {type(version_project_id_from_db)}), "
-                f"path_version_uuid='{version_uuid}' (type: {type(version_uuid)}), "
-                f"path_project_uuid='{project_uuid}' (type: {type(project_uuid)})")
-    # print(f"STDERR: DEBUG CHECK: version_found_in_db={bool(version)}, "
-    #       f"version.id_from_db='{version_id_from_db}', version.project_id_from_db='{version_project_id_from_db}', "
-    #       f"path_version_uuid='{version_uuid}', path_project_uuid='{project_uuid}'", file=sys.stderr)
-
+    # Debug: Log IDs und Query-Parameter
+    logger.info(f"Build-Log-Request: project_id={project_id}, version_id={version_id}")
+    # Get version by ID and project_id in einem Query
+    version = db.query(ProjectVersion).filter(
+        ProjectVersion.id == version_uuid,
+        ProjectVersion.project_id == project_uuid
+    ).first()
     if not version:
-        logger.warning(f"Version not found in DB for version_uuid='{version_uuid}'")
-        # print(f"STDERR: Version not found in DB for version_uuid='{version_uuid}'", file=sys.stderr)
-        raise HTTPException(status_code=404, detail="Version not found (lookup by version_uuid failed)")
+        logger.warning(f"Version not found for project_id={project_uuid}, version_id={version_uuid}")
+        raise HTTPException(status_code=404, detail="Version not found (by project_id and version_id)")
+    logger.info(f"Build-Log-Request: Version gefunden: {version.id}")
 
-    if str(version.project_id) != str(project_uuid):
-        logger.warning(f"Project ID mismatch: version.project_id='{version.project_id}' (type: {type(version.project_id)}) "
-                       f"!= path_project_uuid='{project_uuid}' (type: {type(project_uuid)})")
-        # print(f"STDERR: Project ID mismatch: version.project_id='{version.project_id}' != path_project_uuid='{project_uuid}'", file=sys.stderr)
-        raise HTTPException(status_code=404, detail="Version not found (project_id mismatch)")
-        
     logger.info(f"Successfully found version '{version.id}' for project '{project.id}'. Returning build_logs.")
     # print(f"STDERR: Successfully found version '{version.id}' for project '{project.id}'. Returning build_logs.", file=sys.stderr)
     # print(f"STDERR: ACTUAL BUILD_LOGS VALUE: {repr(version.build_logs)}", file=sys.stderr)
@@ -256,7 +242,7 @@ def delete_project(
     db.commit()
     return 
 
-@router.post("/{project_id}/submit_version")
+@router.post("/{project_id}/submit_version", response_model=ProjectVersionRead)
 async def submit_project_version_endpoint(
     project_id: str,
     file: UploadFile = File(...),
@@ -268,7 +254,7 @@ async def submit_project_version_endpoint(
     Submit a new version of a project (synchronous, DB-based logging).
     """
     version = submit_project_version(db, project_id, file, version_notes, current_user)
-    return version
+    return ProjectVersionRead.model_validate(version)
 
 @router.get("/{project_id}/versions", response_model=list[ProjectVersionRead])
 async def get_project_versions(
