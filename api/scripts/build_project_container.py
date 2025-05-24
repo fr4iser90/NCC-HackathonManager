@@ -7,6 +7,9 @@ import yaml
 import sys
 import time
 from typing import Dict, Any, Tuple
+import signal
+import threading
+import re
 
 # Add the parent directory to sys.path to allow importing from app
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -198,6 +201,45 @@ def build_compose(project_path: str, logger: BuildLogger) -> Tuple[int, str]:
     
     return proc.returncode, "\n".join(output)
 
+def log(msg):
+    print(msg)
+    sys.stdout.flush()
+
+def check_project_files(project_path):
+    missing = []
+    for fname in ["Dockerfile", "requirements.txt", "package.json"]:
+        if not os.path.exists(os.path.join(project_path, fname)):
+            missing.append(fname)
+    return missing
+
+def check_security_warnings(project_path):
+    warnings = []
+    dockerfile = os.path.join(project_path, "Dockerfile")
+    compose = os.path.join(project_path, "docker-compose.yml")
+    if os.path.exists(dockerfile):
+        with open(dockerfile) as f:
+            content = f.read()
+            if re.search(r"USER\s+root", content):
+                warnings.append("SECURITY WARNING: Dockerfile uses USER root!")
+            if "privileged: true" in content:
+                warnings.append("SECURITY WARNING: Dockerfile uses privileged: true!")
+    if os.path.exists(compose):
+        with open(compose) as f:
+            content = f.read()
+            if "privileged: true" in content:
+                warnings.append("SECURITY WARNING: docker-compose.yml uses privileged: true!")
+    return warnings
+
+def run_with_timeout(cmd, cwd, timeout):
+    proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    timer = threading.Timer(timeout, lambda: proc.kill())
+    try:
+        timer.start()
+        out, _ = proc.communicate()
+        return proc.returncode, out
+    finally:
+        timer.cancel()
+
 def main():
     parser = argparse.ArgumentParser(description="Dockerize User Project")
     parser.add_argument("--project-path", required=True, help="Pfad zum User-Projekt")
@@ -241,6 +283,43 @@ def main():
         ensure_dockerfile(project_path, stack, logger)
         rc, output = build_image(project_path, args.tag, logger)
         exit(rc)
+
+    build_log = []
+    try:
+        log(f"�� Starte Build für {args.tag}")
+        # Check for missing files
+        missing = check_project_files(project_path)
+        if missing:
+            msg = f"WARN: Projektdateien fehlen: {', '.join(missing)}"
+            log(msg)
+            build_log.append(msg)
+        # Security warnings
+        for warn in check_security_warnings(project_path):
+            log(warn)
+            build_log.append(warn)
+        # Build (simulate with Docker build if Dockerfile exists)
+        if os.path.exists(os.path.join(project_path, "Dockerfile")):
+            cmd = ["docker", "build", "-t", args.tag, project_path]
+            log(f"🔨 Starte Build: {' '.join(cmd)}")
+            build_log.append(f"🔨 Starte Build: {' '.join(cmd)}")
+            rc, out = run_with_timeout(cmd, cwd=project_path, timeout=60)
+            build_log.append(out)
+            if rc == 0:
+                log("✨ Build erfolgreich!")
+                build_log.append("✨ Build erfolgreich!")
+            else:
+                log(f"❌ Build fehlgeschlagen (Exit {rc})!")
+                build_log.append(f"❌ Build fehlgeschlagen (Exit {rc})!")
+        else:
+            log("WARN: Kein Dockerfile gefunden, Build wird übersprungen.")
+            build_log.append("WARN: Kein Dockerfile gefunden, Build wird übersprungen.")
+    except Exception as e:
+        log(f"ERROR: Build-Exception: {e}")
+        build_log.append(f"ERROR: Build-Exception: {e}")
+    finally:
+        # Schreibe Build-Log in Datei, falls gewünscht (kann von Service-Layer gelesen werden)
+        with open(os.path.join(project_path, "build.log"), "w") as f:
+            f.write("\n".join(build_log))
 
 if __name__ == "__main__":
     main()
