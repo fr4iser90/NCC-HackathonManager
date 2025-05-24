@@ -163,9 +163,7 @@ pkgs.mkShell {
       # Check Docker and build containers
       if check_docker; then
         echo "Building Docker containers..."
-        cd  
         docker compose build
-        cd -
       fi
       
       echo "Quick installation complete!"
@@ -230,7 +228,6 @@ pkgs.mkShell {
 
     start-backend() {
       echo "Starting backend server..."
-      cd  
       # Run in detached mode
       docker compose up --build -d
       # Wait a moment for containers to start
@@ -238,20 +235,16 @@ pkgs.mkShell {
       # Check if containers are actually running
       if ! docker compose ps --services --filter "status=running" | grep -q "api"; then
         echo "Failed to start containers. Check logs with: docker compose logs api"
-        cd -
         return 1
       fi
       echo "Backend containers started successfully"
-      cd -
     }
 
     rebuild-backend() {
       echo "Stopping and removing all containers and volumes..."
-      cd  
       docker compose down -v
       echo "Rebuilding and starting containers in background..."
       docker compose up --build -d
-      cd -
       echo "Rebuild complete!"
     }
 
@@ -480,9 +473,7 @@ pkgs.mkShell {
         echo "You may need to manually identify and kill the process using this port."
         echo "Continuing with rebuild anyway..."
       fi
-      cd  
       docker compose down -v
-      cd -
       echo ">>> Cleaning up frontend..."
       cd  frontend
       rm -rf node_modules package-lock.json .next
@@ -543,9 +534,7 @@ pkgs.mkShell {
 
     close-kill-clean-all() {
       echo ">>> Stopping and removing all backend containers and volumes..."
-      cd  
       docker compose down -v
-      cd -
 
       echo ">>> Killing frontend dev server and freeing its port..."
       kill-frontend-port
