@@ -256,9 +256,11 @@ pkgs.mkShell {
     }
 
     rebuild-frontend() {
-      echo "Removing node_modules and package-lock.json in the frontend..."
+      echo "Removing node_modules, package-lock.json, and .next in the frontend..."
       cd  frontend
-      rm -rf node_modules package-lock.json
+      rm -rf node_modules package-lock.json .next
+      echo "Cleaning npm cache..."
+      npm cache clean --force
       echo "Reinstalling npm dependencies..."
       npm install
       cd -
@@ -471,7 +473,6 @@ pkgs.mkShell {
     rebuild-all() {
       echo ">>> Stopping and removing all containers and volumes..."
       local frontend_port=$(get-frontend-port)
-      
       # Kill frontend processes and wait for port to be free
       kill-frontend-port
       if ! wait_for_port_free "$frontend_port" 15 2; then
@@ -479,26 +480,23 @@ pkgs.mkShell {
         echo "You may need to manually identify and kill the process using this port."
         echo "Continuing with rebuild anyway..."
       fi
-      
       cd  
       docker compose down -v
       cd -
-
       echo ">>> Cleaning up frontend..."
       cd  frontend
       rm -rf node_modules package-lock.json .next
+      echo ">>> Cleaning npm cache..."
+      npm cache clean --force
       echo ">>> Installing dependencies..."
       npm install
       cd -
-
       echo ">>> Rebuilding and starting backend containers..."
       docker compose up --build -d
-
       echo ">>> Starting frontend development server..."
       cd  frontend
       npm run dev &
       cd -
-
       echo ">>> Everything has been rebuilt and started!"
       echo "Frontend: http://localhost:3000"
       echo "Backend:  http://localhost:8000"
