@@ -1,9 +1,10 @@
 import uuid
+import enum
 # import enum # No longer needed here directly if HackathonStatus is the only enum from this model's perspective
 from datetime import datetime, timezone
 from typing import Optional, List, TYPE_CHECKING
 
-from sqlalchemy import Table, Column, String, DateTime, ForeignKey, Enum as SQLEnum, JSON # Table might be removed if hackathon_teams_table is fully gone
+from sqlalchemy import Table, Column, String, DateTime, ForeignKey, Enum as SQLEnum, JSON, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
@@ -13,6 +14,12 @@ from app.schemas.hackathon import HackathonStatus, HackathonMode # Import Hackat
 if TYPE_CHECKING:
     from .hackathon_registration import HackathonRegistration # Import for relationship
     from .team import Team
+
+class VotingType(str, enum.Enum):
+    judges_only = "judges_only"
+    users = "users"
+    public = "public"
+    mixed = "mixed"
 
 class Hackathon(Base):
     __tablename__ = "hackathons"
@@ -48,6 +55,14 @@ class Hackathon(Base):
     allow_individuals: Mapped[bool] = mapped_column(nullable=False, default=True)
     allow_multiple_projects_per_team: Mapped[bool] = mapped_column(nullable=False, default=False)
     custom_fields: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    # --- Judging/Voting Config ---
+    voting_type: Mapped[str] = mapped_column(String(32), nullable=False, default="judges_only")
+    judging_criteria: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)  # List of criteria dicts
+    voting_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    voting_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    anonymous_votes: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    allow_multiple_votes: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     organizer = relationship("User", lazy="selectin")
     # Relationship to the new HackathonRegistration table

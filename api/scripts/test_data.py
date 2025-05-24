@@ -1,7 +1,7 @@
 import os
 import sys
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 logger = logging.getLogger("test_data")
@@ -20,6 +20,12 @@ from app.models.hackathon import Hackathon
 from app.schemas.hackathon import HackathonStatus, HackathonMode
 from app.schemas.project import ProjectStatus, ProjectStorageType
 from app.models.hackathon_registration import HackathonRegistration
+
+# --- Judging Criteria ---
+CRITERIA = [
+    {"name": "Innovation", "description": "How innovative is the project?", "max_score": 10, "weight": 1.0},
+    {"name": "Technical Quality", "description": "How technically sound is the project?", "max_score": 10, "weight": 1.0},
+]
 
 # --- Testdaten ---
 USERS = [
@@ -63,7 +69,13 @@ HACKATHONS = [
         "contact_email": "orga@hackathon.com",
         "allow_individuals": True,
         "allow_multiple_projects_per_team": False,
-        "custom_fields": {"special_award": "Best UI"}
+        "custom_fields": {"special_award": "Best UI"},
+        "voting_type": "users",
+        "judging_criteria": CRITERIA,
+        "voting_start": datetime(2025, 5, 4, 10, 0),
+        "voting_end": datetime(2025, 5, 11, 18, 0),
+        "anonymous_votes": True,
+        "allow_multiple_votes": False
     },
     {
         "name": "Team Hackathon",
@@ -76,20 +88,47 @@ HACKATHONS = [
         "category": "Security",
         "max_team_size": 4,
         "min_team_size": 2,
-        "allow_individuals": False
+        "allow_individuals": False,
+        "voting_type": "judges_only",
+        "judging_criteria": CRITERIA,
+        "voting_start": datetime(2025, 6, 4, 10, 0),
+        "voting_end": datetime(2025, 6, 11, 18, 0),
+        "anonymous_votes": False,
+        "allow_multiple_votes": False
     },
-    {"name": "Hackathon Completed", "description": "Herbst 2025", "start_date": datetime(2025, 9, 1, 10, 0), "end_date": datetime(2025, 9, 3, 18, 0), "status": "COMPLETED", "category": "General"},
-    {"name": "Hackathon Archived", "description": "Winter 2025", "start_date": datetime(2025, 12, 1, 10, 0), "end_date": datetime(2025, 12, 3, 18, 0), "status": "ARCHIVED", "category": "General"},
+    {
+        "name": "Hackathon Completed",
+        "description": "Herbst 2025",
+        "start_date": datetime(2025, 9, 1, 10, 0),
+        "end_date": datetime(2025, 9, 3, 18, 0),
+        "status": "COMPLETED",
+        "category": "General",
+        "voting_type": "public",
+        "judging_criteria": CRITERIA,
+        "voting_start": datetime(2025, 9, 4, 10, 0),
+        "voting_end": datetime(2025, 9, 11, 18, 0),
+        "anonymous_votes": True,
+        "allow_multiple_votes": True
+    },
+    {
+        "name": "Hackathon Archived",
+        "description": "Winter 2025",
+        "start_date": datetime(2025, 12, 1, 10, 0),
+        "end_date": datetime(2025, 12, 3, 18, 0),
+        "status": "ARCHIVED",
+        "category": "General",
+        "voting_type": "public",
+        "judging_criteria": CRITERIA,
+        "voting_start": datetime(2025, 12, 4, 10, 0),
+        "voting_end": datetime(2025, 12, 11, 18, 0),
+        "anonymous_votes": True,
+        "allow_multiple_votes": True
+    },
 ]
 
 PROJECTS = [
     {"name": "Test Project 1", "description": "Demo project 1", "status": "ACTIVE"},
     {"name": "Test Project 2", "description": "Demo project 2", "status": "DRAFT"},
-]
-
-CRITERIA = [
-    {"name": "Innovation", "description": "How innovative is the project?", "max_score": 10, "weight": 1.0},
-    {"name": "Technical Quality", "description": "How technically sound is the project?", "max_score": 10, "weight": 1.0},
 ]
 
 def main():
@@ -143,6 +182,12 @@ def main():
                     allow_individuals=h.get("allow_individuals", True),
                     allow_multiple_projects_per_team=h.get("allow_multiple_projects_per_team", False),
                     custom_fields=h.get("custom_fields"),
+                    voting_type=h.get("voting_type", "judges_only"),
+                    judging_criteria=h.get("judging_criteria"),
+                    voting_start=h.get("voting_start"),
+                    voting_end=h.get("voting_end"),
+                    anonymous_votes=h.get("anonymous_votes", True),
+                    allow_multiple_votes=h.get("allow_multiple_votes", False),
                 )
                 db.add(hack)
                 db.commit()
