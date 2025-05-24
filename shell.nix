@@ -85,6 +85,7 @@ pkgs.mkShell {
       check_docker_containers || return 1
       check_frontend_deps
       start-test-db || return 1
+      init-testdb-migration
       clean-caches
       echo "Running pytest (locally) with arguments: $@"
       command pytest "$@"
@@ -101,6 +102,7 @@ pkgs.mkShell {
       check_docker_containers || return 1
       check_frontend_deps
       start-test-db || return 1
+      init-testdb-migration
       clean-caches
       echo "Running pytest with minimal log (short tracebacks, warnings disabled, max 10 fails)..."
       command pytest --maxfail=30 --disable-warnings --tb=short > test_report.txt || true
@@ -495,6 +497,8 @@ pkgs.mkShell {
       cd -
       echo ">>> Rebuilding and starting backend containers..."
       docker compose up --build -d
+      start-test-db || true
+      init-testdb-migration
       echo ">>> Starting frontend development server..."
       cd  frontend
       npm run dev &
@@ -561,6 +565,18 @@ pkgs.mkShell {
       echo ">>> Cleaning Python caches (__pycache__, .pytest_cache)..."
       clean-caches
 
+      # --- Ensure Docker network is removed ---
+      echo ">>> Attempting to remove Docker network ncc-hackathonmanager_default..."
+      if docker network inspect ncc-hackathonmanager_default >/dev/null 2>&1; then
+        if docker network rm ncc-hackathonmanager_default; then
+          echo "Docker network ncc-hackathonmanager_default removed."
+        else
+          echo "WARNING: Could not remove Docker network ncc-hackathonmanager_default. It may still be in use."
+        fi
+      else
+        echo "Docker network ncc-hackathonmanager_default does not exist."
+      fi
+
       echo ">>> All apps stopped and all caches/artifacts cleaned!"
       echo "If you want to start fresh, use: quick-startup"
     }
@@ -601,8 +617,20 @@ pkgs.mkShell {
 
     pytest-with-testdb() {
       start-test-db || return 1
+      init-testdb-migration
       pytest "$@"
       stop-test-db
+    }
+
+    # --- Test-DB Migration/Init Funktion ---
+    init-testdb-migration() {
+      echo "[Migration-Check] Prüfe, ob auth.users in Test-DB existiert..."
+      if ! PGPASSWORD=testpass psql -h localhost -p 5433 -U testuser -d testdb -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='auth' AND table_name='users';" | grep -q 1; then
+        echo "[Migration] Migration/Init-SQL wird ausgeführt..."
+        PGPASSWORD=testpass psql -h localhost -p 5433 -U testuser -d testdb -f database/init.sql
+      else
+        echo "[Migration] Migration/Init-SQL übersprungen (Tabelle auth.users existiert bereits)."
+      fi
     }
 
     echo "Python development environment activated"
@@ -623,5 +651,6 @@ pkgs.mkShell {
     echo "  clean-all           - Clean both Python and frontend caches/artifacts"
     echo "  db_upgrade          - Apply database migrations using Alembic inside the bot container"
     echo "  close-kill-clean-all - Stop all backend/frontend, remove all caches, Docker volumes, and frontend artifacts"
+    echo "  init-testdb-migration - Führe Migration/Init-SQL für Test-DB nur falls nötig aus (prüft auf auth.users)"
   '';
 }

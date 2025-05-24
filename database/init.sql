@@ -135,9 +135,12 @@ CREATE TABLE projects.templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
-    tech_stack VARCHAR(100)[] NOT NULL,
+    tech_stack JSONB NOT NULL,
+    repository_url VARCHAR(255),
+    live_url VARCHAR(255),
     resources JSONB NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE projects.projects (
