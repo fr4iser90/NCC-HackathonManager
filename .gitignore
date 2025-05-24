@@ -50,4 +50,6 @@ next-env.d.ts
 test_report.txt
 test.db
 
+api/app/static/projects/*
+api/logs
 __pycache__/

@@ -23,8 +23,8 @@ class User(Base):
     __table_args__ = {"schema": "auth"}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    username = Column(String(50), unique=True, index=True, nullable=False)
-    email = Column(String(100), unique=True, index=True, nullable=False)
+    username = Column(String(255), unique=True, index=True, nullable=False)
+    email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(100), nullable=False)
     full_name = Column(String(100))
     role = Column(Enum(UserRole), nullable=False, default=UserRole.PARTICIPANT)

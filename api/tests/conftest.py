@@ -23,23 +23,16 @@ from app.auth import get_password_hash
 from app.models.hackathon import Hackathon
 from app.schemas.hackathon import HackathonStatus, HackathonMode
 
-# --- Test Database Setup (SQLite file-based for thread safety) ---
-# For full compatibility with PostgreSQL features (like schemas), a test PostgreSQL DB would be better.
-# This SQLite setup will not test schema-specific SQL directly.
-DATABASE_URL_TEST = "sqlite:///./test.db"
+# --- Test Database Setup (PostgreSQL) ---
+DATABASE_URL_TEST = "postgresql+psycopg2://testuser:testpass@localhost:5433/testdb"
 
 engine_test = create_engine(
     DATABASE_URL_TEST,
-    connect_args={"check_same_thread": False}, # Needed for SQLite
+    pool_pre_ping=True,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine_test)
 
 EXAMPLE_PROJECTS_DIR = os.path.join(os.path.dirname(__file__), "example_projects")
-
-# --- Schemas Used ---
-# Define the schemas used by your models here
-# This is important for SQLite testing, as we need to "simulate" schemas.
-SCHEMAS_TO_ATTACH = ["auth", "teams", "projects", "judging", "hackathons"]
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db_schemas():
@@ -48,8 +41,11 @@ def setup_test_db_schemas():
     @event.listens_for(engine_test, "connect")
     def connect(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()
-        for schema_name in SCHEMAS_TO_ATTACH:
-            cursor.execute(f"ATTACH DATABASE ':memory:' AS {schema_name};")
+        cursor.execute("CREATE SCHEMA IF NOT EXISTS auth;")
+        cursor.execute("CREATE SCHEMA IF NOT EXISTS teams;")
+        cursor.execute("CREATE SCHEMA IF NOT EXISTS projects;")
+        cursor.execute("CREATE SCHEMA IF NOT EXISTS judging;")
+        cursor.execute("CREATE SCHEMA IF NOT EXISTS hackathons;")
         cursor.close()
 
 @pytest.fixture(scope="function")

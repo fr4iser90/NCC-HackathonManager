@@ -596,45 +596,35 @@ def test_update_submission_invalid_data(
 # Dependency: get_submission_owner_project_team_owner_or_admin (Same as update)
 # Allows: Submitter, Project Team Owner, Admin
 
-@pytest.fixture(scope="function")
-def submission_for_deletion_by_owner(
-    client: TestClient, test_project: ProjectModel, team_owner_user: UserModel, auth_headers_team_owner: dict, db_session: Session
-) -> UUID:
+def test_delete_submission_as_submitter_owner(
+    client: TestClient, test_project: ProjectModel, team_owner_user: UserModel, auth_headers_team_owner: dict
+):
+    # Submission per API erstellen
     submission_data = SubmissionCreate(
         content_type=SubmissionContentType.TEXT, content_value="To be deleted by owner", project_id=test_project.id
     )
     response = client.post(f"/submissions/projects/{test_project.id}/submissions/", json=jsonable_encoder(submission_data), headers=auth_headers_team_owner)
     assert response.status_code == status.HTTP_201_CREATED
-    submission_id_str = response.json()["id"]
-    return UUID(submission_id_str)
-
-@pytest.fixture(scope="function")
-def submission_for_deletion_by_member(
-    client: TestClient, test_project: ProjectModel, team_member_user: UserModel, auth_headers_team_member: dict, db_session: Session, team_member_joins_team
-) -> UUID:
-    submission_data = SubmissionCreate(
-        content_type=SubmissionContentType.TEXT, content_value="To be deleted by member", project_id=test_project.id
-    )
-    response = client.post(f"/submissions/projects/{test_project.id}/submissions/", json=jsonable_encoder(submission_data), headers=auth_headers_team_member)
-    assert response.status_code == status.HTTP_201_CREATED
-    submission_id_str = response.json()["id"]
-    return UUID(submission_id_str)
-
-
-def test_delete_submission_as_submitter_owner(
-    client: TestClient, submission_for_deletion_by_owner: UUID, auth_headers_team_owner: dict
-):
-    sub_id = submission_for_deletion_by_owner
+    sub_id = response.json()["id"]
+    # Jetzt löschen
     response = client.delete(f"/submissions/{sub_id}", headers=auth_headers_team_owner)
     assert response.status_code == status.HTTP_204_NO_CONTENT
     # Prüfe per API, dass Submission nicht mehr existiert
     get_response = client.get(f"/submissions/submissions/{sub_id}", headers=auth_headers_team_owner)
     assert get_response.status_code == status.HTTP_404_NOT_FOUND
 
+
 def test_delete_submission_as_submitter_member(
-    client: TestClient, submission_for_deletion_by_member: UUID, auth_headers_team_member: dict, team_member_joins_team
+    client: TestClient, test_project: ProjectModel, team_member_user: UserModel, auth_headers_team_member: dict, team_member_joins_team
 ):
-    sub_id = submission_for_deletion_by_member
+    # Submission per API erstellen
+    submission_data = SubmissionCreate(
+        content_type=SubmissionContentType.TEXT, content_value="To be deleted by member", project_id=test_project.id
+    )
+    response = client.post(f"/submissions/projects/{test_project.id}/submissions/", json=jsonable_encoder(submission_data), headers=auth_headers_team_member)
+    assert response.status_code == status.HTTP_201_CREATED
+    sub_id = response.json()["id"]
+    # Jetzt löschen
     response = client.delete(f"/submissions/{sub_id}", headers=auth_headers_team_member)
     assert response.status_code == status.HTTP_204_NO_CONTENT
     # Prüfe per API, dass Submission nicht mehr existiert
@@ -643,23 +633,38 @@ def test_delete_submission_as_submitter_member(
 
 
 def test_delete_submission_as_project_team_owner_for_member_submission(
-    client: TestClient, submission_for_deletion_by_member: UUID, auth_headers_team_owner: dict
+    client: TestClient, test_project: ProjectModel, team_member_user: UserModel, auth_headers_team_owner: dict, auth_headers_team_member: dict, team_member_joins_team
 ):
-    sub_id = submission_for_deletion_by_member
-    response = client.delete(f"/submissions/{sub_id}", headers=auth_headers_team_owner) # Team owner deletes member's submission
+    # Team-Mitglied erstellt Submission
+    submission_data = SubmissionCreate(
+        content_type=SubmissionContentType.TEXT, content_value="To be deleted by owner", project_id=test_project.id
+    )
+    response = client.post(f"/submissions/projects/{test_project.id}/submissions/", json=jsonable_encoder(submission_data), headers=auth_headers_team_member)
+    assert response.status_code == status.HTTP_201_CREATED
+    sub_id = response.json()["id"]
+    # Team-Owner löscht Submission
+    response = client.delete(f"/submissions/{sub_id}", headers=auth_headers_team_owner)
     assert response.status_code == status.HTTP_204_NO_CONTENT
     get_response = client.get(f"/submissions/submissions/{sub_id}", headers=auth_headers_team_owner)
     assert get_response.status_code == status.HTTP_404_NOT_FOUND
 
+
 def test_delete_submission_as_admin_for_any_submission(
-    client: TestClient, submission_for_deletion_by_member: UUID, auth_headers_admin: dict
+    client: TestClient, test_project: ProjectModel, team_member_user: UserModel, auth_headers_admin: dict, auth_headers_team_member: dict, team_member_joins_team
 ):
-    # Admin can delete any submission
-    submission_id_to_delete = submission_for_deletion_by_member
-    response = client.delete(f"/submissions/{submission_id_to_delete}", headers=auth_headers_admin)
+    # Team-Mitglied erstellt Submission
+    submission_data = SubmissionCreate(
+        content_type=SubmissionContentType.TEXT, content_value="To be deleted by admin", project_id=test_project.id
+    )
+    response = client.post(f"/submissions/projects/{test_project.id}/submissions/", json=jsonable_encoder(submission_data), headers=auth_headers_team_member)
+    assert response.status_code == status.HTTP_201_CREATED
+    sub_id = response.json()["id"]
+    # Admin löscht Submission
+    response = client.delete(f"/submissions/{sub_id}", headers=auth_headers_admin)
     assert response.status_code == status.HTTP_204_NO_CONTENT
-    get_response = client.get(f"/submissions/submissions/{submission_id_to_delete}", headers=auth_headers_admin)
+    get_response = client.get(f"/submissions/submissions/{sub_id}", headers=auth_headers_admin)
     assert get_response.status_code == status.HTTP_404_NOT_FOUND
+
 
 def test_delete_submission_as_team_member_non_submitter_non_owner_forbidden(
     client: TestClient,
@@ -667,9 +672,8 @@ def test_delete_submission_as_team_member_non_submitter_non_owner_forbidden(
     test_project: ProjectModel,
     team_owner_user: UserModel, auth_headers_team_owner: dict, # User A (owner)
     team_member_user: UserModel, auth_headers_team_member: dict, team_member_joins_team, # User B (member)
-    # other_user and auth_headers_other_user are not needed here if User B acts as non-submitter
 ):
-    # User A (team_owner_user) creates a submission
+    # User A (team_owner_user) erstellt Submission
     submission_data_owner = SubmissionCreate(
         content_type=SubmissionContentType.TEXT,
         content_value="Owner's submission for delete test by another member.",
@@ -684,7 +688,7 @@ def test_delete_submission_as_team_member_non_submitter_non_owner_forbidden(
     assert response_owner_sub.status_code == status.HTTP_201_CREATED
     owner_submission_id = response_owner_sub.json()["id"]
 
-    # User B (team_member_user) attempts to delete User A's submission
+    # User B (team_member_user) versucht zu löschen
     response_delete_attempt = client.delete(
         f"/submissions/{owner_submission_id}",
         headers=auth_headers_team_member
@@ -694,13 +698,20 @@ def test_delete_submission_as_team_member_non_submitter_non_owner_forbidden(
     get_response = client.get(f"/submissions/submissions/{owner_submission_id}", headers=auth_headers_team_owner)
     assert get_response.status_code == status.HTTP_200_OK
 
+
 def test_delete_submission_as_other_user_forbidden(
-    client: TestClient, submission_for_deletion_by_owner: UUID, auth_headers_other_user: dict
+    client: TestClient, test_project: ProjectModel, team_owner_user: UserModel, auth_headers_other_user: dict, auth_headers_team_owner: dict
 ):
-    sub_id = submission_for_deletion_by_owner
+    # Owner erstellt Submission
+    submission_data = SubmissionCreate(
+        content_type=SubmissionContentType.TEXT, content_value="To be deleted by other user", project_id=test_project.id
+    )
+    response = client.post(f"/submissions/projects/{test_project.id}/submissions/", json=jsonable_encoder(submission_data), headers=auth_headers_team_owner)
+    assert response.status_code == status.HTTP_201_CREATED
+    sub_id = response.json()["id"]
+    # Fremder User versucht zu löschen
     response = client.delete(f"/submissions/{sub_id}", headers=auth_headers_other_user)
     assert response.status_code == status.HTTP_403_FORBIDDEN
     # Submission existiert noch
-    get_response = client.get(f"/submissions/submissions/{sub_id}", headers=auth_headers_other_user)
-    # Kann 403 oder 200 sein, aber nicht 404 (Submission existiert noch, aber Zugriff verweigert)
-    assert get_response.status_code in (status.HTTP_403_FORBIDDEN, status.HTTP_200_OK) 
+    get_response = client.get(f"/submissions/submissions/{sub_id}", headers=auth_headers_team_owner)
+    assert get_response.status_code == status.HTTP_200_OK 

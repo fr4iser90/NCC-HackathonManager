@@ -1,1 +1,0 @@
-2025-05-23 00:41:15,072 - hackathon_api - ERROR - Request 139852232543600 failed in 0.0047s: 'ProjectCreate' object has no attribute 'team_id'

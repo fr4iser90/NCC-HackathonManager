@@ -8,12 +8,12 @@ CREATE SCHEMA IF NOT EXISTS hackathons;
 -- Auth schema
 CREATE TABLE auth.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(100) NOT NULL UNIQUE,
-    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    username VARCHAR(255) NOT NULL UNIQUE,
     hashed_password VARCHAR(100) NOT NULL,
     full_name VARCHAR(100),
     role VARCHAR(50) NOT NULL DEFAULT 'participant',
-    github_id VARCHAR(100) UNIQUE,
+    github_id VARCHAR(255) UNIQUE,
     avatar_url VARCHAR(255),
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

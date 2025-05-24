@@ -66,7 +66,8 @@ pkgs.mkShell {
   
   shellHook = ''
     # Set PYTHONPATH to include the project root
-    export PYTHONPATH="$PWD/ api:$PWD:$PYTHONPATH"
+    export PYTHONPATH="$PWD/api:$PWD:$PYTHONPATH"
+    echo "Für produktionsnahe Tests: Stelle sicher, dass die PostgreSQL-Testdatenbank (test-db) per Docker läuft!"
     
     # --- Cache Cleaning Function ---
     clean-caches() {
@@ -80,23 +81,33 @@ pkgs.mkShell {
 
     # Override pytest to clean before and after
     pytest() {
+      check_docker || return 1
+      check_docker_containers || return 1
+      check_frontend_deps
+      start-test-db || return 1
       clean-caches
       echo "Running pytest (locally) with arguments: $@"
-      command pytest "$@" # IMPORTANT: Use 'command' to call the real pytest
+      command pytest "$@"
       local exit_code=$?
       echo "Pytest finished with exit code $exit_code."
       clean-caches
+      stop-test-db
       return $exit_code
     }
 
     # Minimal log pytest function
     pytest-minimal-log() {
+      check_docker || return 1
+      check_docker_containers || return 1
+      check_frontend_deps
+      start-test-db || return 1
       clean-caches
       echo "Running pytest with minimal log (short tracebacks, warnings disabled, max 10 fails)..."
-      command pytest --maxfail=10 --disable-warnings --tb=short > test_report.txt || true
+      command pytest --maxfail=30 --disable-warnings --tb=short > test_report.txt || true
       local exit_code=$?
       echo "Pytest finished with exit code $exit_code. See test_report.txt for results."
       clean-caches
+      stop-test-db
       return $exit_code
     }
 
@@ -552,6 +563,46 @@ pkgs.mkShell {
 
       echo ">>> All apps stopped and all caches/artifacts cleaned!"
       echo "If you want to start fresh, use: quick-startup"
+    }
+
+    start-test-db() {
+      # Remove old test-db container if exists (any state)
+      docker rm -f hackathon-test-db 2>/dev/null || true
+
+      # Remove old test network if exists (optional, only if not used by other containers)
+      docker network rm ncc-hackathonmanager_default 2>/dev/null || true
+
+      # Recreate network (if needed)
+      docker network create ncc-hackathonmanager_default 2>/dev/null || true
+
+      echo "Starte PostgreSQL-Testdatenbank..."
+      docker compose -f docker-compose.yml -f docker-compose.override.test.yml up -d --force-recreate test-db
+      # Warten bis healthy
+      for i in {1..20}; do
+        status=$(docker inspect --format='{{.State.Health.Status}}' hackathon-test-db 2>/dev/null)
+        if [ "$status" = "healthy" ]; then
+          echo "Test-DB ist healthy!"
+          return 0
+        fi
+        echo "Warte auf Test-DB ($i/20)..."
+        sleep 1
+      done
+      echo "Test-DB wurde nicht healthy!"
+      docker logs hackathon-test-db || true
+      return 1
+    }
+
+    stop-test-db() {
+      echo "Stoppe PostgreSQL-Testdatenbank..."
+      docker stop hackathon-test-db 2>/dev/null || true
+      docker rm hackathon-test-db 2>/dev/null || true
+      # Optional: docker network rm ncc-hackathonmanager_default 2>/dev/null || true
+    }
+
+    pytest-with-testdb() {
+      start-test-db || return 1
+      pytest "$@"
+      stop-test-db
     }
 
     echo "Python development environment activated"
