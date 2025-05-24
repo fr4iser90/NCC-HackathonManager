@@ -66,7 +66,7 @@ pkgs.mkShell {
   
   shellHook = ''
     # Set PYTHONPATH to include the project root
-    export PYTHONPATH="$PWD/docker/platform-management/hackathon/api:$PWD:$PYTHONPATH"
+    export PYTHONPATH="$PWD/ api:$PWD:$PYTHONPATH"
     
     # --- Cache Cleaning Function ---
     clean-caches() {
@@ -100,7 +100,7 @@ pkgs.mkShell {
 
     # Check if node_modules exists in frontend
     check_frontend_deps() {
-      if [ ! -d "docker/platform-management/hackathon/frontend/node_modules" ]; then
+      if [ ! -d " frontend/node_modules" ]; then
         echo "Frontend dependencies not found. Installing..."
         install-npm
       fi
@@ -128,7 +128,7 @@ pkgs.mkShell {
 
     # Check if Docker containers are built and running
     check_docker_containers() {
-      if ! docker compose -f docker/platform-management/hackathon/docker-compose.yml ps --services --filter "status=running" | grep -q "api"; then
+      if ! docker compose -f  docker-compose.yml ps --services --filter "status=running" | grep -q "api"; then
         echo "Docker containers not running. Building and starting..."
         if ! start-backend; then
           echo "Failed to start backend properly. Please check the logs."
@@ -152,7 +152,7 @@ pkgs.mkShell {
       # Check Docker and build containers
       if check_docker; then
         echo "Building Docker containers..."
-        cd docker/platform-management/hackathon/
+        cd  
         docker compose build
         cd -
       fi
@@ -188,7 +188,7 @@ pkgs.mkShell {
 
     install-npm() {
       echo "Installing npm dependencies for frontend..."
-      cd docker/platform-management/hackathon/frontend
+      cd  frontend
       npm install
       cd -
       echo "npm dependencies installation complete."
@@ -196,7 +196,7 @@ pkgs.mkShell {
 
     start-frontend-dev() {
       echo "Starting frontend development server..."
-      cd docker/platform-management/hackathon/frontend
+      cd  frontend
       npm run dev
       cd -
     }
@@ -209,7 +209,7 @@ pkgs.mkShell {
       fi
       
       # Send commands to the tmux session
-      tmux send-keys -t frontend "cd $(pwd)/docker/platform-management/hackathon/frontend" C-m
+      tmux send-keys -t frontend "cd $(pwd)/ frontend" C-m
       tmux send-keys -t frontend "npm run dev" C-m
       
       echo "Frontend server started in tmux session 'frontend'"
@@ -219,7 +219,7 @@ pkgs.mkShell {
 
     start-backend() {
       echo "Starting backend server..."
-      cd docker/platform-management/hackathon/
+      cd  
       # Run in detached mode
       docker compose up --build -d
       # Wait a moment for containers to start
@@ -236,7 +236,7 @@ pkgs.mkShell {
 
     rebuild-backend() {
       echo "Stopping and removing all containers and volumes..."
-      cd docker/platform-management/hackathon/
+      cd  
       docker compose down -v
       echo "Rebuilding and starting containers in background..."
       docker compose up --build -d
@@ -246,7 +246,7 @@ pkgs.mkShell {
 
     rebuild-frontend() {
       echo "Removing node_modules and package-lock.json in the frontend..."
-      cd docker/platform-management/hackathon/frontend
+      cd  frontend
       rm -rf node_modules package-lock.json
       echo "Reinstalling npm dependencies..."
       npm install
@@ -451,7 +451,7 @@ pkgs.mkShell {
     clean-frontend() {
       kill-frontend-port
       echo "Removing node_modules, package-lock.json, and .next in the frontend..."
-      cd docker/platform-management/hackathon/frontend
+      cd  frontend
       rm -rf node_modules package-lock.json .next
       cd -
       echo "Frontend has been cleaned!"
@@ -469,24 +469,22 @@ pkgs.mkShell {
         echo "Continuing with rebuild anyway..."
       fi
       
-      cd docker/platform-management/hackathon/
+      cd  
       docker compose down -v
       cd -
 
       echo ">>> Cleaning up frontend..."
-      cd docker/platform-management/hackathon/frontend
+      cd  frontend
       rm -rf node_modules package-lock.json .next
       echo ">>> Installing dependencies..."
       npm install
       cd -
 
       echo ">>> Rebuilding and starting backend containers..."
-      cd docker/platform-management/hackathon/
       docker compose up --build -d
-      cd -
 
       echo ">>> Starting frontend development server..."
-      cd docker/platform-management/hackathon/frontend
+      cd  frontend
       npm run dev &
       cd -
 
@@ -503,7 +501,7 @@ pkgs.mkShell {
     }
 
     get-frontend-port() {
-      local env_file="docker/platform-management/hackathon/frontend/.env.local"
+      local env_file=" frontend/.env.local"
       if [ -f "$env_file" ]; then
         # Try to find a line like PORT=3050 or NEXTAUTH_URL=http://localhost:3050
         local port
@@ -523,11 +521,11 @@ pkgs.mkShell {
     }
     
     get-frontend-tree() {
-      tree docker/platform-management/hackathon/frontend -I 'node_modules|.next|.swc'
+      tree  frontend -I 'node_modules|.next|.swc'
     }
 
     get-backend-tree() {
-      tree docker/platform-management/hackathon/api -I 'node_modules|.next|.swc'
+      tree  api -I 'node_modules|.next|.swc'
     }   
 
     trivy() {
@@ -536,7 +534,7 @@ pkgs.mkShell {
 
     close-kill-clean-all() {
       echo ">>> Stopping and removing all backend containers and volumes..."
-      cd docker/platform-management/hackathon/
+      cd  
       docker compose down -v
       cd -
 
@@ -547,7 +545,7 @@ pkgs.mkShell {
       fi
 
       echo ">>> Removing frontend build artifacts and dependencies..."
-      cd docker/platform-management/hackathon/frontend
+      cd  frontend
       rm -rf node_modules package-lock.json .next
       cd -
 
