@@ -33,6 +33,7 @@ from app.auth import (
 )
 from app.static import STATIC_DIR, project_image_path as project_file_path, project_image_url as project_file_url, SCRIPTS_DIR # Import project file functions and SCRIPTS_DIR
 from app.logger import get_logger
+from app.services.project_service import create_project, submit_project_version
 
 router = APIRouter(tags=["projects"])
 
@@ -150,7 +151,7 @@ def list_project_templates(skip: int = 0, limit: int = 100, db: Session = Depend
 
 # --- Project Endpoints ---
 @router.post("/", response_model=ProjectRead, status_code=status.HTTP_201_CREATED, tags=["projects"])
-async def create_project(
+async def create_project_endpoint(
     project_in: ProjectCreate, 
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
@@ -158,34 +159,10 @@ async def create_project(
     """
     Create a new project with storage and deployment options.
     """
-    db_project = Project(
-        name=project_in.name,
-        description=project_in.description,
-        hackathon_id=project_in.hackathon_id,
-        project_template_id=project_in.project_template_id,
-        status=project_in.status,
-        storage_type=project_in.storage_type,
-        github_url=project_in.github_url,
-        gitlab_url=project_in.gitlab_url,
-        bitbucket_url=project_in.bitbucket_url,
-        server_url=project_in.server_url,
-        docker_url=project_in.docker_url,
-        kubernetes_url=project_in.kubernetes_url,
-        cloud_url=project_in.cloud_url,
-        archive_url=project_in.archive_url,
-        docker_archive_url=project_in.docker_archive_url,
-        backup_url=project_in.backup_url,
-        docker_image=project_in.docker_image,
-        docker_tag=project_in.docker_tag,
-        docker_registry=project_in.docker_registry,
-        owner_id=current_user.id  # Set owner_id from authenticated user
-    )
     try:
-        db.add(db_project)
-        db.commit()
-        db.refresh(db_project)
+        db_project = create_project(db, project_in, current_user)
         return db_project
-    except IntegrityError: # Should not happen if name is not unique in Project table itself, but good practice
+    except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Error creating project. Check input data.")
 
@@ -280,120 +257,18 @@ def delete_project(
     return 
 
 @router.post("/{project_id}/submit_version")
-async def submit_project_version(
+async def submit_project_version_endpoint(
     project_id: str,
     file: UploadFile = File(...),
     version_notes: Optional[str] = Form(None),
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Submit a new version of a project (synchronous, DB-based logging).
     """
-    logger.debug("Entered submit_project_version endpoint")
-    import uuid
-    import shutil
-    import os
-    from datetime import datetime
-
-    # Convert project_id to UUID
-    try:
-        project_uuid = uuid.UUID(str(project_id))
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid project_id format")
-
-    # Get project
-    project = db.query(Project).filter(Project.id == project_uuid).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    # Verify file type
-    if not file.filename.endswith('.zip'):
-        raise HTTPException(status_code=400, detail="Only ZIP files are allowed")
-
-    # Generate unique filename
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    filename = f"version_{timestamp}_{uuid.uuid4()}.zip"
-    file_path = os.path.abspath(project_file_path(filename))
-    file_path = file_path.replace("/app/app/static", "/app/static")
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
-    try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        file.file.close()
-
-        # Create version record
-        version = ProjectVersion(
-            id=uuid.uuid4(),
-            project_id=project_uuid,
-            version_number=len(project.versions) + 1,
-            file_path=filename,
-            version_notes=version_notes,
-            submitted_by=current_user.id,
-            status="pending"
-        )
-        db.add(version)
-        db.commit()
-        db.refresh(version)
-
-        # Extract ZIP file to a temporary directory
-        temp_dir = tempfile.mkdtemp()
-        try:
-            logger.debug("Before ZIP extraction...")
-            # print("DEBUG: Before ZIP extraction...", flush=True)
-            with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                zip_ref.extractall(temp_dir)
-            logger.debug("After ZIP extraction...")
-            # print("DEBUG: After ZIP extraction...", flush=True)
-
-            # Start build process synchronously
-            build_script = os.path.join(SCRIPTS_DIR, "build_project_container.py")
-            tag = f"hackathon-project-{project_id}-{version.id}"
-
-            # print("DEBUG: Starting build process...", flush=True)
-            process = subprocess.run(
-                [sys.executable, build_script, "--project-path", temp_dir, "--tag", tag],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                check=False
-            )
-            # print("DEBUG: Build process finished.", flush=True)
-
-            build_output = process.stdout if process.stdout else "No output from build process"
-            if process.returncode == 0:
-                version.status = "built"
-                project.status = "built"
-            else:
-                version.status = "failed"
-                project.status = "failed"
-
-            version.build_logs = build_output
-            db.commit()
-            db.refresh(version)
-            db.refresh(project)
-
-            return {
-                "version_id": str(version.id),
-                "project_id": str(project_id),
-                "status": version.status,
-                "build_logs": build_output
-            }
-        finally:
-            try:
-                shutil.rmtree(temp_dir)
-            except Exception:
-                pass
-
-    except Exception as e:
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except Exception:
-                pass
-        raise HTTPException(status_code=500, detail=f"Exception in submit_project_version: {e}")
-
+    version = submit_project_version(db, project_id, file, version_notes, current_user)
+    return version
 
 @router.get("/{project_id}/versions", response_model=list[ProjectVersionRead])
 async def get_project_versions(

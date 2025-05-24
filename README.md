@@ -1,3 +1,14 @@
+# NCC-HackathonManager
+
+## Modern Modular Architecture & Automation (2024)
+
+- **Backend**: Routers (API), Services (business logic), Utils (shared helpers), Models/Schemas (domain-driven)
+- **Frontend**: Components (UI), Services (API/business logic), Utils (shared helpers)
+- **Automation**: Nix shell for unified dev env, GitHub Actions for CI (lint, type-check, test)
+- **Docs**: See `docs/feature-development/ai-implementation.md` for full details
+
+---
+
 # Hackathon Platform
 
 A modern, scalable platform for managing hackathon events, built with NixOS, Docker, and modern web technologies.
