@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 import secrets
-import logging
+from app.logger import get_logger
 
 from app.database import get_db
 from app.models.user import User
@@ -18,6 +18,9 @@ from app.auth import (
     get_team_owner_admin_or_self_for_member_removal
 )
 
+# Initialize logger
+logger = get_logger("teams_router")
+
 router = APIRouter()
 
 @router.get("/my-join-requests", response_model=List[JoinRequestRead], dependencies=[Depends(get_current_user)])
@@ -25,9 +28,9 @@ def list_my_join_requests(db: Session = Depends(get_db), current_user: User = De
     allowed = {JoinRequestStatus.pending, JoinRequestStatus.accepted, JoinRequestStatus.rejected}
     all_reqs = db.query(JoinRequest).filter(JoinRequest.user_id == current_user.id).all()
     filtered = [req for req in all_reqs if req.status in allowed]
-    logging.warning(f"DEBUG JOINREQUESTS COUNT: {len(filtered)}")
+    logger.warning(f"DEBUG JOINREQUESTS COUNT: {len(filtered)}")
     for req in filtered:
-        logging.warning(f"DEBUG JOINREQUEST: team_id={req.team_id} ({type(req.team_id)}), user_id={req.user_id} ({type(req.user_id)}), status={req.status} ({type(req.status)}), created_at={req.created_at} ({type(req.created_at)})")
+        logger.warning(f"DEBUG JOINREQUEST: team_id={req.team_id} ({type(req.team_id)}), user_id={req.user_id} ({type(req.user_id)}), status={req.status} ({type(req.status)}), created_at={req.created_at} ({type(req.created_at)})")
     return [JoinRequestRead.model_validate(req) for req in filtered]
 
 @router.post("/", response_model=TeamRead, status_code=status.HTTP_201_CREATED)

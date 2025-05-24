@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from fastapi.staticfiles import StaticFiles
 import os
 import time
-from app.logger import logger, get_logger
+from app.logger import get_logger
 
 # Import app components
 from app.database import get_db
@@ -71,6 +71,9 @@ app.include_router(ping_router, prefix="/ping", tags=["ping"])
 # Define oauth2_scheme AFTER all routers are included in the app
 # This allows the tokenUrl to be resolvable against the app's routing table
 # oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login") # REMOVED - defined in app.security_schemes.py
+
+# Initialize logger
+logger = get_logger("hackathon_api")
 
 @app.get("/")
 def read_root():

@@ -32,10 +32,12 @@ from app.auth import (
     get_project_team_owner_or_admin # For delete_project
 )
 from app.static import STATIC_DIR, project_image_path as project_file_path, project_image_url as project_file_url, SCRIPTS_DIR # Import project file functions and SCRIPTS_DIR
+from app.logger import get_logger
 
 router = APIRouter(tags=["projects"])
 
-logger = logging.getLogger(__name__)
+# Initialize logger
+logger = get_logger("projects_router")
 
 @router.get("/projects/{project_id}/versions/{version_id}/build_logs")
 def get_build_logs(
