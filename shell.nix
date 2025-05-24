@@ -527,10 +527,35 @@ pkgs.mkShell {
     }
 
     get-backend-tree() {
+      tree docker/platform-management/hackathon/api -I 'node_modules|.next|.swc'
     }   
 
     trivy() {
       nix-shell -p trivy --run "trivy fs --scanners vuln,secret,misconfig --exit-code 0 --format table --ignore-unfixed ."
+    }
+
+    close-kill-clean-all() {
+      echo ">>> Stopping and removing all backend containers and volumes..."
+      cd docker/platform-management/hackathon/
+      docker compose down -v
+      cd -
+
+      echo ">>> Killing frontend dev server and freeing its port..."
+      kill-frontend-port
+      if ! wait_for_port_free "$(get-frontend-port)" 10 2; then
+        echo "WARNING: Could not free frontend port after multiple attempts."
+      fi
+
+      echo ">>> Removing frontend build artifacts and dependencies..."
+      cd docker/platform-management/hackathon/frontend
+      rm -rf node_modules package-lock.json .next
+      cd -
+
+      echo ">>> Cleaning Python caches (__pycache__, .pytest_cache)..."
+      clean-caches
+
+      echo ">>> All apps stopped and all caches/artifacts cleaned!"
+      echo "If you want to start fresh, use: quick-startup"
     }
 
     echo "Python development environment activated"
@@ -550,5 +575,6 @@ pkgs.mkShell {
     echo "  clean-frontend      - Remove node_modules, package-lock.json, and .next in the frontend"
     echo "  clean-all           - Clean both Python and frontend caches/artifacts"
     echo "  db_upgrade          - Apply database migrations using Alembic inside the bot container"
+    echo "  close-kill-clean-all - Stop all backend/frontend, remove all caches, Docker volumes, and frontend artifacts"
   '';
 }
