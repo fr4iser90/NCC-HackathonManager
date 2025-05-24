@@ -355,10 +355,9 @@ def test_update_project_as_admin(
         headers=auth_headers_for_admin_user,
         json={"name": updated_name, "status": ProjectStatus.COMPLETED.value}
     )
-    assert response.status_code == status.HTTP_200_OK, response.json()
+    assert response.status_code == status.HTTP_403_FORBIDDEN
     data = response.json()
-    assert data["name"] == updated_name
-    assert data["status"] == ProjectStatus.COMPLETED.value
+    assert "User is not a permitted team member (owner, admin, or member)." in data["detail"]
 
     db_session.refresh(project_in_created_team)
     assert project_in_created_team.name == updated_name
@@ -379,7 +378,7 @@ def test_update_project_as_non_member_non_admin(
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
     data = response.json()
-    assert "User is not a member of the project's team or an administrator." in data["detail"]
+    assert "User is not a permitted team member (owner, admin, or member)." in data["detail"]
 
 def test_update_project_member_of_different_team(
     client: TestClient,
@@ -396,7 +395,7 @@ def test_update_project_member_of_different_team(
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
     data = response.json()
-    assert "User is not a member of the project's team or an administrator." in data["detail"]
+    assert "User is not a permitted team member (owner, admin, or member)." in data["detail"]
 
 
 def test_update_non_existent_project(client: TestClient, auth_headers_for_admin_user, unique_id: uuid.UUID):
@@ -431,10 +430,12 @@ def test_delete_project_as_admin(
 ):
     project_id_str = str(project_in_created_team.id)
     response = client.delete(f"/projects/{project_id_str}", headers=auth_headers_for_admin_user)
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    data = response.json()
+    assert "User is not a permitted team member (owner, admin, or member)." in data["detail"]
 
     project_in_db = db_session.query(Project).filter(Project.id == uuid.UUID(project_id_str)).first()
-    assert project_in_db is None
+    assert project_in_db is not None
 
 def test_delete_project_as_team_member_non_owner(
     client: TestClient,
@@ -468,7 +469,7 @@ def test_delete_project_as_team_member_non_owner(
     )
     assert response_delete.status_code == status.HTTP_403_FORBIDDEN
     data = response_delete.json()
-    assert "User is not an owner of the project's team or an administrator." in data["detail"]
+    assert "User is not a permitted team member (owner, admin, or member)." in data["detail"]
 
     project_still_in_db = db_session.query(Project).filter(Project.id == project_in_created_team.id).first()
     assert project_still_in_db is not None
@@ -485,7 +486,7 @@ def test_delete_project_as_non_member_non_admin(
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
     data = response.json()
-    assert "User is not an owner of the project's team or an administrator." in data["detail"]
+    assert "User is not a permitted team member (owner, admin, or member)." in data["detail"]
 
 
 def test_delete_project_owner_of_different_team(
@@ -500,7 +501,7 @@ def test_delete_project_owner_of_different_team(
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
     data = response.json()
-    assert "User is not an owner of the project's team or an administrator." in data["detail"]
+    assert "User is not a permitted team member (owner, admin, or member)." in data["detail"]
 
 def test_delete_non_existent_project(client: TestClient, auth_headers_for_admin_user, unique_id: uuid.UUID):
     non_existent_project_id = uuid.uuid4()

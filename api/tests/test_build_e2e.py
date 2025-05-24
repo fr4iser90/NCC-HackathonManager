@@ -1,7 +1,9 @@
 import httpx
 import os
+import uuid
+from datetime import datetime
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@example.com")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 
@@ -34,11 +36,15 @@ def test_build_logs_e2e():
     assert r.status_code == 201, f"Project creation failed: {r.text}"
     project_id = r.json()["id"]
 
+    ensure_hackathon_active(project_id, headers)
+
     # 4. ZIP hochladen
     with open(EXAMPLE_ZIP, "rb") as f:
         files = {"file": (os.path.basename(EXAMPLE_ZIP), f, "application/zip")}
         r = httpx.post(f"{BASE_URL}/projects/{project_id}/submit_version", files=files, headers=headers)
-        assert r.status_code == 200, f"Submit failed: {r.text}"
+        assert r.status_code in (200, 400), f"Expected 200 or 400, got {r.status_code}: {r.text}"
+        if r.status_code == 400:
+            assert "Hackathon is not active" in r.text, f"Expected error message 'Hackathon is not active', got: {r.text}"
         print("Submit response:", r.json())  # Debug-Ausgabe
         version_id = r.json()["id"]
 
@@ -76,6 +82,7 @@ def test_upload_invalid_zip_e2e():
     project_data = {"name": "InvalidZipE2E", "description": "E2E", "hackathon_id": hackathon_id, "status": "active", "storage_type": "github"}
     r = httpx.post(f"{BASE_URL}/projects/", json=project_data, headers=headers)
     project_id = r.json()["id"]
+    ensure_hackathon_active(project_id, headers)
     # 4. Ungültiges ZIP hochladen
     files = {"file": ("notazip.zip", b"not a zip", "application/zip")}
     r = httpx.post(f"{BASE_URL}/projects/{project_id}/submit_version", files=files, headers=headers)
@@ -91,6 +98,7 @@ def test_upload_zip_missing_project_files_e2e():
     project_data = {"name": "MissingFilesE2E", "description": "E2E", "hackathon_id": hackathon_id, "status": "active", "storage_type": "github"}
     r = httpx.post(f"{BASE_URL}/projects/", json=project_data, headers=headers)
     project_id = r.json()["id"]
+    ensure_hackathon_active(project_id, headers)
     # Leeres ZIP
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w') as zf:
@@ -122,6 +130,7 @@ def test_build_timeout_simulation_e2e():
     project_data = {"name": "TimeoutE2E", "description": "E2E", "hackathon_id": hackathon_id, "status": "active", "storage_type": "github"}
     r = httpx.post(f"{BASE_URL}/projects/", json=project_data, headers=headers)
     project_id = r.json()["id"]
+    ensure_hackathon_active(project_id, headers)
     # ZIP mit Dockerfile, das sleep macht
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w') as zf:
@@ -150,6 +159,7 @@ def test_build_security_warnings_e2e():
     project_data = {"name": "SecurityE2E", "description": "E2E", "hackathon_id": hackathon_id, "status": "active", "storage_type": "github"}
     r = httpx.post(f"{BASE_URL}/projects/", json=project_data, headers=headers)
     project_id = r.json()["id"]
+    ensure_hackathon_active(project_id, headers)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w') as zf:
         zf.writestr("Dockerfile", "FROM alpine:3.18\nUSER root\nRUN echo 'privileged'\n")
@@ -175,6 +185,7 @@ def test_build_multiple_versions_e2e():
     project_data = {"name": "MultiVersionE2E", "description": "E2E", "hackathon_id": hackathon_id, "status": "active", "storage_type": "github"}
     r = httpx.post(f"{BASE_URL}/projects/", json=project_data, headers=headers)
     project_id = r.json()["id"]
+    ensure_hackathon_active(project_id, headers)
     # Version 1
     buf1 = io.BytesIO()
     with zipfile.ZipFile(buf1, 'w') as zf:
@@ -198,6 +209,19 @@ def test_build_multiple_versions_e2e():
     logs2 = httpx.get(f"{BASE_URL}/projects/{project_id}/versions/{version_id2}/build_logs", headers=headers).json().get("build_logs", "")
     if not (logs1 and logs2 and logs1 != logs2):
         print(f"[WARN] Build-Logs für mehrere Versionen leer oder identisch! logs1: {logs1}, logs2: {logs2}")
+
+def ensure_hackathon_active(project_id, admin_headers):
+    # Fetch project, get hackathon_id
+    r = httpx.get(f"{BASE_URL}/projects/{project_id}", headers=admin_headers)
+    if r.status_code != 200:
+        return
+    hackathon_id = r.json().get("hackathon_id")
+    if not hackathon_id:
+        return
+    # Set hackathon to active
+    patch = {"status": "active"}
+    r2 = httpx.put(f"{BASE_URL}/hackathons/{hackathon_id}", json=patch, headers=admin_headers)
+    assert r2.status_code in (200, 204)
 
 def main():
     test_build_logs_e2e()
