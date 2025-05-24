@@ -23,7 +23,7 @@ logger = get_logger("users_router")
 
 # Dependency for admin check (can be refined later)
 async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != UserRole.ADMIN:
+    if not any(r.role == UserRole.ADMIN for r in getattr(current_user, 'roles_association', [])):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to access this resource."
@@ -32,7 +32,8 @@ async def get_admin_user(current_user: User = Depends(get_current_user)) -> User
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
-    return register_user(db, user_in)
+    user = register_user(db, user_in)
+    return UserRead.from_orm(user)
 
 @router.post("/login")
 def login(email: EmailStr = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
@@ -40,7 +41,7 @@ def login(email: EmailStr = Form(...), password: str = Form(...), db: Session = 
 
 @router.get("/me", response_model=UserRead)
 def get_me(current_user: User = Depends(get_current_user)):
-    return current_user
+    return UserRead.from_orm(current_user)
 
 @router.put("/me", response_model=UserRead)
 def update_own_profile(
@@ -48,7 +49,8 @@ def update_own_profile(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return update_profile(db, user_in, current_user)
+    user = update_profile(db, user_in, current_user)
+    return UserRead.from_orm(user)
 
 @router.get("/", response_model=List[UserRead], dependencies=[Depends(get_admin_user)]) # New endpoint for listing users
 def list_users(db: Session = Depends(get_db)):
@@ -56,7 +58,7 @@ def list_users(db: Session = Depends(get_db)):
     Retrieve all users. Only accessible by admin users.
     """
     users = db.query(User).all()
-    return users
+    return [UserRead.from_orm(u) for u in users]
 
 @router.get("/{user_id}", response_model=UserRead, dependencies=[Depends(get_admin_user)])
 def read_user_by_id(user_id: uuid.UUID, db: Session = Depends(get_db)):
@@ -66,9 +68,7 @@ def read_user_by_id(user_id: uuid.UUID, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    user_dict = user.to_dict()
-    user_dict["avatar_url"] = avatar_url(user.avatar_filename)
-    return user_dict
+    return UserRead.from_orm(user)
 
 @router.put("/{user_id}", response_model=UserRead)
 def update_user_profile(
@@ -97,7 +97,7 @@ def update_user_profile(
     db.add(target_user)
     db.commit()
     db.refresh(target_user)
-    return target_user 
+    return UserRead.from_orm(target_user)
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(get_admin_user)])
 def delete_user_by_admin(

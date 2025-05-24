@@ -26,11 +26,8 @@ router = APIRouter(
 
 # Helper function for admin check (can be moved to a shared auth utils if used elsewhere)
 def get_current_active_admin_user(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="The user doesn't have enough privileges"
-        )
+    if not any(r.role == "admin" for r in getattr(current_user, 'roles_association', [])):
+        raise HTTPException(status_code=403, detail="Not authorized")
     return current_user
 
 @router.post("/", response_model=HackathonRead, status_code=status.HTTP_201_CREATED)
@@ -256,7 +253,7 @@ def register_participant_for_hackathon(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User to register not found.")
 
         # Authorization: Current user must be the user being registered or an admin
-        if current_user.id != db_user_to_register.id and current_user.role != "admin":
+        if current_user.id != db_user_to_register.id and not any(r.role == "admin" for r in getattr(current_user, 'roles_association', [])):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to register this user.")
         
         # Check if user is already registered (solo)
@@ -293,7 +290,7 @@ def register_participant_for_hackathon(
         ).first()
         
         is_team_owner = team_membership and team_membership.role == TeamMemberRole.owner
-        is_platform_admin = current_user.role == "admin"
+        is_platform_admin = any(r.role == "admin" for r in getattr(current_user, 'roles_association', []))
 
         if not (is_team_owner or is_platform_admin):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User must be an owner of the team or a platform admin to register it.")

@@ -40,6 +40,8 @@ router = APIRouter(tags=["projects"])
 # Initialize logger
 logger = get_logger("projects_router")
 
+IS_ADMIN = lambda user: any(r.role == "admin" for r in getattr(user, 'roles_association', []))
+
 @router.get("/projects/{project_id}/versions/{version_id}/build_logs")
 def get_build_logs(
     project_id: str,
@@ -80,7 +82,7 @@ def get_build_logs(
     if hasattr(project, 'team') and project.team and hasattr(project.team, 'members'):
         is_member = current_user.id in [m.user_id for m in project.team.members]
     
-    if current_user.role != "admin" and not is_member: # Simplified for now, ensure project.members or equivalent is correct
+    if not IS_ADMIN(current_user) and not is_member:
         logger.warning(f"User {current_user.id} not authorized for project {project_id}")
         # print(f"STDERR: User {current_user.id} not authorized for project {project_id}", file=sys.stderr)
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -115,7 +117,7 @@ def create_project_template(
     Create a new project template. (Protected - for admins)
     """
     # Add role check here: if current_user.role != "admin": throw HTTPException
-    if current_user.role not in ["admin"]:
+    if not IS_ADMIN(current_user):
          raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to create templates")
     try:
         db_template = ProjectTemplate(**template_in.model_dump())

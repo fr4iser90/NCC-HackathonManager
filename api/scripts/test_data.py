@@ -10,7 +10,7 @@ logger = logging.getLogger("test_data")
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.database import SessionLocal
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, UserRoleAssociation
 from app.models.team import Team, TeamMember, TeamMemberRole, JoinRequest, JoinRequestStatus, TeamStatus
 from app.models.team import TeamInvite, TeamInviteStatus
 from app.models.project import Project
@@ -140,17 +140,23 @@ def main():
             user = db.query(User).filter_by(email=u["email"]).first()
             if not user:
                 user = User(
-                    id=uuid.uuid4(),
                     email=u["email"],
                     username=u["username"],
                     hashed_password=get_password_hash(u["password"]),
-                    role=u["role"],
+                    full_name=u.get("full_name"),
                     github_id=u.get("github_id"),
+                    avatar_url=u.get("avatar_url"),
                     is_active=True
                 )
                 db.add(user)
                 db.commit()
                 db.refresh(user)
+            # Rolle setzen, falls noch nicht vorhanden
+            if u.get("role"):
+                has_role = db.query(UserRoleAssociation).filter_by(user_id=user.id, role=u["role"]).first()
+                if not has_role:
+                    db.add(UserRoleAssociation(user_id=user.id, role=u["role"]))
+                    db.commit()
             user_objs[u["username"]] = user
         logger.info(f"Users: {[u.email for u in user_objs.values()]}")
 

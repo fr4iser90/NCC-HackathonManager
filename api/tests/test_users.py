@@ -90,9 +90,9 @@ def test_get_me(client: TestClient, auth_headers_for_regular_user: dict, regular
     response = client.get("/users/me", headers=headers)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    assert data["email"] == user_data_from_fixture["email"]
-    assert data["username"] == user_data_from_fixture["username"]
-    assert data["role"] == "participant" # Default role from regular_user_data
+    assert data["email"] == regular_user_data["email"]
+    assert data["username"] == regular_user_data["username"]
+    assert data["roles"] == ["participant"]  # Default role from regular_user_data
 
 def test_get_me_unauthorized(client: TestClient):
     response = client.get("/users/me")

@@ -11,6 +11,8 @@ from fastapi import HTTPException, status
 import secrets
 import uuid
 
+IS_ADMIN = lambda user: any(r.role == "admin" for r in getattr(user, 'roles_association', []))
+
 def create_team(db: Session, team_in: TeamCreate, current_user: User) -> Team:
     """Create a new team for a specific hackathon. The creator becomes the team leader."""
     hackathon = db.query(Hackathon).filter(Hackathon.id == team_in.hackathon_id).first()
@@ -127,7 +129,7 @@ def accept_join_request(db: Session, team_id: uuid.UUID, user_id: uuid.UUID, cur
     if not hackathon or hackathon.status != HackathonStatus.ACTIVE:
         raise HTTPException(status_code=400, detail="Cannot accept join request for inactive hackathon")
     owner = db.query(TeamMember).filter_by(team_id=team_id, user_id=current_user.id, role=TeamMemberRole.owner).first()
-    if not owner and current_user.role != "admin":
+    if not owner and not IS_ADMIN(current_user):
         raise HTTPException(status_code=403, detail="Not authorized")
     join_req = db.query(JoinRequest).filter_by(team_id=team_id, user_id=user_id, status=JoinRequestStatus.pending).first()
     if not join_req:

@@ -10,6 +10,7 @@ from app.models.team import Team, TeamMember # SQLAlchemy models
 from app.schemas.team import TeamMemberRole # Enum for DB checks/assertions if needed
 from app.models.user import User as UserModel # For user creation in fixtures
 from app.models.hackathon import Hackathon # Added for Hackathon model
+from app.models.user import User, UserRoleAssociation # Added for user creation and role assignment
 
 # --- Team Creation Tests ---
 def test_create_team(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID, db_session: Session, test_hackathon: Hackathon):
@@ -143,28 +144,30 @@ def test_join_team_not_found(client: TestClient, auth_headers_for_regular_user):
 
 @pytest.fixture
 def another_regular_user_data(db_session: Session, unique_id: uuid.UUID) -> dict:
-    # Simplified helper to create a second distinct user for tests
-    # In a real setup, this might come from conftest.py or a more robust helper
     from app.auth import get_password_hash # Local import for fixture setup
     email = f"another_user_{unique_id}@example.com"
     username = f"another_user_{unique_id}"
-    user = UserModel(
-        id=uuid.uuid4(), 
+    password = "anotherpassword"
+    user = User(
         email=email,
         username=username,
-        hashed_password=get_password_hash("anotherpassword"),
+        hashed_password=get_password_hash(password),
         full_name="Another Test User",
-        role="participant"
+        github_id=None,
+        avatar_url=None,
+        is_active=True
     )
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
+    db_session.add(UserRoleAssociation(user_id=user.id, role="participant"))
+    db_session.commit()
     return {
         "id": str(user.id),
         "email": user.email,
         "username": user.username,
-        "password": "anotherpassword", # Plain password for login
-        "role": user.role
+        "password": password,
+        "role": "participant",
     }
 
 @pytest.fixture

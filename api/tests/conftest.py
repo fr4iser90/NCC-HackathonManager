@@ -18,7 +18,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from app.main import app
 from app.database import Base, get_db
-from app.models.user import User
+from app.models.user import User, UserRoleAssociation
 from app.auth import get_password_hash
 from app.models.hackathon import Hackathon
 from app.schemas.hackathon import HackathonStatus, HackathonMode
@@ -73,31 +73,31 @@ def unique_id() -> uuid.UUID: # This can still be used by tests for other unique
     return uuid.uuid4()
 
 # --- User Helper Function (not a fixture itself) ---
-def _create_user_in_db_helper(db_session: Session, role: str = "participant", specific_uuid: Optional[uuid.UUID] = None) -> Dict[str, Any]:
-    user_id_to_use = specific_uuid if specific_uuid else uuid.uuid4()
+def _create_user_in_db_helper(db_session, role="participant"):
+    user_id_to_use = uuid.uuid4()
     email = f"testuser_{role}_{user_id_to_use}@example.com"
     username = f"testuser_{role}_{user_id_to_use}"
-    password = "testpassword123"
-    full_name = f"Test {role.capitalize()} User"
-
+    password = "testpassword"
     user = User(
-        id=user_id_to_use, # Use the generated or provided UUID
         email=email,
-        username=username, 
+        username=username,
         hashed_password=get_password_hash(password),
-        full_name=full_name,
-        role=role
+        full_name="Test User",
+        github_id=None,
+        avatar_url=None,
+        is_active=True
     )
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
+    db_session.add(UserRoleAssociation(user_id=user.id, role=role))
+    db_session.commit()
     return {
         "id": str(user.id),
         "email": user.email,
         "username": user.username,
-        "full_name": user.full_name,
-        "role": user.role,
-        "password": password, # Return plain password for login tests
+        "password": password,
+        "role": role,
     }
 
 # --- User Fixtures ---

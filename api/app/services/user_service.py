@@ -2,7 +2,7 @@
 Service layer for user-related business logic.
 """
 from sqlalchemy.orm import Session
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, UserRoleAssociation
 from app.schemas.user import UserCreate, UserUpdate
 from app.auth import get_password_hash, verify_password, create_access_token
 from fastapi import HTTPException, status, UploadFile
@@ -27,9 +27,15 @@ def register_user(db: Session, user_in: UserCreate) -> User:
         full_name=user_in.full_name,
         username=user_in.username,
         github_id=user_in.github_id,
-        role=UserRole.PARTICIPANT
     )
     db.add(user)
+    db.commit()
+    db.refresh(user)
+    # Rollen setzen
+    roles = user_in.roles if user_in.roles else [UserRole.PARTICIPANT]
+    for role in roles:
+        assoc = UserRoleAssociation(user_id=user.id, role=role)
+        db.add(assoc)
     db.commit()
     db.refresh(user)
     return user
@@ -60,6 +66,13 @@ def update_profile(db: Session, user_in: UserUpdate, current_user: User) -> User
         current_user.hashed_password = get_password_hash(update_data["password"])
         update_data.pop("password")
         update_data.pop("current_password")
+    # Rollen aktualisieren
+    if "roles" in update_data and update_data["roles"] is not None:
+        db.query(UserRoleAssociation).filter(UserRoleAssociation.user_id == current_user.id).delete()
+        for role in update_data["roles"]:
+            assoc = UserRoleAssociation(user_id=current_user.id, role=role)
+            db.add(assoc)
+        update_data.pop("roles")
     for field, value in update_data.items():
         setattr(current_user, field, value)
     db.add(current_user)

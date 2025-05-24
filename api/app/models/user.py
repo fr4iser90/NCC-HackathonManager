@@ -18,6 +18,13 @@ class UserRole(str, enum.Enum):
     MENTOR = "mentor"
     PARTICIPANT = "participant"
 
+class UserRoleAssociation(Base):
+    __tablename__ = "user_roles"
+    __table_args__ = {"schema": "auth"}
+    user_id = Column(UUID(as_uuid=True), ForeignKey("auth.users.id", ondelete="CASCADE"), primary_key=True)
+    role = Column(String(50), primary_key=True)
+    user = relationship("User", back_populates="roles_association")
+
 class User(Base):
     __tablename__ = "users"
     __table_args__ = {"schema": "auth"}
@@ -27,12 +34,14 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(100), nullable=False)
     full_name = Column(String(100))
-    role = Column(Enum(UserRole), nullable=False, default=UserRole.PARTICIPANT)
     github_id = Column(String(100), unique=True, nullable=True)
     avatar_url = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Multi-Role Relationship
+    roles_association = relationship("UserRoleAssociation", back_populates="user", cascade="all, delete-orphan")
 
     # Relationships
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
@@ -63,5 +72,9 @@ class User(Base):
     sent_join_requests = relationship("JoinRequest", back_populates="sender", foreign_keys="JoinRequest.sender_id", cascade="all, delete-orphan")
     received_join_requests = relationship("JoinRequest", back_populates="recipient", foreign_keys="JoinRequest.recipient_id", cascade="all, delete-orphan")
     project_versions = relationship("ProjectVersion", back_populates="submitter", cascade="all, delete-orphan")
+
+    @property
+    def roles(self) -> list[UserRole]:
+        return [r.role for r in self.roles_association]
 
 # Pydantic Schemas (UserCreate, UserRead, UserUpdate) have been moved to app.schemas.user.py

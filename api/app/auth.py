@@ -76,7 +76,8 @@ def get_current_user_or_admin_for_profile_update(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    if current_user.id == target_user.id or current_user.role == "admin":
+    is_admin = any(r.role == "admin" for r in getattr(current_user, 'roles_association', []))
+    if current_user.id == target_user.id or is_admin:
         return target_user
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -99,7 +100,8 @@ def get_team_owner_or_admin(
         TeamMember.user_id == current_user.id
     ).first()
 
-    if current_user.role == "admin":
+    is_admin = any(r.role == "admin" for r in getattr(current_user, 'roles_association', []))
+    if is_admin:
         return membership
 
     if not membership or membership.role != TeamMemberRole.owner:
@@ -123,7 +125,8 @@ def get_team_member_or_admin(
         TeamMember.user_id == current_user.id
     ).first()
 
-    if current_user.role == "admin":
+    is_admin = any(r.role == "admin" for r in getattr(current_user, 'roles_association', []))
+    if is_admin:
         return membership
 
     if not membership:
@@ -185,7 +188,7 @@ def get_team_owner_admin_or_self_for_member_removal(
                 )
         return membership_to_remove
 
-    if current_user.role == "admin":
+    if any(r.role == "admin" for r in getattr(current_user, 'roles_association', [])):
         return membership_to_remove
 
     current_user_membership = db.query(TeamMember).filter(
@@ -215,7 +218,7 @@ def get_project_team_member_or_admin(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
     print(f"[DEBUG] Project.team_id={project.team_id}")
-    if current_user.role == "admin":
+    if any(r.role == "admin" for r in getattr(current_user, 'roles_association', [])):
         print(f"[DEBUG] User is admin")
         return current_user
 
@@ -241,7 +244,7 @@ def get_project_team_owner_or_admin(
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
-    if current_user.role == "admin":
+    if any(r.role == "admin" for r in getattr(current_user, 'roles_association', [])):
         membership = db.query(TeamMember).filter(
             TeamMember.team_id == project.team_id,
             TeamMember.user_id == current_user.id,
@@ -273,7 +276,7 @@ def get_submission_owner_project_team_member_or_admin(
     if submission.user_id == current_user.id:
         return submission
 
-    if current_user.role == "admin":
+    if any(r.role == "admin" for r in getattr(current_user, 'roles_association', [])):
         return submission
 
     project = db.query(Project).filter(Project.id == submission.project_id).first()
@@ -305,7 +308,7 @@ def get_submission_owner_project_team_owner_or_admin(
     if submission.user_id == current_user.id:
         return submission
 
-    if current_user.role == "admin":
+    if any(r.role == "admin" for r in getattr(current_user, 'roles_association', [])):
         return submission
 
     project = db.query(Project).filter(Project.id == submission.project_id).first()

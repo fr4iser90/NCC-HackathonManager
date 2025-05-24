@@ -9,7 +9,7 @@ import logging
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.database import SessionLocal, engine, Base # Assuming Base might be needed if models are not yet created
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, UserRoleAssociation
 from app.auth import get_password_hash # Use your existing password hashing
 
 logger = logging.getLogger("create_admin")
@@ -34,40 +34,38 @@ def ensure_admin_user():
 
         if existing_user:
             logger.info(f"Admin user with email '{admin_email}' or username '{admin_username}' already exists.")
-            updated = False
-            if existing_user.role != UserRole.ADMIN:
-                logger.info(f"Updating role for user '{existing_user.email}' to 'admin'.")
-                existing_user.role = UserRole.ADMIN
-                updated = True
-            
+            # Prüfe, ob Rolle schon gesetzt ist
+            has_admin_role = any(r.role == UserRole.ADMIN for r in getattr(existing_user, 'roles_association', []))
+            if not has_admin_role:
+                db.add(UserRoleAssociation(user_id=existing_user.id, role=UserRole.ADMIN))
+                db.commit()
+                logger.info("Admin role added to existing user.")
+            # Optional: github_id updaten wie gehabt
             if admin_github_id and existing_user.github_id != admin_github_id:
                 logger.info(f"Updating GitHub ID for user '{existing_user.email}'.")
                 existing_user.github_id = admin_github_id
-                updated = True
-
-            if updated:
                 db.commit()
-                logger.info("User details updated.")
-            else:
-                logger.info("No changes made to existing admin user.")
+                logger.info("GitHub ID updated.")
             return # Exit if user exists
 
         # If user does not exist, create new one
         logger.info(f"Creating new admin user: Email='{admin_email}', Username='{admin_username}'")
 
-        hashed_password = get_password_hash(admin_password)
-        
-        new_admin_user = User(
-            id=uuid.uuid4(),
+        admin_user = User(
             email=admin_email,
             username=admin_username,
+            hashed_password=get_password_hash(admin_password),
             full_name=admin_full_name if admin_full_name else None,
-            hashed_password=hashed_password,
-            role=UserRole.ADMIN,
             github_id=admin_github_id,
+            avatar_url=None,
             is_active=True
         )
-        db.add(new_admin_user)
+        db.add(admin_user)
+        db.commit()
+        db.refresh(admin_user)
+        # Admin-Rolle setzen
+        admin_role = UserRoleAssociation(user_id=admin_user.id, role=UserRole.ADMIN)
+        db.add(admin_role)
         db.commit()
         logger.info(f"Admin user '{admin_email}' / '{admin_username}' created successfully!")
 

@@ -24,6 +24,8 @@ logger = get_logger("teams_router")
 
 router = APIRouter()
 
+IS_ADMIN = lambda user: any(r.role == "admin" for r in getattr(user, 'roles_association', []))
+
 @router.get("/my-join-requests", response_model=List[JoinRequestRead], dependencies=[Depends(get_current_user)])
 def list_my_join_requests(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     allowed = {JoinRequestStatus.pending, JoinRequestStatus.accepted, JoinRequestStatus.rejected}
@@ -148,7 +150,7 @@ def list_join_requests(team_id: uuid.UUID, db: Session = Depends(get_db), curren
         raise HTTPException(status_code=400, detail="Cannot view join requests for inactive hackathon")
 
     owner = db.query(TeamMember).filter_by(team_id=team_id, user_id=current_user.id, role=TeamMemberRole.owner).first()
-    if not owner and current_user.role != "admin":
+    if not owner and not IS_ADMIN(current_user):
         raise HTTPException(status_code=403, detail="Not authorized")
     return db.query(JoinRequest).filter_by(team_id=team_id, status=JoinRequestStatus.pending).all()
 
@@ -168,7 +170,7 @@ def reject_join_request(team_id: uuid.UUID, user_id: uuid.UUID, db: Session = De
         raise HTTPException(status_code=400, detail="Cannot reject join request for inactive hackathon")
 
     owner = db.query(TeamMember).filter_by(team_id=team_id, user_id=current_user.id, role=TeamMemberRole.owner).first()
-    if not owner and current_user.role != "admin":
+    if not owner and not IS_ADMIN(current_user):
         raise HTTPException(status_code=403, detail="Not authorized")
     join_req = db.query(JoinRequest).filter_by(team_id=team_id, user_id=user_id, status=JoinRequestStatus.pending).first()
     if not join_req:
@@ -189,7 +191,7 @@ def invite_user(team_id: uuid.UUID, email: str, db: Session = Depends(get_db), c
         raise HTTPException(status_code=400, detail="Cannot invite users for inactive hackathon")
 
     owner = db.query(TeamMember).filter_by(team_id=team_id, user_id=current_user.id, role=TeamMemberRole.owner).first()
-    if not owner and current_user.role != "admin":
+    if not owner and not IS_ADMIN(current_user):
         raise HTTPException(status_code=403, detail="Not authorized")
     existing = db.query(TeamInvite).filter_by(team_id=team_id, email=email).first()
     if existing:
@@ -212,7 +214,7 @@ def list_invites(team_id: uuid.UUID, db: Session = Depends(get_db), current_user
         raise HTTPException(status_code=400, detail="Cannot view invites for inactive hackathon")
 
     owner = db.query(TeamMember).filter_by(team_id=team_id, user_id=current_user.id, role=TeamMemberRole.owner).first()
-    if not owner and current_user.role != "admin":
+    if not owner and not IS_ADMIN(current_user):
         raise HTTPException(status_code=403, detail="Not authorized")
     return db.query(TeamInvite).filter_by(team_id=team_id, status=TeamInviteStatus.pending).all()
 

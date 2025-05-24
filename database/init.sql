@@ -12,12 +12,17 @@ CREATE TABLE auth.users (
     username VARCHAR(255) NOT NULL UNIQUE,
     hashed_password VARCHAR(100) NOT NULL,
     full_name VARCHAR(100),
-    role VARCHAR(50) NOT NULL DEFAULT 'participant',
     github_id VARCHAR(255) UNIQUE,
     avatar_url VARCHAR(255),
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE auth.user_roles (
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    role VARCHAR(50) NOT NULL,
+    PRIMARY KEY (user_id, role)
 );
 
 CREATE TABLE auth.sessions (
