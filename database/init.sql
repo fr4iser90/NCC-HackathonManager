@@ -30,7 +30,8 @@ CREATE TABLE auth.sessions (
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     token VARCHAR(255) NOT NULL UNIQUE,
     expires_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Hackathons schema
@@ -64,7 +65,7 @@ CREATE TABLE hackathons.hackathons (
     allow_multiple_votes BOOLEAN NOT NULL DEFAULT FALSE,
     custom_fields JSONB,
     location VARCHAR(255),
-    organizer_id UUID REFERENCES auth.users(id),
+    organizer_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

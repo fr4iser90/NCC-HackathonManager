@@ -74,10 +74,34 @@ def unique_id() -> uuid.UUID: # This can still be used by tests for other unique
 
 # --- User Helper Function (not a fixture itself) ---
 def _create_user_in_db_helper(db_session, role="participant"):
-    user_id_to_use = uuid.uuid4()
-    email = f"testuser_{role}_{user_id_to_use}@example.com"
-    username = f"testuser_{role}_{user_id_to_use}"
-    password = "testpassword"
+    # Feste Testdaten für Kernrollen
+    if role == "admin":
+        email = os.environ.get("ADMIN_EMAIL", "admin@example.com")
+        username = os.environ.get("ADMIN_USERNAME", "admin")
+        password = os.environ.get("ADMIN_PASSWORD", "admin123")
+    elif role == "judge":
+        email = "judge@example.com"
+        username = "judge"
+        password = "judgepass"
+    elif role == "mentor":
+        email = "mentor@example.com"
+        username = "mentor"
+        password = "mentorpass"
+    elif role == "participant":
+        email = "participant@example.com"
+        username = "participant"
+        password = "participant123"
+    else:
+        user_id_to_use = uuid.uuid4()
+        email = f"testuser_{role}_{user_id_to_use}@example.com"
+        username = f"testuser_{role}_{user_id_to_use}"
+        password = "testpassword"
+    # Idempotenz: Vorher löschen, falls vorhanden
+    existing = db_session.query(User).filter_by(email=email).first()
+    if existing:
+        db_session.query(UserRoleAssociation).filter_by(user_id=existing.id).delete()
+        db_session.delete(existing)
+        db_session.commit()
     user = User(
         email=email,
         username=username,
@@ -94,8 +118,8 @@ def _create_user_in_db_helper(db_session, role="participant"):
     db_session.commit()
     return {
         "id": str(user.id),
-        "email": user.email,
-        "username": user.username,
+        "email": email,
+        "username": username,
         "password": password,
         "role": role,
     }
