@@ -3,12 +3,43 @@ import os
 import uuid
 
 BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
-MENTOR_EMAIL = os.environ.get("MENTOR_EMAIL", "mentor@example.com")
-MENTOR_PASSWORD = os.environ.get("MENTOR_PASSWORD", "mentor123")
+def test_mentor_login_and_permissions(admin_user_data):
+    # Step 1: Register a new user to be promoted to mentor
+    unique_email = f"mentor_{uuid.uuid4()}@example.com"
+    unique_username = f"mentor_{uuid.uuid4().hex[:8]}"
+    mentor_password = "testmentorpw"
+    register_payload = {
+        "email": unique_email,
+        "username": unique_username,
+        "password": mentor_password,
+        "full_name": "Mentor User"
+    }
+    r = httpx.post(f"{BASE_URL}/users/register", json=register_payload)
+    assert r.status_code in (200, 201), f"Mentor registration failed: {r.text}"
 
-def test_mentor_login_and_permissions():
-    # Login als Mentor
-    r = httpx.post(f"{BASE_URL}/users/login", data={"email": MENTOR_EMAIL, "password": MENTOR_PASSWORD})
+    # Step 2: Login as Admin
+    r = httpx.post(
+        f"{BASE_URL}/users/login",
+        data={"email": admin_user_data["email"], "password": admin_user_data["password"]}
+    )
+    assert r.status_code == 200, f"Admin login failed: {r.text}"
+    admin_token = r.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # Step 3: Find the new mentor user by email
+    r = httpx.get(f"{BASE_URL}/users", headers=admin_headers)
+    assert r.status_code == 200, f"Admin could not list users: {r.text}"
+    users = r.json()
+    mentor_user = next((u for u in users if u["email"] == unique_email), None)
+    assert mentor_user, "Mentor user not found"
+    mentor_id = mentor_user["id"]
+
+    # Step 4: Assign mentor role to mentor user
+    r = httpx.post(f"{BASE_URL}/users/{mentor_id}/roles", headers=admin_headers, json={"role": "mentor"})
+    assert r.status_code in (200, 201), f"Admin could not assign mentor role: {r.text}"
+
+    # Step 5: Login as Mentor
+    r = httpx.post(f"{BASE_URL}/users/login", data={"email": unique_email, "password": mentor_password})
     assert r.status_code == 200, f"Login failed: {r.text}"
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}

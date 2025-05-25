@@ -163,3 +163,38 @@ def get_my_teams_endpoint(db: Session = Depends(get_db), current_user: User = De
 @router.get("/me/projects", response_model=List[ProjectRead])
 def get_my_projects_endpoint(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return get_my_projects(db, current_user)
+
+# --- User Role Management Endpoints (Admin only) ---
+
+from fastapi import Body
+from app.models.user import UserRoleAssociation
+
+@router.post("/{user_id}/roles", dependencies=[Depends(get_admin_user)])
+def assign_role_to_user(
+    user_id: uuid.UUID,
+    role: str = Body(..., embed=True),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    # Check if role already assigned
+    existing = db.query(UserRoleAssociation).filter_by(user_id=user_id, role=role).first()
+    if existing:
+        return {"detail": f"Role '{role}' already assigned to user."}
+    db.add(UserRoleAssociation(user_id=user_id, role=role))
+    db.commit()
+    return {"detail": f"Role '{role}' assigned to user."}
+
+@router.delete("/{user_id}/roles", dependencies=[Depends(get_admin_user)])
+def remove_role_from_user(
+    user_id: uuid.UUID,
+    role: str = Body(..., embed=True),
+    db: Session = Depends(get_db)
+):
+    assoc = db.query(UserRoleAssociation).filter_by(user_id=user_id, role=role).first()
+    if not assoc:
+        raise HTTPException(status_code=404, detail=f"Role '{role}' not assigned to user.")
+    db.delete(assoc)
+    db.commit()
+    return {"detail": f"Role '{role}' removed from user."}

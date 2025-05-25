@@ -3,14 +3,41 @@ import os
 import uuid
 
 BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
-JUDGE_EMAIL = os.environ.get("JUDGE_EMAIL", "judge@example.com")
-JUDGE_PASSWORD = os.environ.get("JUDGE_PASSWORD", "judge123")
+def test_judge_login_and_judging_flow(admin_user_data):
+    # Step 1: Register a new user to be promoted to judge
+    unique_email = f"judge_{uuid.uuid4()}@example.com"
+    unique_username = f"judge_{uuid.uuid4().hex[:8]}"
+    judge_password = "testjudgepw"
+    register_payload = {
+        "email": unique_email,
+        "username": unique_username,
+        "password": judge_password,
+        "full_name": "Judge User"
+    }
+    r = httpx.post(f"{BASE_URL}/users/register", json=register_payload)
+    assert r.status_code in (200, 201), f"Judge registration failed: {r.text}"
 
+    # Step 2: Login as Admin
+    r = httpx.post(f"{BASE_URL}/users/login", data={"email": admin_user_data["email"], "password": admin_user_data["password"]})
+    assert r.status_code == 200, f"Admin login failed: {r.text}"
+    admin_token = r.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
 
-def test_judge_login_and_judging_flow():
-    # Login als Judge
-    r = httpx.post(f"{BASE_URL}/users/login", data={"email": JUDGE_EMAIL, "password": JUDGE_PASSWORD})
-    assert r.status_code == 200, f"Login failed: {r.text}"
+    # Step 3: Find the new judge user by email
+    r = httpx.get(f"{BASE_URL}/users", headers=admin_headers)
+    assert r.status_code == 200, f"Admin could not list users: {r.text}"
+    users = r.json()
+    judge_user = next((u for u in users if u["email"] == unique_email), None)
+    assert judge_user, "Judge user not found"
+    judge_id = judge_user["id"]
+
+    # Step 4: Assign judge role to judge user
+    r = httpx.post(f"{BASE_URL}/users/{judge_id}/roles", headers=admin_headers, json={"role": "judge"})
+    assert r.status_code in (200, 201), f"Admin could not assign judge role: {r.text}"
+
+    # Step 5: Login as Judge
+    r = httpx.post(f"{BASE_URL}/users/login", data={"email": unique_email, "password": judge_password})
+    assert r.status_code == 200, f"Judge login failed: {r.text}"
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 

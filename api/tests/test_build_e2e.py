@@ -4,15 +4,14 @@ import uuid
 from datetime import datetime
 
 BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@example.com")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
+
 
 EXAMPLE_ZIP = os.path.join(os.path.dirname(__file__), "example_projects", "SimpleSecCheck-main.zip")
 assert os.path.exists(EXAMPLE_ZIP), f"ZIP not found: {EXAMPLE_ZIP}"
 
-def test_build_logs_e2e():
+def test_build_logs_e2e(admin_user_data):
     # 1. Login
-    r = httpx.post(f"{BASE_URL}/users/login", data={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    r = httpx.post(f"{BASE_URL}/users/login", data={"email": admin_user_data["email"], "password": admin_user_data["password"]})
     assert r.status_code == 200, f"Login failed: {r.text}"
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
@@ -69,9 +68,9 @@ def test_build_logs_e2e():
         assert logs is not None, "Build logs missing in version list!"
         assert "Starte Build" in logs or "Build erfolgreich" in logs, "Build logs do not contain expected output!"
 
-def test_upload_invalid_zip_e2e():
+def test_upload_invalid_zip_e2e(admin_user_data):
     # 1. Login
-    r = httpx.post(f"{BASE_URL}/users/login", data={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    r = httpx.post(f"{BASE_URL}/users/login", data={"email": admin_user_data["email"], "password": admin_user_data["password"]})
     assert r.status_code == 200
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
@@ -88,9 +87,9 @@ def test_upload_invalid_zip_e2e():
     r = httpx.post(f"{BASE_URL}/projects/{project_id}/submit_version", files=files, headers=headers)
     assert r.status_code in (400, 422), f"Expected failure, got {r.status_code}: {r.text}"
 
-def test_upload_zip_missing_project_files_e2e():
+def test_upload_zip_missing_project_files_e2e(admin_user_data):
     import io, zipfile
-    r = httpx.post(f"{BASE_URL}/users/login", data={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    r = httpx.post(f"{BASE_URL}/users/login", data={"email": admin_user_data["email"], "password": admin_user_data["password"]})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     r = httpx.get(f"{BASE_URL}/hackathons/", headers=headers)
@@ -120,9 +119,9 @@ def test_upload_zip_missing_project_files_e2e():
         if not ("Dockerfile" in logs or "requirements.txt" in logs or "package.json" in logs or "not found" in logs):
             print("[WARN] Build logs leer oder keine erwartete Fehlermeldung für fehlende Projektdateien:", logs)
 
-def test_build_timeout_simulation_e2e():
+def test_build_timeout_simulation_e2e(admin_user_data):
     import io, zipfile
-    r = httpx.post(f"{BASE_URL}/users/login", data={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    r = httpx.post(f"{BASE_URL}/users/login", data={"email": admin_user_data["email"], "password": admin_user_data["password"]})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     r = httpx.get(f"{BASE_URL}/hackathons/", headers=headers)
@@ -149,9 +148,9 @@ def test_build_timeout_simulation_e2e():
         if not ("sleep" in logs or "timeout" in logs or "timed out" in logs):
             print("[WARN] Build logs leer oder keine Timeout-Meldung:", logs)
 
-def test_build_security_warnings_e2e():
+def test_build_security_warnings_e2e(admin_user_data):
     import io, zipfile
-    r = httpx.post(f"{BASE_URL}/users/login", data={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    r = httpx.post(f"{BASE_URL}/users/login", data={"email": admin_user_data["email"], "password": admin_user_data["password"]})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     r = httpx.get(f"{BASE_URL}/hackathons/", headers=headers)
@@ -175,9 +174,9 @@ def test_build_security_warnings_e2e():
         if not ("privileged" in logs or "root" in logs or "SECURITY" in logs):
             print("[WARN] Build logs leer oder keine Security-Warnung:", logs)
 
-def test_build_multiple_versions_e2e():
+def test_build_multiple_versions_e2e(admin_user_data):
     import io, zipfile
-    r = httpx.post(f"{BASE_URL}/users/login", data={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    r = httpx.post(f"{BASE_URL}/users/login", data={"email": admin_user_data["email"], "password": admin_user_data["password"]})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     r = httpx.get(f"{BASE_URL}/hackathons/", headers=headers)
@@ -233,4 +232,4 @@ def main():
     print("E2E Build-Log-Test erfolgreich!")
 
 if __name__ == "__main__":
-    main() 
+    main()

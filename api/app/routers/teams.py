@@ -74,14 +74,11 @@ def update_team_endpoint(
 def delete_team(
     team_id: uuid.UUID, 
     db: Session = Depends(get_db), 
-    # Auth: current_user must be team owner or admin
     _: TeamMember = Depends(get_team_owner_or_admin)
 ):
     db_team = db.query(Team).filter(Team.id == team_id).first()
-    if not db_team: # Should be caught by dependency, but good practice
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
-    
-    # Instead of deleting, mark as disbanded
+    if not db_team or db_team.status == TeamStatus.disbanded:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found or already disbanded")
     db_team.status = TeamStatus.disbanded
     db.add(db_team)
     db.commit()
@@ -286,4 +283,4 @@ def get_own_join_request(team_id: uuid.UUID, db: Session = Depends(get_db), curr
     join_req = db.query(JoinRequest).filter_by(team_id=team_id, user_id=current_user.id).first()
     if not join_req:
         raise HTTPException(status_code=404, detail="Join request not found")
-    return join_req 
+    return join_req

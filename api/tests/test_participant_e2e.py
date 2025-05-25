@@ -3,12 +3,23 @@ import os
 import uuid
 
 BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
-PARTICIPANT_EMAIL = os.environ.get("PARTICIPANT_EMAIL", "participant@example.com")
-PARTICIPANT_PASSWORD = os.environ.get("PARTICIPANT_PASSWORD", "participant123")
 
 def test_participant_permissions_and_deadlines():
-    # Login als Participant
-    r = httpx.post(f"{BASE_URL}/users/login", data={"email": PARTICIPANT_EMAIL, "password": PARTICIPANT_PASSWORD})
+    # Step 1: Register a new participant user
+    unique_email = f"participant_{uuid.uuid4()}@example.com"
+    unique_username = f"participant_{uuid.uuid4().hex[:8]}"
+    participant_password = "testparticipantpw"
+    register_payload = {
+        "email": unique_email,
+        "username": unique_username,
+        "password": participant_password,
+        "full_name": "Participant User"
+    }
+    r = httpx.post(f"{BASE_URL}/users/register", json=register_payload)
+    assert r.status_code in (200, 201), f"Participant registration failed: {r.text}"
+
+    # Step 2: Login as Participant
+    r = httpx.post(f"{BASE_URL}/users/login", data={"email": unique_email, "password": participant_password})
     assert r.status_code == 200, f"Login failed: {r.text}"
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}

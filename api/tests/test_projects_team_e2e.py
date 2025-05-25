@@ -3,14 +3,13 @@ import os
 import uuid
 
 BASE_URL = "http://localhost:8000"
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@example.com")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 
 
-def test_admin_crud_project_e2e():
+
+def test_admin_crud_project_e2e(admin_user_data):
     unique = str(uuid.uuid4())[:8]
     # 1. Login als Admin
-    r = httpx.post(f"{BASE_URL}/users/login", data={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    r = httpx.post(f"{BASE_URL}/users/login", data={"email": admin_user_data["email"], "password": admin_user_data["password"]})
     assert r.status_code == 200, f"Login failed: {r.text}"
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
@@ -65,7 +64,7 @@ def test_admin_crud_project_e2e():
     r = httpx.get(f"{BASE_URL}/projects/{project_id}", headers=headers)
     assert r.status_code == 404, f"Deleted project still exists: {r.text}"
 
-def test_user_crud_project_e2e():
+def test_user_crud_project_e2e(admin_user_data):
     unique = str(uuid.uuid4())[:8]
     # 1. User registrieren
     user_email = f"e2euser_{unique}@example.com"
@@ -88,7 +87,7 @@ def test_user_crud_project_e2e():
     hackathon_id = hackathon["id"]
     # Patch: Activate hackathon if not active
     if hackathon.get("status") != "active":
-        admin_r = httpx.post(f"{BASE_URL}/users/login", data={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+        admin_r = httpx.post(f"{BASE_URL}/users/login", data={"email": admin_user_data["email"], "password": admin_user_data["password"]})
         admin_token = admin_r.json()["access_token"]
         admin_headers = {"Authorization": f"Bearer {admin_token}"}
         patch = {"status": "active"}
@@ -122,7 +121,7 @@ def test_user_crud_project_e2e():
     assert r.status_code == 204, f"Team project delete failed: {r.text}"
 
     # --- Fremdes Projekt (Admin) testen wie gehabt ---
-    admin_r = httpx.post(f"{BASE_URL}/users/login", data={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    admin_r = httpx.post(f"{BASE_URL}/users/login", data={"email": admin_user_data["email"], "password": admin_user_data["password"]})
     admin_token = admin_r.json()["access_token"]
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
     # Create a different team for the foreign project
@@ -139,7 +138,7 @@ def test_user_crud_project_e2e():
     r = httpx.delete(f"{BASE_URL}/projects/{fremd_id}", headers=headers)
     assert r.status_code in (403, 404), f"User konnte fremdes Projekt löschen! {r.text}"
 
-def test_team_project_forbidden_when_hackathon_not_active():
+def test_team_project_forbidden_when_hackathon_not_active(admin_user_data):
     unique = str(uuid.uuid4())[:8]
     # Register and login user
     user_email = f"forbiddenteam_{unique}@example.com"
@@ -160,7 +159,7 @@ def test_team_project_forbidden_when_hackathon_not_active():
     hackathon_id = hackathon["id"]
     # Ensure hackathon is active
     if hackathon.get("status") != "active":
-        admin_r = httpx.post(f"{BASE_URL}/users/login", data={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+        admin_r = httpx.post(f"{BASE_URL}/users/login", data={"email": admin_user_data["email"], "password": admin_user_data["password"]})
         admin_token = admin_r.json()["access_token"]
         admin_headers = {"Authorization": f"Bearer {admin_token}"}
         patch = {"status": "active"}
@@ -184,7 +183,7 @@ def test_team_project_forbidden_when_hackathon_not_active():
     assert r.status_code == 201
     project_id = r.json()["id"]
     # Set hackathon to archived
-    admin_r = httpx.post(f"{BASE_URL}/users/login", data={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    admin_r = httpx.post(f"{BASE_URL}/users/login", data={"email": admin_user_data["email"], "password": admin_user_data["password"]})
     admin_token = admin_r.json()["access_token"]
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
     patch = {"status": "archived"}
@@ -217,4 +216,4 @@ def main():
     print("E2E Team Project Forbidden Test erfolgreich!")
 
 if __name__ == "__main__":
-    main() 
+    main()

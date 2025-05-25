@@ -81,3 +81,10 @@ def list_scores_by_judge_endpoint(judge_id: uuid.UUID, db: Session = Depends(get
 
 # Consider adding an endpoint to get aggregated results for a project
 # e.g., /results/project/{project_id} 
+
+@router.get("/")
+def check_judge_rights(current_user: User = Depends(get_current_user)):
+    # Check if user has judge role
+    if any(r.role == "judge" for r in getattr(current_user, 'roles_association', [])):
+        return {"detail": "User is a judge."}
+    raise HTTPException(status_code=403, detail="User is not a judge.")

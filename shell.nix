@@ -634,7 +634,6 @@ pkgs.mkShell {
     echo "  clean-caches        - Manually clean host __pycache__ and .pytest_cache directories"
     echo "  clean-frontend      - Remove node_modules, package-lock.json, and .next in the frontend"
     echo "  clean-all           - Clean both Python and frontend caches/artifacts"
-    echo "  db_upgrade          - Apply database migrations using Alembic inside the bot container"
     echo "  close-kill-clean-all - Stop all backend/frontend, remove all caches, Docker volumes, and frontend artifacts"
   '';
 }

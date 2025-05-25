@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv(dotenv_path=".env.test", override=True)
 import pytest
 import uuid
 from typing import Generator, Dict, Any, Optional
@@ -24,6 +26,7 @@ from app.models.hackathon import Hackathon
 from app.schemas.hackathon import HackathonStatus, HackathonMode
 
 # --- Test Database Setup (PostgreSQL) ---
+import pprint
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://testuser:testpass@localhost:5433/testdb")
 
 engine_test = create_engine(
@@ -46,6 +49,11 @@ def setup_test_db_schemas():
         cursor.execute("CREATE SCHEMA IF NOT EXISTS projects;")
         cursor.execute("CREATE SCHEMA IF NOT EXISTS judging;")
         cursor.execute("CREATE SCHEMA IF NOT EXISTS hackathons;")
+        # Cleanup: Remove any hackathon_registrations with NULL project_id (legacy/orphaned)
+        try:
+            cursor.execute("DELETE FROM hackathons.hackathon_registrations WHERE project_id IS NULL;")
+        except Exception as e:
+            print(f'[DB CLEANUP] Failed to delete orphaned hackathon_registrations: {e}')
         cursor.close()
 
 @pytest.fixture(scope="session")
@@ -78,7 +86,7 @@ def _create_user_in_db_helper(db_session, role="participant"):
     if role == "admin":
         email = os.environ.get("ADMIN_EMAIL", "admin@example.com")
         username = os.environ.get("ADMIN_USERNAME", "admin")
-        password = os.environ.get("ADMIN_PASSWORD", "admin123")
+        password = os.environ.get("ADMIN_PASSWORD", "adminpass")
     elif role == "judge":
         email = "judge@example.com"
         username = "judge"
@@ -99,6 +107,11 @@ def _create_user_in_db_helper(db_session, role="participant"):
     # Idempotenz: Vorher löschen, falls vorhanden
     existing = db_session.query(User).filter_by(email=email).first()
     if existing:
+        # Vor dem Löschen: alle referenzierenden Registrations löschen
+        db_session.execute(
+            text("DELETE FROM hackathons.hackathon_registrations WHERE user_id = :user_id OR team_id IN (SELECT id FROM teams.teams WHERE id IN (SELECT team_id FROM teams.members WHERE user_id = :user_id))"),
+            {"user_id": existing.id}
+        )
         # Vor dem Löschen: alle referenzierenden Hackathons löschen
         db_session.execute(
             text("DELETE FROM hackathons.hackathons WHERE organizer_id = :user_id"),
