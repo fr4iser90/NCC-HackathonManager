@@ -79,34 +79,59 @@ pkgs.mkShell {
 
     # --- Overridden Test Functions with Auto-Cleaning ---
 
+    # --- Start/Stop Functions ---
+
+    # Start/Stop Production/Dev Backend (API + DB)
+    start-backend-dev() {
+      echo "Starting production/dev API and DB containers..."
+      docker compose -f docker-compose.yml up -d api db
+    }
+    stop-backend-dev() {
+      echo "Stopping production/dev API and DB containers..."
+      docker compose -f docker-compose.yml stop api db
+      docker compose -f docker-compose.yml rm -f api db
+      docker volume rm ncc-hackathonmanager_postgres_data || true
+    }
+
+    # Start/Stop Test Backend (Test-API + Test-DB)
+    start-backend-test() {
+      echo "Starting test API and test DB containers..."
+      docker compose -f docker-compose.override.test.yml up -d api test-db
+    }
+    stop-backend-test() {
+      echo "Stopping test API and test DB containers..."
+      docker compose -f docker-compose.override.test.yml stop api test-db
+      docker compose -f docker-compose.override.test.yml rm -f api test-db
+      docker volume rm ncc-hackathonmanager_test_postgres_data || true
+    }
+
     # Override pytest to clean before and after
     pytest() {
       check_docker || return 1
-      check_docker_containers || return 1
-      check_frontend_deps
-      start-test-db || return 1
-      
       clean-caches
+      start-backend-test || return 1
+      sleep 5
       echo "Running pytest (locally) with arguments: $@"
       command pytest "$@"
       local exit_code=$?
       echo "Pytest finished with exit code $exit_code."
       clean-caches
-      stop-test-db
+      stop-backend-test
       return $exit_code
     }
 
     # Minimal log pytest function
     pytest-minimal-log() {
       check_docker || return 1
-      start-test-db || return 1
       clean-caches
+      start-backend-test || return 1
+      sleep 5
       echo "Running pytest with minimal log (short tracebacks, warnings disabled, max 10 fails)..."
       command pytest --maxfail=30 --disable-warnings --tb=short > test_report.txt || true
       local exit_code=$?
       echo "Pytest finished with exit code $exit_code. See test_report.txt for results."
       clean-caches
-      stop-test-db
+      stop-backend-test
       return $exit_code
     }
 

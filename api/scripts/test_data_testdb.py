@@ -176,9 +176,32 @@ PROJECTS = [
 def main():
     db = SessionLocal()
     try:
-        # --- Entferne User-Setup komplett ---
-        # (Kein Anlegen/Löschen von Usern mehr!)
-        
+        # --- User-Setup ---
+        user_objs = {}
+        for u in USERS:
+            user = db.query(User).filter_by(email=u["email"]).first()
+            if not user:
+                user = User(
+                    email=u["email"],
+                    username=u["username"],
+                    hashed_password=get_password_hash(u["password"]),
+                    full_name=u.get("full_name"),
+                    github_id=u.get("github_id"),
+                    avatar_url=u.get("avatar_url"),
+                    is_active=True
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+            # Rolle setzen, falls noch nicht vorhanden
+            if u.get("role"):
+                has_role = db.query(UserRoleAssociation).filter_by(user_id=user.id, role=u["role"]).first()
+                if not has_role:
+                    db.add(UserRoleAssociation(user_id=user.id, role=u["role"]))
+                    db.commit()
+            user_objs[u["username"]] = user
+        logger.info(f"Users: {[u.email for u in user_objs.values()]}")
+
         # --- Restliche Testdaten (z.B. Templates, Hackathons, etc.) ---
         # ...
 
@@ -355,16 +378,17 @@ def main():
             db.commit()
             db.refresh(project)
 
-            # Erstelle die Registration
-            registration = HackathonRegistration(
-                hackathon_id=p_def["hackathon"].id,
-                project_id=project.id,
-                user_id=p_def.get("user_id"),
-                team_id=p_def.get("team_id"),
-                status="registered"
-            )
-            db.add(registration)
-            db.commit()
+            # Erstelle die Registration (nur wenn project_id vorhanden)
+            if project.id:
+                registration = HackathonRegistration(
+                    hackathon_id=p_def["hackathon"].id,
+                    project_id=project.id,
+                    user_id=p_def.get("user_id"),
+                    team_id=p_def.get("team_id"),
+                    status="registered"
+                )
+                db.add(registration)
+                db.commit()
 
             project_objs[p_def["name"]] = project
         logger.info(f"Projects: {[p.name for p in project_objs.values()]}")

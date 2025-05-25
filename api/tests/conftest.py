@@ -99,6 +99,11 @@ def _create_user_in_db_helper(db_session, role="participant"):
     # Idempotenz: Vorher löschen, falls vorhanden
     existing = db_session.query(User).filter_by(email=email).first()
     if existing:
+        # Vor dem Löschen: alle referenzierenden Hackathons löschen
+        db_session.execute(
+            text("DELETE FROM hackathons.hackathons WHERE organizer_id = :user_id"),
+            {"user_id": existing.id}
+        )
         db_session.query(UserRoleAssociation).filter_by(user_id=existing.id).delete()
         db_session.delete(existing)
         db_session.commit()

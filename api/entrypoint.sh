@@ -10,7 +10,7 @@ set -e
 echo "Attempting to ensure admin user exists..."
 python /app/scripts/create_admin.py
 echo "Attempting to ensure test data exists..."
-python /app/scripts/test_data.py
+python /app/scripts/intial_placeholder_data.py
 
 echo "Admin user check and test data creation complete. Starting Uvicorn server..."
 
