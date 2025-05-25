@@ -24,10 +24,10 @@ from app.models.hackathon import Hackathon
 from app.schemas.hackathon import HackathonStatus, HackathonMode
 
 # --- Test Database Setup (PostgreSQL) ---
-DATABASE_URL_TEST = "postgresql+psycopg2://testuser:testpass@localhost:5433/testdb"
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://testuser:testpass@localhost:5433/testdb")
 
 engine_test = create_engine(
-    DATABASE_URL_TEST,
+    DATABASE_URL,
     pool_pre_ping=True,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine_test)

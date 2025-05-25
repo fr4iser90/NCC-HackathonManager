@@ -85,7 +85,7 @@ pkgs.mkShell {
       check_docker_containers || return 1
       check_frontend_deps
       start-test-db || return 1
-      init-testdb-migration
+      
       clean-caches
       echo "Running pytest (locally) with arguments: $@"
       command pytest "$@"
@@ -99,10 +99,7 @@ pkgs.mkShell {
     # Minimal log pytest function
     pytest-minimal-log() {
       check_docker || return 1
-      check_docker_containers || return 1
-      check_frontend_deps
       start-test-db || return 1
-      init-testdb-migration
       clean-caches
       echo "Running pytest with minimal log (short tracebacks, warnings disabled, max 10 fails)..."
       command pytest --maxfail=30 --disable-warnings --tb=short > test_report.txt || true
@@ -412,30 +409,24 @@ pkgs.mkShell {
       local port=$1
       local max_attempts=10
       local wait_time=1
-      
       # Set max_attempts if provided
       if [ -n "$2" ]; then
         max_attempts=$2
       fi
-      
       # Set wait_time if provided
       if [ -n "$3" ]; then
         wait_time=$3
       fi
-      
       local attempt=1
-      
       while [ $attempt -le $max_attempts ]; do
         if ! is_port_in_use "$port"; then
           echo "Port $port is now free."
           return 0
         fi
-        
         echo "Port $port is still in use, waiting... (attempt $attempt/$max_attempts)"
         sleep $wait_time
         attempt=$((attempt + 1))
       done
-      
       echo "WARNING: Port $port is STILL in use after $max_attempts attempts!"
       return 1
     }
@@ -445,7 +436,6 @@ pkgs.mkShell {
       local port=$(get-frontend-port)
       echo "Checking for processes using frontend port $port..."
       kill_port_process "$port"
-      
       # If first attempt failed, try with force
       if is_port_in_use "$port"; then
         echo "First attempt failed, trying force kill..."
@@ -458,7 +448,6 @@ pkgs.mkShell {
       for port in "$@"; do
         echo "Cleaning port $port..."
         kill_port_process "$port"
-        
         # If first attempt failed, try with force
         if is_port_in_use "$port"; then
           echo "First attempt failed, trying force kill for port $port..."
@@ -497,8 +486,6 @@ pkgs.mkShell {
       cd -
       echo ">>> Rebuilding and starting backend containers..."
       docker compose up --build -d
-      start-test-db || true
-      init-testdb-migration
       echo ">>> Starting frontend development server..."
       cd  frontend
       npm run dev &
@@ -550,25 +537,20 @@ pkgs.mkShell {
     close-kill-clean-all() {
       echo ">>> Stopping and removing all backend containers and volumes (project only)..."
       docker compose down -v
-
       echo ">>> Killing frontend dev server and freeing its port..."
       kill-frontend-port
       if ! wait_for_port_free "$(get-frontend-port)" 10 2; then
         echo "WARNING: Could not free frontend port after multiple attempts."
       fi
-
       echo ">>> Removing frontend build artifacts and dependencies..."
       cd  frontend
       rm -rf node_modules package-lock.json .next
       cd -
-
       echo ">>> Cleaning Python caches (__pycache__, .pytest_cache)..."
       clean-caches
-
       # --- Remove ONLY the project-specific Docker network ---
       echo ">>> Removing project-specific Docker network (if exists)..."
       docker network rm ncc-hackathonmanager_default 2>/dev/null || true
-
       echo ">>> All project apps stopped and all caches/artifacts cleaned!"
       echo "If you want to start fresh, use: quick-startup"
     }
@@ -576,13 +558,8 @@ pkgs.mkShell {
     start-test-db() {
       # Remove old test-db container if exists (any state)
       docker rm -f hackathon-test-db 2>/dev/null || true
-
       # Remove old test network if exists (optional, only if not used by other containers)
       docker network rm ncc-hackathonmanager_default 2>/dev/null || true
-
-      # Recreate network (if needed)
-      docker network create ncc-hackathonmanager_default 2>/dev/null || true
-
       echo "Starte PostgreSQL-Testdatenbank..."
       docker compose -f docker-compose.yml -f docker-compose.override.test.yml up -d --force-recreate test-db
       # Warten bis healthy
@@ -590,6 +567,8 @@ pkgs.mkShell {
         status=$(docker inspect --format='{{.State.Health.Status}}' hackathon-test-db 2>/dev/null)
         if [ "$status" = "healthy" ]; then
           echo "Test-DB ist healthy!"
+          # Add small delay to ensure DB is fully ready
+          sleep 2
           return 0
         fi
         echo "Warte auf Test-DB ($i/20)..."
@@ -609,20 +588,8 @@ pkgs.mkShell {
 
     pytest-with-testdb() {
       start-test-db || return 1
-      init-testdb-migration
       pytest "$@"
       stop-test-db
-    }
-
-    # --- Test-DB Migration/Init Funktion ---
-    init-testdb-migration() {
-      echo "[Migration-Check] Prüfe, ob auth.users in Test-DB existiert..."
-      if ! PGPASSWORD=testpass psql -h localhost -p 5433 -U testuser -d testdb -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='auth' AND table_name='users';" | grep -q 1; then
-        echo "[Migration] Migration/Init-SQL wird ausgeführt..."
-        PGPASSWORD=testpass psql -h localhost -p 5433 -U testuser -d testdb -f database/init.sql
-      else
-        echo "[Migration] Migration/Init-SQL übersprungen (Tabelle auth.users existiert bereits)."
-      fi
     }
 
     echo "Python development environment activated"
@@ -638,6 +605,7 @@ pkgs.mkShell {
     echo "  rebuild-backend     - Remove all containers & volumes, rebuild and start backend fresh"
     echo "  rebuild-frontend    - Remove node_modules and package-lock.json in the frontend and reinstall npm dependencies"
     echo "  pytest              - Run pytest locally (cleans host caches before & after)"
+    echo "  pytest-minimal-log  - Run pytest with minimal log, exported to test_report.txt "
     echo "  clean-caches        - Manually clean host __pycache__ and .pytest_cache directories"
     echo "  clean-frontend      - Remove node_modules, package-lock.json, and .next in the frontend"
     echo "  clean-all           - Clean both Python and frontend caches/artifacts"

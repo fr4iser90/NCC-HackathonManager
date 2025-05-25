@@ -4,20 +4,18 @@ services:
       context: ./database
       dockerfile: Dockerfile
     container_name: hackathon-test-db
-    environment:
-      POSTGRES_USER: testuser
-      POSTGRES_PASSWORD: testpass
-      POSTGRES_DB: testdb
+    env_file:
+      - .env.test
     ports:
       - "5433:5432"
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U testuser"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
-  api:
-    env_file:
-      - .env.test
-    depends_on:
-      test-db:
-        condition: service_healthy
+
+volumes:
+  test_postgres_data:
+    driver: local

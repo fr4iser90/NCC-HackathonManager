@@ -1,29 +1,38 @@
 import os
 import sys
+
+# --- SETUP ENVIRONMENT VARIABLES BEFORE ANY OTHER IMPORTS ---
+from dotenv import load_dotenv
+# Explicitly load .env.test for test DB setup
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../.env.test"), override=True)
+# Always construct DATABASE_URL from individual variables to ensure correct expansion
+db_user = os.environ.get("POSTGRES_USER")
+db_pass = os.environ.get("POSTGRES_PASSWORD")
+db_host = os.environ.get("DB_HOST")
+db_port = os.environ.get("DB_PORT")
+db_name = os.environ.get("POSTGRES_DB")
+TEST_DB_URL = f"postgresql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+os.environ["DATABASE_URL"] = TEST_DB_URL
+
 import uuid
 from datetime import datetime, timedelta
 import logging
 
-from dotenv import load_dotenv
-load_dotenv()
-
 logger = logging.getLogger("test_data_testdb")
-
-# Test-DB-URL aus Umgebungsvariablen oder .env laden
-TEST_DB_URL = os.environ.get(
-    "TEST_DB_URL"
-) or os.environ.get(
-    "DATABASE_TEST_URL"
-) or os.environ.get(
-    "DATABASE_URL_TEST"
-) or "postgresql://testuser:testpass@localhost:5433/testdb"
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+print(f"[DEBUG] TEST_DB_URL: {TEST_DB_URL}")
+print(f"[DEBUG] os.environ['DATABASE_URL']: {os.environ.get('DATABASE_URL')}")
+print(f"[DEBUG] os.environ: {dict(os.environ)}")
+
 try:
     engine = create_engine(TEST_DB_URL, echo=False)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    # Create all tables before seeding data
+    from app.database import Base
+    Base.metadata.create_all(engine)
 except Exception as e:
     print(f"[FATAL] Konnte keine Verbindung zur Test-DB aufbauen: {TEST_DB_URL}\n{e}")
     sys.exit(1)
