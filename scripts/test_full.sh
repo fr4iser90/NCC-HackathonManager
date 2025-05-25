@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 1. Test-DB Container starten
-export COMPOSE_DOCKER_CLI_BUILD=1
-export DOCKER_BUILDKIT=1
-echo "[1/6] Starte Test-DB..."
-docker compose -f docker-compose.yml -f docker-compose.override.test.yml up -d test-db
+# 0. Vorherige Container und Volumes entfernen (immer sauberer Start)
+docker compose -f docker-compose.yml -f docker-compose.override.test.yml down -v
+
+# 1. Test-DB und API-Container starten
+docker compose -f docker-compose.yml -f docker-compose.override.test.yml up -d test-db api
 
 # 2. Warten bis DB healthy
 for i in {1..20}; do
@@ -23,17 +23,18 @@ if [ "$status" != "healthy" ]; then
   exit 1
 fi
 
-# 3. Migration/Init-SQL anwenden
-PGPASSWORD=testpass psql -h localhost -p 5433 -U testuser -d testdb -f database/init.sql
+echo "Attempting to ensure admin user exists..."
+python /app/scripts/create_admin.py
+echo "Attempting to ensure test data exists..."
+python /app/scripts/test_data.py
 
-# 4. Testdaten und User anlegen
+# 5. E2E-Setup (legt alle E2E-User per API an, vergibt Rollen)
+python /api/scripts/setup_e2e_users.py'
 
-nix-shell --run 'python3 api/scripts/test_data_testdb.py'
-
-# 5. Alle Tests/E2E-Tests ausführen
+# 6. Alle Tests/E2E-Tests ausführen
 nix-shell --run 'pytest --maxfail=20 --disable-warnings --tb=short > test_report.txt || true'
 cat test_report.txt
 
-# 6. Test-DB stoppen
-docker stop hackathon-test-db 2>/dev/null || true
-docker rm hackathon-test-db 2>/dev/null || true 
+# 7. Test-DB und API stoppen und entfernen
+docker stop hackathon-test-db hackathon-api 2>/dev/null || true
+docker rm hackathon-test-db hackathon-api 2>/dev/null || true 

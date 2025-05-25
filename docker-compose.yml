@@ -18,7 +18,7 @@ services:
       dockerfile: Dockerfile
     container_name: hackathon-api
     ports:
-      - "8000:8000" # Exposing backend API on host port 8000
+      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -28,7 +28,6 @@ services:
       - api_logs:/app/logs # Mount volume for logs
       - /var/run/docker.sock:/var/run/docker.sock # Mount Docker socket for Docker-outside-of-Docker (DooD)
     restart: unless-stopped
-    # command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload # Or whatever your API's start command is
     
 #  frontend:
 #    build:

@@ -548,7 +548,7 @@ pkgs.mkShell {
     }
 
     close-kill-clean-all() {
-      echo ">>> Stopping and removing all backend containers and volumes..."
+      echo ">>> Stopping and removing all backend containers and volumes (project only)..."
       docker compose down -v
 
       echo ">>> Killing frontend dev server and freeing its port..."
@@ -565,19 +565,11 @@ pkgs.mkShell {
       echo ">>> Cleaning Python caches (__pycache__, .pytest_cache)..."
       clean-caches
 
-      # --- Ensure Docker network is removed ---
-      echo ">>> Attempting to remove Docker network ncc-hackathonmanager_default..."
-      if docker network inspect ncc-hackathonmanager_default >/dev/null 2>&1; then
-        if docker network rm ncc-hackathonmanager_default; then
-          echo "Docker network ncc-hackathonmanager_default removed."
-        else
-          echo "WARNING: Could not remove Docker network ncc-hackathonmanager_default. It may still be in use."
-        fi
-      else
-        echo "Docker network ncc-hackathonmanager_default does not exist."
-      fi
+      # --- Remove ONLY the project-specific Docker network ---
+      echo ">>> Removing project-specific Docker network (if exists)..."
+      docker network rm ncc-hackathonmanager_default 2>/dev/null || true
 
-      echo ">>> All apps stopped and all caches/artifacts cleaned!"
+      echo ">>> All project apps stopped and all caches/artifacts cleaned!"
       echo "If you want to start fresh, use: quick-startup"
     }
 
@@ -651,6 +643,5 @@ pkgs.mkShell {
     echo "  clean-all           - Clean both Python and frontend caches/artifacts"
     echo "  db_upgrade          - Apply database migrations using Alembic inside the bot container"
     echo "  close-kill-clean-all - Stop all backend/frontend, remove all caches, Docker volumes, and frontend artifacts"
-    echo "  init-testdb-migration - Führe Migration/Init-SQL für Test-DB nur falls nötig aus (prüft auf auth.users)"
   '';
 }

@@ -1,6 +1,8 @@
 services:
   test-db:
-    image: postgres:15
+    build:
+      context: ./database
+      dockerfile: Dockerfile
     container_name: hackathon-test-db
     environment:
       POSTGRES_USER: testuser
@@ -13,3 +15,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  api:
+    env_file:
+      - .env.test
+    depends_on:
+      test-db:
+        condition: service_healthy
