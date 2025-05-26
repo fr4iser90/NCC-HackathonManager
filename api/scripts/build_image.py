@@ -243,17 +243,42 @@ def run_with_timeout(cmd, cwd, timeout):
 def main():
     parser = argparse.ArgumentParser(description="Dockerize User Project")
     parser.add_argument("--project-path", required=True, help="Pfad zum User-Projekt")
-    parser.add_argument("--tag", required=True, help="Docker Image Tag")
+    parser.add_argument("--tag", help="Docker Image Tag (if not set, will be generated from name/id args)")
+    parser.add_argument("--project-name", help="Project name (from ZIP or directory) for image tag generation")
+    parser.add_argument("--username", help="User ID for image tag generation")
+    parser.add_argument("--user-name", help="Username/email for image tag generation")
+    parser.add_argument("--version", help="Version for image tag generation")
+    
     args = parser.parse_args()
+    # Determine image tag
+    tag = args.tag
+    def clean(val):
+        return str(val).strip().replace(" ", "_").replace("/", "_").replace(":", "_").replace(".", "_").replace("@", "_")
+    if not tag:
+        # Use project name, username, version for tag
+        project_part = clean(args.project_name) if args.project_name else ""
+        # Try to infer project name from project path if not provided
+        if not project_part and args.project_path:
+            project_part = clean(os.path.basename(os.path.normpath(args.project_path)))
+        user_part = clean(args.user_name) if args.user_name else (clean(args.username) if args.username else "")
+        version_part = clean(args.version) if args.version else "latest"
+        if not args.user_name and not args.username:
+            print("WARNING: --user-name/--username not provided, image tag will not include username.")
+        if not args.version:
+            print("WARNING: --version not provided, image tag will not include version (using 'latest').")
+        if project_part or user_part:
+            tag = f"{project_part}_{user_part}_{version_part}"
+            print(f"Generated image tag: {tag}")
+        else:
+            print("ERROR: --tag or at least --project-name or --user-name must be provided.")
+            exit(1)
 
-    # Extract project_id and version_id from tag
-    tag_parts = args.tag.split('-')
-    project_id = tag_parts[2] if len(tag_parts) > 2 else "unknown"
-    version_id = tag_parts[3] if len(tag_parts) > 3 else "unknown"
+    # Extract project_id and version_id from tag (fallback to args if possible)
+    tag_parts = tag.split('-')
+    project_id = tag_parts[2] if len(tag_parts) > 2 else (args.hackathon or "unknown")
+    version_id = tag_parts[3] if len(tag_parts) > 3 else (args.version or "unknown")
     
     logger = BuildLogger(project_id, version_id)
-    logger.log_build_start(args.project_path, args.tag, "unknown")
-    
     project_path = os.path.abspath(args.project_path)
     if not os.path.isdir(project_path):
         error_msg = f"Projektpfad nicht gefunden: {project_path}"
@@ -268,11 +293,12 @@ def main():
         print(error_msg)
         exit(2)
     
-    logger.log_build_start(args.project_path, args.tag, stack)
+    logger.log_build_start(args.project_path, tag, stack)
+    log(f"🚀 Starte Build für {tag} ({stack.upper()})")
 
     if stack == "dockerfile":
         logger.log_debug("Verwende vorhandenes Dockerfile")
-        rc, output = build_image(project_path, args.tag, logger)
+        rc, output = build_image(project_path, tag, logger)
         exit(rc)
     elif stack == "compose":
         logger.log_debug("Verwende vorhandenes docker-compose.yml")
@@ -281,12 +307,12 @@ def main():
     else:
         logger.log_debug(f"Verwende {stack}-Template")
         ensure_dockerfile(project_path, stack, logger)
-        rc, output = build_image(project_path, args.tag, logger)
+        rc, output = build_image(project_path, tag, logger)
         exit(rc)
 
     build_log = []
     try:
-        log(f"�� Starte Build für {args.tag}")
+        # The build log message is now only printed after tag and stack are resolved
         # Check for missing files
         missing = check_project_files(project_path)
         if missing:
@@ -299,7 +325,7 @@ def main():
             build_log.append(warn)
         # Build (simulate with Docker build if Dockerfile exists)
         if os.path.exists(os.path.join(project_path, "Dockerfile")):
-            cmd = ["docker", "build", "-t", args.tag, project_path]
+            cmd = ["docker", "build", "-t", tag, project_path]
             log(f"🔨 Starte Build: {' '.join(cmd)}")
             build_log.append(f"🔨 Starte Build: {' '.join(cmd)}")
             rc, out = run_with_timeout(cmd, cwd=project_path, timeout=60)

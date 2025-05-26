@@ -27,7 +27,7 @@ def test_mentor_login_and_permissions(admin_user_data):
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
 
     # Step 3: Find the new mentor user by email
-    r = httpx.get(f"{BASE_URL}/users", headers=admin_headers)
+    r = httpx.get(f"{BASE_URL}/users/", headers=admin_headers)
     assert r.status_code == 200, f"Admin could not list users: {r.text}"
     users = r.json()
     mentor_user = next((u for u in users if u["email"] == unique_email), None)
@@ -44,16 +44,40 @@ def test_mentor_login_and_permissions(admin_user_data):
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
+    # Create a hackathon first
+    hackathon_data = {
+        "name": f"Test Hackathon {uuid.uuid4()}",
+        "description": "Test hackathon for mentoring",
+        "start_date": "2030-01-01T00:00:00Z",
+        "end_date": "2030-01-02T00:00:00Z",
+        "status": "upcoming",
+        "location": "Test Location"
+    }
+    r = httpx.post(f"{BASE_URL}/hackathons/", headers=admin_headers, json=hackathon_data)
+    assert r.status_code == 201, f"Hackathon creation failed: {r.text}"
+    hackathon_id = r.json()["id"]
+
+    # Create a team for testing
+    team_data = {
+        "name": f"Test Team {uuid.uuid4()}",
+        "description": "Test team for mentoring",
+        "hackathon_id": hackathon_id
+    }
+    r = httpx.post(f"{BASE_URL}/teams/", headers=headers, json=team_data)
+    assert r.status_code == 201, f"Team creation failed: {r.text}"
+
     # Mentor darf keine Judging- oder Voting-Aktionen durchführen
     r = httpx.get(f"{BASE_URL}/judging/criteria/", headers=headers)
     assert r.status_code == 200
     # Versuch zu bewerten
     r = httpx.get(f"{BASE_URL}/projects/", headers=headers)
-    if r.json():
-        project_id = r.json()[0]["id"]
+    projects = r.json() if r.status_code == 200 else []
+    if isinstance(projects, list) and projects:
+        project_id = projects[0]["id"]
         r2 = httpx.get(f"{BASE_URL}/judging/criteria/", headers=headers)
-        if r2.json():
-            criterion_id = r2.json()[0]["id"]
+        criteria = r2.json() if r2.status_code == 200 else []
+        if isinstance(criteria, list) and criteria:
+            criterion_id = criteria[0]["id"]
             score_payload = {"project_id": project_id, "criteria_id": criterion_id, "score": 5, "notes": "Mentor darf nicht bewerten"}
             r3 = httpx.post(f"{BASE_URL}/judging/scores/", headers=headers, json=score_payload)
             assert r3.status_code == 403
@@ -63,7 +87,9 @@ def test_mentor_login_and_permissions(admin_user_data):
     assert r.status_code == 403
     # Mentor darf kein Team löschen
     r = httpx.get(f"{BASE_URL}/teams/", headers=headers)
-    if r.json():
-        team_id = r.json()[0]["id"]
-        r2 = httpx.delete(f"{BASE_URL}/teams/{team_id}", headers=headers)
-        assert r2.status_code == 403
+    assert r.status_code == 200
+    teams = r.json()
+    assert len(teams) > 0, "No teams found after creation"
+    team_id = teams[0]["id"]
+    r2 = httpx.delete(f"{BASE_URL}/teams/{team_id}", headers=headers)
+    assert r2.status_code == 403

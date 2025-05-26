@@ -33,7 +33,7 @@ def second_regular_user_data_payload(unique_id: uuid.UUID) -> dict:
 @pytest.fixture(scope="function")
 def created_second_regular_user(client: TestClient, second_regular_user_data_payload: dict, db_session: Session) -> User:
     response = client.post("/users/register", json=second_regular_user_data_payload)
-    assert response.status_code == status.HTTP_201_CREATED
+    assert response.status_code == status.HTTP_201_CREATED, f"Template creation failed: {response.status_code} {response.text}"
     user = db_session.query(User).filter(User.email == second_regular_user_data_payload["email"]).first()
     assert user is not None
     return user
@@ -57,7 +57,7 @@ def created_team(client: TestClient, auth_headers_for_regular_user, created_regu
         headers=auth_headers_for_regular_user,
         json={"name": team_name, "description": "A team for projects", "hackathon_id": str(test_hackathon.id)}
     )
-    assert response.status_code == status.HTTP_201_CREATED
+    assert response.status_code == status.HTTP_201_CREATED, f"Template creation failed: {response.status_code} {response.text}"
     team_id_str = response.json()["id"]
     team_uuid = UUID(team_id_str)
     return db_session.query(Team).filter(Team.id == team_uuid).first()
@@ -86,9 +86,20 @@ def another_team_created_by_second_user(client: TestClient, auth_headers_for_sec
     return team_instance
 
 
+import uuid as _uuid
+from sqlalchemy import text
+
 @pytest.fixture(scope="function")
-def created_project_template(client: TestClient, auth_headers_for_admin_user, unique_id: uuid.UUID, db_session: Session) -> ProjectTemplate:
-    template_name = f"Test Template {unique_id}"
+def created_project_template(client: TestClient, auth_headers_for_admin_user, db_session: Session) -> ProjectTemplate:
+    # Logging: Alle Template-Namen vor dem Anlegen ausgeben
+    print("[DEBUG] Vor dem Anlegen: Alle Template-Namen in der DB:", [t.name for t in db_session.query(ProjectTemplate).all()])
+    db_session.query(Project).delete()  # Delete projects first due to foreign key constraints
+    db_session.query(ProjectTemplate).delete()
+    db_session.commit()
+    
+    local_unique_id = _uuid.uuid4()
+    template_name = f"Test Template {local_unique_id}"
+    print("TEST: ProjectTemplate name to be created:", template_name)
     response = client.post(
         "/projects/templates/",
         headers=auth_headers_for_admin_user,
@@ -96,14 +107,15 @@ def created_project_template(client: TestClient, auth_headers_for_admin_user, un
             "name": template_name,
             "description": "A template for testing.",
             "tech_stack": ["python", "fastapi"],
-            "repository_url": f"https://example.com/template_repo/{unique_id}", # Corrected URL
-            "live_url": f"https://example.com/template_live/{unique_id}" # Corrected URL
+            "repository_url": f"https://example.com/template_repo/{local_unique_id}",
+            "live_url": f"https://example.com/template_live/{local_unique_id}"
         }
     )
-    assert response.status_code == status.HTTP_201_CREATED
+    print("Template creation response (fixture):", response.status_code, response.text)
+    assert response.status_code == status.HTTP_201_CREATED, f"Template creation failed: {response.status_code} {response.text}"
     template_data = response.json()
     template_id_str = template_data["id"]
-    template_instance = db_session.query(ProjectTemplate).filter(ProjectTemplate.id == uuid.UUID(template_id_str)).first()
+    template_instance = db_session.query(ProjectTemplate).filter(ProjectTemplate.id == _uuid.UUID(template_id_str)).first()
     assert template_instance is not None, "ProjectTemplate not found in DB after creation in fixture"
     return template_instance
 
@@ -139,6 +151,8 @@ def project_in_another_team(client: TestClient, auth_headers_for_second_regular_
 
 # --- Project Template Tests ---
 def test_create_project_template_as_admin(client: TestClient, auth_headers_for_admin_user, unique_id: uuid.UUID, db_session: Session):
+    # Logging: Alle Template-Namen vor dem Anlegen ausgeben
+    print("[DEBUG] Vor dem Anlegen (test_create_project_template_as_admin):", [t.name for t in db_session.query(ProjectTemplate).all()])
     template_name = f"Admin Template {unique_id}"
     repo_url = f"https://example.com/admin_repo/{unique_id}" # Corrected URL
     live_url = f"https://example.com/admin_live/{unique_id}" # Corrected URL
@@ -153,7 +167,8 @@ def test_create_project_template_as_admin(client: TestClient, auth_headers_for_a
             "live_url": live_url
         }
     )
-    assert response.status_code == status.HTTP_201_CREATED
+    print("Template creation response (test):", response.status_code, response.text)
+    assert response.status_code == status.HTTP_201_CREATED, f"Template creation failed: {response.status_code} {response.text}"
     data = response.json()
     assert data["name"] == template_name
     template_in_db = db_session.query(ProjectTemplate).filter(ProjectTemplate.id == uuid.UUID(data["id"])).first()
@@ -539,4 +554,4 @@ def test_project(
     assert response.status_code == status.HTTP_201_CREATED
     project_id_str = response.json()["id"]
     project_uuid = UUID(project_id_str)
-    return db_session.query(ProjectModel).filter(ProjectModel.id == project_uuid).first() 
+    return db_session.query(ProjectModel).filter(ProjectModel.id == project_uuid).first()

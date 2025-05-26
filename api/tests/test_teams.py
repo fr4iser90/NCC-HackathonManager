@@ -49,11 +49,11 @@ def test_create_team_unauthenticated(client: TestClient, unique_id: uuid.UUID, t
 
 def test_create_team_duplicate_name(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID, test_hackathon: Hackathon):
     team_name = f"Duplicate Name Team {unique_id}"
-    # The backend does not enforce unique team names per hackathon, so both requests should succeed.
+    # The backend now enforces unique team names per hackathon, so the second request should fail.
     resp1 = client.post("/teams/", headers=auth_headers_for_regular_user, json={"name": team_name, "description": "First one", "is_open": True, "hackathon_id": str(test_hackathon.id)})
     resp2 = client.post("/teams/", headers=auth_headers_for_regular_user, json={"name": team_name, "description": "Second one", "is_open": True, "hackathon_id": str(test_hackathon.id)})
     assert resp1.status_code == status.HTTP_201_CREATED
-    assert resp2.status_code == status.HTTP_201_CREATED
+    assert resp2.status_code == status.HTTP_400_BAD_REQUEST
 
 # --- List and Get Team Tests ---
 def test_list_teams(client: TestClient, auth_headers_for_regular_user, unique_id: uuid.UUID, test_hackathon: Hackathon):
@@ -380,4 +380,4 @@ def test_team(
     assert response.status_code == status.HTTP_201_CREATED
     team_id_str = response.json()["id"]
     team_uuid = UUID(team_id_str)
-    return db_session.query(Team).filter(Team.id == team_uuid).first() 
+    return db_session.query(Team).filter(Team.id == team_uuid).first()

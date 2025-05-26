@@ -37,7 +37,8 @@ def test_admin_assign_and_remove_roles(client, admin_token, participant_id):
     roles = r.json()["roles"]
     assert set(roles) >= {"participant", "judge", "mentor"}
     # Remove judge role
-    r = client.request("DELETE", f"/users/{participant_id}/roles", headers=headers, json={"role": "judge"})
+    import json
+    r = client.request("DELETE", f"/users/{participant_id}/roles", headers={**headers, "Content-Type": "application/json"}, data=json.dumps({"role": "judge"}))
     assert r.status_code in (200, 204), r.text
     # Check roles again
     r = client.get(f"/users/{participant_id}", headers=headers)
@@ -57,7 +58,8 @@ def test_participant_rights_update(client, admin_token, participant_token, parti
     r = client.get("/judging", headers=user_headers)
     assert r.status_code in (200, 403)  # 200 if allowed, 403 if not assigned to a hackathon
     # Remove judge role
-    r = client.delete(f"/users/{participant_id}/roles", headers=admin_headers, json={"role": "judge"})
+    import json
+    r = client.request("DELETE", f"/users/{participant_id}/roles", headers={**admin_headers, "Content-Type": "application/json"}, data=json.dumps({"role": "judge"}))
     assert r.status_code in (200, 204)
     # Now participant should NOT have judge rights
     r = client.get("/judging", headers=user_headers)

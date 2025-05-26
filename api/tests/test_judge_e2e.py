@@ -24,7 +24,7 @@ def test_judge_login_and_judging_flow(admin_user_data):
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
 
     # Step 3: Find the new judge user by email
-    r = httpx.get(f"{BASE_URL}/users", headers=admin_headers)
+    r = httpx.get(f"{BASE_URL}/users/", headers=admin_headers)
     assert r.status_code == 200, f"Admin could not list users: {r.text}"
     users = r.json()
     judge_user = next((u for u in users if u["email"] == unique_email), None)
@@ -41,6 +41,28 @@ def test_judge_login_and_judging_flow(admin_user_data):
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
+    # Create a hackathon first
+    hackathon_data = {
+        "name": f"Test Hackathon {uuid.uuid4()}",
+        "description": "Test hackathon for judging",
+        "start_date": "2030-01-01T00:00:00Z",
+        "end_date": "2030-01-02T00:00:00Z",
+        "status": "active",
+        "location": "Test Location"
+    }
+    r = httpx.post(f"{BASE_URL}/hackathons/", headers=admin_headers, json=hackathon_data)
+    assert r.status_code == 201, f"Hackathon creation failed: {r.text}"
+    hackathon_id = r.json()["id"]
+
+    # Create a team for testing
+    team_data = {
+        "name": f"Test Team {uuid.uuid4()}",
+        "description": "Test team for judging",
+        "hackathon_id": hackathon_id
+    }
+    r = httpx.post(f"{BASE_URL}/teams/", headers=headers, json=team_data)
+    assert r.status_code == 201, f"Team creation failed: {r.text}"
+
     # Judge darf Kriterien sehen, aber nicht anlegen
     r = httpx.get(f"{BASE_URL}/judging/criteria/", headers=headers)
     assert r.status_code == 200
@@ -50,11 +72,13 @@ def test_judge_login_and_judging_flow(admin_user_data):
     # Judge darf bewerten (Score abgeben)
     # Hole ein Projekt und ein Kriterium
     r = httpx.get(f"{BASE_URL}/projects/", headers=headers)
-    assert r.status_code == 200 and r.json(), "No projects found!"
-    project_id = r.json()[0]["id"]
+    projects = r.json() if r.status_code == 200 else []
+    assert isinstance(projects, list) and projects, f"No projects found! Response: {r.text}"
+    project_id = projects[0]["id"]
     r = httpx.get(f"{BASE_URL}/judging/criteria/", headers=headers)
-    assert r.status_code == 200 and r.json(), "No criteria found!"
-    criterion_id = r.json()[0]["id"]
+    criteria = r.json() if r.status_code == 200 else []
+    assert isinstance(criteria, list) and criteria, f"No criteria found! Response: {r.text}"
+    criterion_id = criteria[0]["id"]
     score_payload = {"project_id": project_id, "criteria_id": criterion_id, "score": 8, "notes": "Gut!"}
     r = httpx.post(f"{BASE_URL}/judging/scores/", headers=headers, json=score_payload)
     assert r.status_code == 201, f"Judge could not submit score: {r.text}"
@@ -69,7 +93,9 @@ def test_judge_login_and_judging_flow(admin_user_data):
 
     # Judge darf kein Team löschen
     r = httpx.get(f"{BASE_URL}/teams/", headers=headers)
-    if r.json():
-        team_id = r.json()[0]["id"]
-        r2 = httpx.delete(f"{BASE_URL}/teams/{team_id}", headers=headers)
-        assert r2.status_code == 403
+    assert r.status_code == 200
+    teams = r.json()
+    assert len(teams) > 0, "No teams found after creation"
+    team_id = teams[0]["id"]
+    r2 = httpx.delete(f"{BASE_URL}/teams/{team_id}", headers=headers)
+    assert r2.status_code == 403

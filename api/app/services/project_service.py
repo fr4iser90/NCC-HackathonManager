@@ -84,10 +84,19 @@ def submit_project_version(db: Session, project_id: str, file: UploadFile, versi
     try:
         with zipfile.ZipFile(file_path, 'r') as zip_ref:
             zip_ref.extractall(temp_dir)
-        build_script = os.path.join(SCRIPTS_DIR, "build_project_container.py")
-        tag = f"hackathon-project-{project_id}-{version.id}"
+        build_script = os.path.join(SCRIPTS_DIR, "build_image.py")
+        # Use project name from ZIP filename (without .zip), username/email, and version number
+        project_name = os.path.splitext(os.path.basename(file.filename))[0]
+        user_name = getattr(current_user, "email", None) or getattr(current_user, "username", None) or "unknown"
+        version_str = str(version.version_number)
         process = subprocess.run(
-            ["python3", build_script, "--project-path", temp_dir, "--tag", tag],
+            [
+                "python3", build_script,
+                "--project-path", temp_dir,
+                "--project-name", project_name,
+                "--user-name", user_name,
+                "--version", version_str
+            ],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -120,4 +129,4 @@ def submit_project_version(db: Session, project_id: str, file: UploadFile, versi
         raise HTTPException(status_code=400, detail=f"Build failed: {str(e)}")
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
-    return version 
+    return version
