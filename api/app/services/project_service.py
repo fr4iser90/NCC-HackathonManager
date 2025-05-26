@@ -87,7 +87,7 @@ def submit_project_version(db: Session, project_id: str, file: UploadFile, versi
         build_script = os.path.join(SCRIPTS_DIR, "build_image.py")
         # Use project name from ZIP filename (without .zip), username/email, and version number
         project_name = os.path.splitext(os.path.basename(file.filename))[0]
-        user_name = getattr(current_user, "email", None) or getattr(current_user, "username", None) or "unknown"
+        user_name = getattr(current_user, "username", None) or getattr(current_user, "email", None) or "unknown"
         version_str = str(version.version_number)
         process = subprocess.run(
             [
