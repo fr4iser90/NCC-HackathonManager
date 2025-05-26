@@ -1,16 +1,16 @@
-from typing import List
+from typing import List, Optional
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 import secrets
 from app.logger import get_logger
 
 from app.database import get_db
-from app.models.user import User
-from app.models.team import Team, TeamMember, JoinRequest, JoinRequestStatus, TeamInvite, TeamInviteStatus, TeamStatus
+from app.models.user import User, UserRole
+from app.models.team import Team, TeamMember, JoinRequest, JoinRequestStatus, TeamInvite, TeamInviteStatus, TeamStatus, TeamMemberRole
 from app.models.hackathon import Hackathon
-from app.schemas.team import TeamCreate, TeamRead, TeamUpdate, TeamMemberRole, JoinRequestRead, TeamInviteRead
+from app.schemas.team import TeamCreate, TeamRead, TeamUpdate, TeamMemberCreate, TeamMemberRead, JoinRequestRead, TeamInviteRead
 from app.auth import (
     get_current_user, 
     get_team_owner_or_admin,
@@ -18,11 +18,12 @@ from app.auth import (
     get_team_owner_admin_or_self_for_member_removal
 )
 from app.services.team_service import create_team, update_team, join_team, leave_team, request_join, accept_join_request
+from app.middleware import require_roles, require_admin, require_organizer
 
 # Initialize logger
 logger = get_logger("teams_router")
 
-router = APIRouter()
+router = APIRouter(tags=["teams"])
 
 IS_ADMIN = lambda user: any(r.role == "admin" for r in getattr(user, 'roles_association', []))
 
@@ -36,11 +37,11 @@ def list_my_join_requests(db: Session = Depends(get_db), current_user: User = De
         logger.debug(f"DEBUG JOINREQUEST: team_id={req.team_id} ({type(req.team_id)}), user_id={req.user_id} ({type(req.user_id)}), status={req.status} ({type(req.status)}), created_at={req.created_at} ({type(req.created_at)})")
     return [JoinRequestRead.model_validate(req) for req in filtered]
 
-@router.post("/", response_model=TeamRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=TeamRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles([UserRole.PARTICIPANT]))])
 def create_team_endpoint(team_in: TeamCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return create_team(db, team_in, current_user)
 
-@router.get("/", response_model=List[TeamRead], dependencies=[Depends(get_current_user)])
+@router.get("/", response_model=List[TeamRead])
 def list_teams(hackathon_id: uuid.UUID, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """
     List all teams for a specific hackathon.
@@ -284,3 +285,108 @@ def get_own_join_request(team_id: uuid.UUID, db: Session = Depends(get_db), curr
     if not join_req:
         raise HTTPException(status_code=404, detail="Join request not found")
     return join_req
+
+@router.post("/{team_id}/members", response_model=TeamMemberRead, status_code=status.HTTP_201_CREATED)
+def add_team_member(
+    team_id: uuid.UUID,
+    member_in: TeamMemberCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Add a member to the team. Only accessible by team owner or admin."""
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    # Check if user is team owner or admin
+    member = db.query(TeamMember).filter(
+        TeamMember.team_id == team_id,
+        TeamMember.user_id == current_user.id,
+        TeamMember.role.in_([TeamMemberRole.owner, TeamMemberRole.admin])
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not authorized to add team members")
+
+    # Check if user exists
+    user = db.query(User).filter(User.id == member_in.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Check if user is already a member
+    existing_member = db.query(TeamMember).filter(
+        TeamMember.team_id == team_id,
+        TeamMember.user_id == member_in.user_id
+    ).first()
+    if existing_member:
+        raise HTTPException(status_code=400, detail="User is already a team member")
+
+    # Create team member
+    db_member = TeamMember(
+        team_id=team_id,
+        user_id=member_in.user_id,
+        role=member_in.role
+    )
+    
+    try:
+        db.add(db_member)
+        db.commit()
+        db.refresh(db_member)
+        return db_member
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Error adding team member")
+
+@router.delete("/{team_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_team_member(
+    team_id: uuid.UUID,
+    user_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Remove a member from the team. Only accessible by team owner or admin."""
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    # Check if user is team owner or admin
+    member = db.query(TeamMember).filter(
+        TeamMember.team_id == team_id,
+        TeamMember.user_id == current_user.id,
+        TeamMember.role.in_([TeamMemberRole.owner, TeamMemberRole.admin])
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not authorized to remove team members")
+
+    # Check if target user is a member
+    target_member = db.query(TeamMember).filter(
+        TeamMember.team_id == team_id,
+        TeamMember.user_id == user_id
+    ).first()
+    if not target_member:
+        raise HTTPException(status_code=404, detail="User is not a team member")
+
+    # Prevent removing the last owner
+    if target_member.role == TeamMemberRole.owner:
+        owner_count = db.query(TeamMember).filter(
+            TeamMember.team_id == team_id,
+            TeamMember.role == TeamMemberRole.owner
+        ).count()
+        if owner_count <= 1:
+            raise HTTPException(status_code=400, detail="Cannot remove the last team owner")
+
+    db.delete(target_member)
+    db.commit()
+    return
+
+@router.get("/{team_id}/members", response_model=List[TeamMemberRead])
+def list_team_members(
+    team_id: uuid.UUID,
+    db: Session = Depends(get_db)
+):
+    """List all members of a team."""
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    members = db.query(TeamMember).filter(TeamMember.team_id == team_id).all()
+    return members

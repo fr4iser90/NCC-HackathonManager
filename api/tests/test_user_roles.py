@@ -35,6 +35,7 @@ def test_admin_assign_and_remove_roles(client, admin_token, participant_id):
     r = client.get(f"/users/{participant_id}", headers=headers)
     assert r.status_code == 200
     roles = r.json()["roles"]
+    # Should have at least participant, judge, mentor
     assert set(roles) >= {"participant", "judge", "mentor"}
     # Remove judge role
     import json
@@ -54,13 +55,13 @@ def test_participant_rights_update(client, admin_token, participant_token, parti
     # Assign judge role
     r = client.post(f"/users/{participant_id}/roles", headers=admin_headers, json={"role": "judge"})
     assert r.status_code in (200, 201)
-    # Now participant should have judge rights (e.g. access /judging)
-    r = client.get("/judging", headers=user_headers)
-    assert r.status_code in (200, 403)  # 200 if allowed, 403 if not assigned to a hackathon
+    # Now participant should have judge rights (access /judging/check-judge)
+    r = client.get("/judging/check-judge", headers=user_headers)
+    assert r.status_code == 200  # Should succeed if judge role is present
     # Remove judge role
     import json
     r = client.request("DELETE", f"/users/{participant_id}/roles", headers={**admin_headers, "Content-Type": "application/json"}, data=json.dumps({"role": "judge"}))
     assert r.status_code in (200, 204)
     # Now participant should NOT have judge rights
-    r = client.get("/judging", headers=user_headers)
-    assert r.status_code in (403, 401)
+    r = client.get("/judging/check-judge", headers=user_headers)
+    assert r.status_code == 403  # Should fail if judge role is removed

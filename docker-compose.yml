@@ -31,32 +31,32 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock # Mount Docker socket for Docker-outside-of-Docker (DooD)
     restart: unless-stopped
     
-  hackathon-frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    image: fr4iser/hackathon-platform:frontend
-    container_name: hackathon-frontend
-    ports:
-      - "3030:3000" # Exposing frontend on host port 3000
-    depends_on:
-      - hackathon-api
-    env_file:
-      - .env
-    volumes:
-      - frontend_logs:/app/logs # Mount volume for logs
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://hackathon-api:8000/ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+#  hackathon-frontend:
+#    build:
+#      context: ./frontend
+#      dockerfile: Dockerfile
+#    image: fr4iser/hackathon-platform:frontend
+#    container_name: hackathon-frontend
+#    ports:
+#      - "3030:3000" # Exposing frontend on host port 3000
+#    depends_on:
+#      - hackathon-api
+#    env_file:
+#      - .env
+#    volumes:
+#      - frontend_logs:/app/logs # Mount volume for logs
+#    restart: unless-stopped
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://hackathon-api:8000/ping"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 10
+#      start_period: 10s
 
 volumes:
   hackathon-db-data:
     driver: local
   api_logs:
     driver: local
-  frontend_logs:
-    driver: local
+#  frontend_logs:
+#    driver: local

@@ -1,12 +1,12 @@
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from datetime import datetime, timezone # Added timezone
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.hackathon import Hackathon # hackathon_teams_table removed
 from app.models.hackathon_registration import HackathonRegistration # Added
 from app.models.team import Team, TeamMember, TeamMemberRole # Team models
@@ -17,6 +17,7 @@ from app.schemas.hackathon import (
     HackathonRegistrationRead, ParticipantRegistrationCreate # Added ParticipantRegistrationCreate
 ) # Pydantic schemas
 from app.auth import get_current_user
+from app.middleware import require_roles, require_admin, require_organizer
 # from app.static import banner_url # This was unused
 # If you have a specific get_current_active_admin_user, import that instead for admin routes
 
@@ -30,11 +31,10 @@ def get_current_active_admin_user(current_user: User = Depends(get_current_user)
         raise HTTPException(status_code=403, detail="Not authorized")
     return current_user
 
-@router.post("/", response_model=HackathonRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=HackathonRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin())])
 def create_hackathon(
     hackathon_in: HackathonCreate,
-    db: Session = Depends(get_db),
-    admin_user: User = Depends(get_current_active_admin_user) # Ensures only admin can create
+    db: Session = Depends(get_db)
 ):
     """
     Create a new hackathon. Only accessible by admin users.
@@ -96,12 +96,11 @@ def get_hackathon(hackathon_id: uuid.UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hackathon not found")
     return hackathon
 
-@router.put("/{hackathon_id}", response_model=HackathonRead)
+@router.put("/{hackathon_id}", response_model=HackathonRead, dependencies=[Depends(require_admin())])
 def update_hackathon(
     hackathon_id: uuid.UUID,
     hackathon_in: HackathonUpdate,
-    db: Session = Depends(get_db),
-    admin_user: User = Depends(get_current_active_admin_user)
+    db: Session = Depends(get_db)
 ):
     """
     Update an existing hackathon. Only accessible by admin users.
@@ -145,11 +144,10 @@ def update_hackathon(
             detail="Hackathon name already exists or other integrity violation during update."
         )
 
-@router.delete("/{hackathon_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{hackathon_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin())])
 def delete_hackathon(
     hackathon_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    admin_user: User = Depends(get_current_active_admin_user)
+    db: Session = Depends(get_db)
 ):
     """
     Delete a hackathon. Only accessible by admin users.
@@ -172,7 +170,7 @@ def delete_hackathon(
 # async def list_hackathons():
 #     pass
 
-@router.delete("/{hackathon_id}/registration", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{hackathon_id}/registration", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_roles([UserRole.PARTICIPANT]))])
 def withdraw_registration(
     hackathon_id: uuid.UUID,
     db: Session = Depends(get_db),
@@ -216,7 +214,7 @@ def withdraw_registration(
     db.commit()
     return
 
-@router.post("/{hackathon_id}/register", response_model=HackathonRegistrationRead, status_code=status.HTTP_201_CREATED)
+@router.post("/{hackathon_id}/register", response_model=HackathonRegistrationRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles([UserRole.PARTICIPANT]))])
 def register_participant_for_hackathon(
     hackathon_id: uuid.UUID,
     registration_in: ParticipantRegistrationCreate, # Use the new schema for request body

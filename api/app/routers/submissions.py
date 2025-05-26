@@ -6,14 +6,15 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.submission import Submission
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.submission import SubmissionCreate, SubmissionRead, SubmissionUpdate
 from app.auth import (
     get_submission_owner_project_team_member_or_admin,
     get_submission_owner_project_team_owner_or_admin,
     get_project_team_member_or_admin,
 )
-from app.models.project import Project # Required for project existence check
+from app.middleware import require_roles, require_admin
+from app.models.project import Project
 
 
 router = APIRouter(tags=["submissions"])
@@ -23,19 +24,17 @@ router = APIRouter(tags=["submissions"])
     "/projects/{project_id}/submissions/",
     response_model=SubmissionRead,
     status_code=status.HTTP_201_CREATED,
-    tags=["Submissions"],
-    summary="Create a new submission for a project",
+    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))]
 )
 def create_submission(
     project_id: UUID,
     submission_in: SubmissionCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_project_team_member_or_admin), # User must be a team member of the project
+    current_user: User = Depends(get_project_team_member_or_admin),
 ) -> Submission:
     """
     Create a new submission for a project.
-
-    Users can only submit to projects they are a member of.
+    Only accessible by project team members or admins.
     """
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
@@ -57,17 +56,16 @@ def create_submission(
 @router.get(
     "/projects/{project_id}/submissions/",
     response_model=List[SubmissionRead],
-    tags=["Submissions"],
-    summary="List all submissions for a project",
+    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))]
 )
 def list_submissions_for_project(
     project_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_project_team_member_or_admin), # User must be a team member or admin
+    current_user: User = Depends(get_project_team_member_or_admin),
 ) -> List[Submission]:
     """
     List all submissions for a specific project.
-    Only team members of the project or administrators can view submissions.
+    Only accessible by project team members or admins.
     """
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
@@ -81,8 +79,7 @@ def list_submissions_for_project(
 @router.get(
     "/submissions/{submission_id}",
     response_model=SubmissionRead,
-    tags=["Submissions"],
-    summary="Get a specific submission by ID",
+    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))]
 )
 def get_submission(
     submission_id: UUID,
@@ -107,8 +104,7 @@ def get_submission(
 @router.put(
     "/submissions/{submission_id}",
     response_model=SubmissionRead,
-    tags=["Submissions"],
-    summary="Update a submission",
+    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))]
 )
 def update_submission(
     submission_id: UUID,
@@ -118,7 +114,7 @@ def update_submission(
 ) -> Submission:
     """
     Update an existing submission.
-    Only the submission owner, the project's team owner, or an administrator can update a submission.
+    Only accessible by the submission owner, the project's team owner, or an administrator.
     """
     submission = (
         db.query(Submission).filter(Submission.id == submission_id).first()
@@ -142,8 +138,7 @@ def update_submission(
 @router.delete(
     "/submissions/{submission_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    tags=["Submissions"],
-    summary="Delete a submission",
+    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))]
 )
 def delete_submission(
     submission_id: UUID,
@@ -152,7 +147,7 @@ def delete_submission(
 ) -> None:
     """
     Delete a submission.
-    Only the submission owner, the project's team owner, or an administrator can delete a submission.
+    Only accessible by the submission owner, the project's team owner, or an administrator.
     """
     submission = (
         db.query(Submission).filter(Submission.id == submission_id).first()

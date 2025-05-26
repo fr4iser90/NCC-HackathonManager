@@ -19,25 +19,11 @@ CREATE TABLE auth.users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Updated user_roles table with role descriptions
 CREATE TABLE auth.user_roles (
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     role VARCHAR(50) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (user_id, role),
-    CONSTRAINT valid_role CHECK (role IN ('admin', 'organizer', 'judge', 'mentor', 'participant'))
+    PRIMARY KEY (user_id, role)
 );
-
--- Add role descriptions
-INSERT INTO auth.user_roles (role, description) VALUES
-    ('admin', 'Full system access'),
-    ('organizer', 'Can manage hackathons and participants'),
-    ('judge', 'Can evaluate projects and assign scores'),
-    ('mentor', 'Can provide guidance to participants'),
-    ('participant', 'Regular user who can join hackathons')
-ON CONFLICT (role) DO NOTHING;
 
 CREATE TABLE auth.sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

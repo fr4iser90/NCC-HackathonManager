@@ -13,7 +13,7 @@ import sys
 import logging
 from app.database import get_db
 from datetime import datetime, timezone # Added datetime, timezone
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.team import Team, TeamMember, TeamMemberRole
 from app.models.project import Project, ProjectTemplate, ProjectVersion # SQLAlchemy models
 from app.models.hackathon import Hackathon # Need Hackathon model
@@ -31,6 +31,7 @@ from app.auth import (
     get_project_team_member_or_admin, # For update_project
     get_project_team_owner_or_admin # For delete_project
 )
+from app.middleware import require_roles, require_admin, require_organizer, require_judge
 from app.static import STATIC_DIR, project_image_path as project_file_path, project_image_url as project_file_url, SCRIPTS_DIR # Import project file functions and SCRIPTS_DIR
 from app.logger import get_logger
 from app.services.project_service import create_project, submit_project_version
@@ -138,116 +139,86 @@ def list_project_templates(skip: int = 0, limit: int = 100, db: Session = Depend
     return templates
 
 # --- Project Endpoints ---
-@router.post("/", response_model=ProjectRead, status_code=status.HTTP_201_CREATED, tags=["projects"])
-async def create_project_endpoint(
-    project_in: ProjectCreate, 
-    db: Session = Depends(get_db), 
+@router.post("/", response_model=ProjectRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles([UserRole.ADMIN, UserRole.ORGANIZER]))])
+def create_project_endpoint(
+    project_in: ProjectCreate,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Create a new project with storage and deployment options.
-    """
-    try:
-        db_project = create_project(db, project_in, current_user)
-        return db_project
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Error creating project. Check input data.")
+    """Create a new project. Only accessible by admin or organizer users."""
+    return create_project(db, project_in, current_user)
 
-@router.get("/", response_model=List[ProjectRead], tags=["projects"])
+@router.get("/", response_model=List[ProjectRead])
 def list_projects(
-    team_id: Optional[uuid.UUID] = None,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    status: Optional[ProjectStatus] = None,
-    storage_type: Optional[ProjectStorageType] = None,
-    hackathon_id: Optional[str] = None
+    hackathon_id: Optional[uuid.UUID] = None,
+    db: Session = Depends(get_db)
 ):
-    """
-    List projects with optional filtering by status, storage type, and hackathon.
-    """
+    """List all projects. Can be filtered by hackathon."""
     query = db.query(Project)
-    if team_id:
-        query = query.filter(Project.team_id == team_id)
-    if status:
-        query = query.filter(Project.status == status)
-    if storage_type:
-        query = query.filter(Project.storage_type == storage_type)
     if hackathon_id:
         query = query.filter(Project.hackathon_id == hackathon_id)
     projects = query.offset(skip).limit(limit).all()
     return projects
 
-@router.get("/{project_id}", response_model=ProjectRead, tags=["projects"])
-def get_project(project_id: uuid.UUID, db: Session = Depends(get_db)):
-    """
-    Get details of a specific project by ID.
-    """
+@router.get("/{project_id}", response_model=ProjectRead)
+def get_project(
+    project_id: uuid.UUID,
+    db: Session = Depends(get_db)
+):
+    """Get details of a specific project."""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        raise HTTPException(status_code=404, detail="Project not found")
     return project
 
-@router.put("/{project_id}", response_model=ProjectRead, tags=["projects"])
+@router.put("/{project_id}", response_model=ProjectRead)
 def update_project(
     project_id: uuid.UUID,
     project_in: ProjectUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    db_project = db.query(Project).filter(Project.id == project_id).first()
-    if not db_project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-    # Check hackathon status
-    hackathon = db.query(Hackathon).filter(Hackathon.id == db_project.hackathon_id).first()
-    if not hackathon or hackathon.status != HackathonStatus.ACTIVE:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Project cannot be edited: Hackathon is not active.")
-    # SOLO: Only owner can update
-    if not db_project.team_id:
-        if db_project.owner_id != current_user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not the owner.")
-    else:
-        # TEAM: Only owner, admin, or member can update (no platform admin override)
-        team_member = db.query(TeamMember).filter(TeamMember.team_id == db_project.team_id, TeamMember.user_id == current_user.id).first()
-        if not team_member or team_member.role not in [TeamMemberRole.owner, TeamMemberRole.admin, TeamMemberRole.member]:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not a permitted team member (owner, admin, or member).")
+    """Update a project. Only accessible by admin, organizer, or team owner."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Check if user has permission to update
+    is_admin = any(r.role == UserRole.ADMIN for r in current_user.roles_association)
+    is_organizer = any(r.role == UserRole.ORGANIZER for r in current_user.roles_association)
+    
+    if not (is_admin or is_organizer):
+        # Check if user is team owner
+        team_member = db.query(TeamMember).filter(
+            TeamMember.team_id == project.team_id,
+            TeamMember.user_id == current_user.id,
+            TeamMember.role == TeamMemberRole.owner
+        ).first()
+        if not team_member:
+            raise HTTPException(status_code=403, detail="Not authorized to update this project")
+
     update_data = project_in.model_dump(exclude_unset=True)
     for key, value in update_data.items():
-        setattr(db_project, key, value)
-    try:
-        db.add(db_project)
-        db.commit()
-        db.refresh(db_project)
-        return db_project
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Error updating project.")
+        setattr(project, key, value)
+    
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    return project
 
-@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["projects"])
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_roles([UserRole.ADMIN, UserRole.ORGANIZER]))])
 def delete_project(
     project_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
-    db_project = db.query(Project).filter(Project.id == project_id).first()
-    if not db_project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-    # Check hackathon status
-    hackathon = db.query(Hackathon).filter(Hackathon.id == db_project.hackathon_id).first()
-    if not hackathon or hackathon.status != HackathonStatus.ACTIVE:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Project cannot be deleted: Hackathon is not active.")
-    # SOLO: Only owner can delete
-    if not db_project.team_id:
-        if db_project.owner_id != current_user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not the owner.")
-    else:
-        # TEAM: Only owner, admin, or member can delete (no platform admin override)
-        team_member = db.query(TeamMember).filter(TeamMember.team_id == db_project.team_id, TeamMember.user_id == current_user.id).first()
-        if not team_member or team_member.role not in [TeamMemberRole.owner, TeamMemberRole.admin, TeamMemberRole.member]:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not a permitted team member (owner, admin, or member).")
-    db.delete(db_project)
+    """Delete a project. Only accessible by admin or organizer users."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    db.delete(project)
     db.commit()
     return
 
@@ -259,52 +230,55 @@ async def submit_project_version_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Submit a new version of a project (synchronous, DB-based logging).
-    """
+    """Submit a new version of a project."""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    # Check if user is a team member
+    team_member = db.query(TeamMember).filter(
+        TeamMember.team_id == project.team_id,
+        TeamMember.user_id == current_user.id
+    ).first()
+    if not team_member:
+        raise HTTPException(status_code=403, detail="Not authorized to submit versions for this project")
+
     hackathon = db.query(Hackathon).filter(Hackathon.id == project.hackathon_id).first()
     if not hackathon or hackathon.status != HackathonStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Project version cannot be submitted: Hackathon is not active.")
+
     version = submit_project_version(db, project_id, file, version_notes, current_user)
     return ProjectVersionRead.model_validate(version)
 
-@router.get("/{project_id}/versions", response_model=list[ProjectVersionRead])
-async def get_project_versions(
-    project_id: str,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+@router.get("/{project_id}/versions", response_model=List[ProjectVersionRead])
+def list_project_versions(
+    project_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
 ):
-    """Get all versions of a project."""
+    """List all versions of a project."""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-
-    return project.versions
+    
+    versions = db.query(ProjectVersion).filter(
+        ProjectVersion.project_id == project_id
+    ).order_by(ProjectVersion.created_at.desc()).offset(skip).limit(limit).all()
+    
+    return versions
 
 @router.get("/{project_id}/versions/{version_id}", response_model=ProjectVersionRead)
-async def get_project_version(
-    project_id: str,
-    version_id: str,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+def get_project_version(
+    project_id: uuid.UUID,
+    version_id: uuid.UUID,
+    db: Session = Depends(get_db)
 ):
-    """Get a specific version of a project."""
-    import uuid
-    try:
-        project_uuid = uuid.UUID(str(project_id))
-        version_uuid = uuid.UUID(str(version_id))
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid UUID: {e}")
-
+    """Get details of a specific project version."""
     version = db.query(ProjectVersion).filter(
-        ProjectVersion.project_id == project_uuid,
-        ProjectVersion.id == version_uuid
+        ProjectVersion.project_id == project_id,
+        ProjectVersion.id == version_id
     ).first()
-    
     if not version:
-        raise HTTPException(status_code=404, detail="Version not found")
-
+        raise HTTPException(status_code=404, detail="Project version not found")
     return version
