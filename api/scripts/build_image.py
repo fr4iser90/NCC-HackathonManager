@@ -248,6 +248,7 @@ def main():
     parser.add_argument("--username", help="User ID for image tag generation")
     parser.add_argument("--user-name", help="Username/email for image tag generation")
     parser.add_argument("--version", help="Version for image tag generation")
+    parser.add_argument("--hackathon", help="Hackathon ID for image tag generation")
     
     args = parser.parse_args()
     # Determine image tag

@@ -3,6 +3,7 @@ services:
     build:
       context: ./database
       dockerfile: Dockerfile
+    image: fr4iser/hackathon-platform:db
     container_name: hackathon-db
     ports:
       - "5432:5432"
@@ -16,6 +17,7 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
+    image: fr4iser/hackathon-platform:api
     container_name: hackathon-api
     ports:
       - "8000:8000"
@@ -29,25 +31,26 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock # Mount Docker socket for Docker-outside-of-Docker (DooD)
     restart: unless-stopped
     
-#  frontend:
-#    build:
-#      context: ./frontend
-#      dockerfile: Dockerfile
-#    container_name: hackathon-frontend
-#    ports:
-#      - "3000:3000" # Exposing frontend on host port 3000
-#    depends_on:
-#      - api
-#    env_file:
-#      - .env
-#    volumes:
-#      - frontend_logs:/app/logs # Mount volume for logs
-#    restart: unless-stopped
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: fr4iser/hackathon-platform:frontend
+    container_name: hackathon-frontend
+    ports:
+      - "3030:3000" # Exposing frontend on host port 3000
+    depends_on:
+      - api
+    env_file:
+      - .env
+    volumes:
+      - frontend_logs:/app/logs # Mount volume for logs
+    restart: unless-stopped
 
 volumes:
   postgres_data:
     driver: local
   api_logs:
     driver: local
-#  frontend_logs:
-#    driver: local
+  frontend_logs:
+    driver: local

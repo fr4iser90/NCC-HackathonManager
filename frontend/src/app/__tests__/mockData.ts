@@ -63,4 +63,4 @@ export const mockJudgingScores = [
     score: 9,
     comment: 'Excellent performance',
   },
-]; 
+];

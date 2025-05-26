@@ -1,6 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import Home from '../page'; // Adjust path based on actual file structure relative to __tests__
-import { mockUser, mockTeams, mockProjects, mockJudgingScores } from './mockData';
+import {
+  mockUser,
+  mockTeams,
+  mockProjects,
+  mockJudgingScores,
+} from './mockData';
 
 describe('Home Page', () => {
   it('renders the main heading/call to action', () => {
@@ -57,4 +62,4 @@ describe('Mock/Seed Data', () => {
     expect(mockJudgingScores[0]).toHaveProperty('project_id');
     expect(mockJudgingScores[0]).toHaveProperty('score');
   });
-}); 
+});

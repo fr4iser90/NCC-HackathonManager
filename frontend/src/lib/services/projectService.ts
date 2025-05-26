@@ -13,7 +13,7 @@ export async function fetchProjects(token: string) {
 /**
  * Create a new project.
  */
-export async function createProject(token: string, payload: any) {
+export async function createProject(token: string, payload: unknown) {
   const res = await axiosInstance.post('/projects/', payload, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -38,4 +38,4 @@ export async function fetchProject(token: string, projectId: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;
-} 
+}

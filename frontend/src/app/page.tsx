@@ -1,21 +1,6 @@
-import Image from "next/image";
-import HackathonCard from "@/components/HackathonCard";
-import { Suspense } from "react";
-import HackathonFilterGrid from "@/components/HackathonFilterGrid";
-
-type Hackathon = {
-  id: string;
-  name: string;
-  description?: string;
-  start_date: string;
-  end_date: string;
-  status: string;
-  mode: string;
-  category?: string;
-  tags?: string[];
-  banner_image_url?: string;
-  sponsor?: string;
-};
+import HackathonFilterGrid from '@/components/HackathonFilterGrid';
+import type { Hackathon } from '@/types/hackathon';
+import Image from 'next/image';
 
 type Project = {
   id: string;
@@ -27,22 +12,28 @@ type Project = {
 };
 
 async function fetchHackathons(): Promise<Hackathon[]> {
-  const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/hackathons/", {
-    cache: "no-store",
-  });
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + '/hackathons/',
+    {
+      cache: 'no-store',
+    },
+  );
   if (!res.ok) return [];
   const data = await res.json();
   const plain = JSON.parse(JSON.stringify(data));
-  console.log("Hackathons API response:", plain);
+  console.log('Hackathons API response:', plain);
   return plain;
 }
 
 async function fetchFeaturedProject(): Promise<Project | null> {
-  const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/projects/featured/", { cache: "no-store" });
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + '/projects/featured/',
+    { cache: 'no-store' },
+  );
   if (!res.ok) return null;
   const data = await res.json();
   const plain = JSON.parse(JSON.stringify(data));
-  console.log("Featured Project API response:", plain);
+  console.log('Featured Project API response:', plain);
   return plain;
 }
 
@@ -50,7 +41,6 @@ export default async function HomePage() {
   const hackathons = await fetchHackathons();
   const featuredProject = await fetchFeaturedProject();
   const featured = hackathons[0];
-  const rest = hackathons.slice(1);
 
   return (
     <div className="flex flex-col gap-12">
@@ -58,14 +48,21 @@ export default async function HomePage() {
       {featured && (
         <section className="bg-gradient-to-r from-indigo-500 to-blue-500 rounded-xl shadow-lg p-8 flex flex-col md:flex-row items-center gap-8 text-white">
           <div className="flex-1">
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">{featured.name}</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">
+              {featured.name}
+            </h1>
             <div className="mb-2 text-lg">{featured.description}</div>
             <div className="mb-2">
-              <span className="bg-white/20 px-3 py-1 rounded mr-2">{featured.category}</span>
-              <span className="bg-white/20 px-3 py-1 rounded">{featured.status.toUpperCase()}</span>
+              <span className="bg-white/20 px-3 py-1 rounded mr-2">
+                {featured.category}
+              </span>
+              <span className="bg-white/20 px-3 py-1 rounded">
+                {featured.status.toUpperCase()}
+              </span>
             </div>
             <div className="mb-4 text-sm">
-              {new Date(featured.start_date).toLocaleDateString()} - {new Date(featured.end_date).toLocaleDateString()}
+              {new Date(featured.start_date).toLocaleDateString()} -{' '}
+              {new Date(featured.end_date).toLocaleDateString()}
             </div>
             <a
               href={`/hackathons/${featured.id}`}
@@ -74,10 +71,17 @@ export default async function HomePage() {
               Mehr erfahren
             </a>
           </div>
-          <img
-            src={featured.banner_image_url || `${process.env.NEXT_PUBLIC_API_BASE_URL}/static/default-banner.svg`}
+          <Image
+            src={
+              featured.banner_image_url ||
+              `${process.env.NEXT_PUBLIC_API_BASE_URL}/static/default-banner.svg`
+            }
             alt={featured.name}
             className="w-64 h-40 object-cover rounded-lg shadow-lg"
+            width={256}
+            height={160}
+            style={{ width: '16rem', height: '10rem', objectFit: 'cover' }}
+            priority
           />
         </section>
       )}
@@ -85,10 +89,13 @@ export default async function HomePage() {
       {featuredProject && (
         <section className="bg-gradient-to-r from-pink-500 to-yellow-500 rounded-xl shadow-lg p-8 flex flex-col md:flex-row items-center gap-8 text-white my-8">
           <div className="flex-1">
-            <h2 className="text-2xl font-bold mb-2">Featured Project: {featuredProject.name}</h2>
+            <h2 className="text-2xl font-bold mb-2">
+              Featured Project: {featuredProject.name}
+            </h2>
             <div className="mb-2">{featuredProject.description}</div>
             <div className="mb-2 text-sm">
-              Team: {featuredProject.team?.name} | Hackathon: {featuredProject.hackathon?.name}
+              Team: {featuredProject.team?.name} | Hackathon:{' '}
+              {featuredProject.hackathon?.name}
             </div>
             <a
               href={`/projects/${featuredProject.id}`}
@@ -97,17 +104,26 @@ export default async function HomePage() {
               Projekt ansehen
             </a>
           </div>
-          <img
-            src={featuredProject.banner_image_url || `${process.env.NEXT_PUBLIC_API_BASE_URL}/static/default-banner.svg`}
+          <Image
+            src={
+              featuredProject.banner_image_url ||
+              `${process.env.NEXT_PUBLIC_API_BASE_URL}/static/default-banner.svg`
+            }
             alt={featuredProject.name}
             className="w-64 h-40 object-cover rounded-lg shadow-lg"
+            width={256}
+            height={160}
+            style={{ width: '16rem', height: '10rem', objectFit: 'cover' }}
+            priority
           />
         </section>
       )}
 
       {/* Call to Action */}
       <section className="text-center">
-        <h2 className="text-2xl font-bold mb-2">Mach mit beim nächsten Hackathon!</h2>
+        <h2 className="text-2xl font-bold mb-2">
+          Mach mit beim nächsten Hackathon!
+        </h2>
         <p className="mb-4 text-gray-600 dark:text-gray-300">
           Entdecke spannende Projekte, finde Teams und gewinne tolle Preise.
         </p>
@@ -128,15 +144,21 @@ export default async function HomePage() {
       <section className="my-12 text-center">
         <h2 className="text-xl font-bold mb-4">Unsere Partner</h2>
         <div className="flex flex-wrap gap-8 justify-center items-center">
-          <img
+          <Image
             src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/static/partners/partner1.svg`}
             alt="Partner 1"
             className="h-12"
+            width={48}
+            height={48}
+            style={{ height: '3rem', width: 'auto' }}
           />
-          <img
+          <Image
             src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/static/partners/partner2.svg`}
             alt="Partner 2"
             className="h-12"
+            width={48}
+            height={48}
+            style={{ height: '3rem', width: 'auto' }}
           />
           {/* ... */}
         </div>
@@ -145,12 +167,20 @@ export default async function HomePage() {
       <section className="my-12 max-w-2xl mx-auto">
         <h2 className="text-xl font-bold mb-4">FAQ</h2>
         <details className="mb-2">
-          <summary className="font-semibold cursor-pointer">Wie kann ich teilnehmen?</summary>
-          <div className="pl-4 mt-1 text-gray-600">Registriere dich und tritt einem Team bei oder starte solo!</div>
+          <summary className="font-semibold cursor-pointer">
+            Wie kann ich teilnehmen?
+          </summary>
+          <div className="pl-4 mt-1 text-gray-600">
+            Registriere dich und tritt einem Team bei oder starte solo!
+          </div>
         </details>
         <details className="mb-2">
-          <summary className="font-semibold cursor-pointer">Was kostet die Teilnahme?</summary>
-          <div className="pl-4 mt-1 text-gray-600">Die Teilnahme ist kostenlos.</div>
+          <summary className="font-semibold cursor-pointer">
+            Was kostet die Teilnahme?
+          </summary>
+          <div className="pl-4 mt-1 text-gray-600">
+            Die Teilnahme ist kostenlos.
+          </div>
         </details>
         {/* ... */}
       </section>

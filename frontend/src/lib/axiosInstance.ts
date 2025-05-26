@@ -16,18 +16,28 @@ axiosInstance.interceptors.response.use(
       // Nur bei Auth-Check-Endpunkten automatisch ausloggen
       const url = error.config?.url || '';
       if (url.includes('/ping') || url.includes('/users/me')) {
-        const publicAuthPaths = ['/auth/signin', '/auth/register', '/auth/error'];
-        if (typeof window !== 'undefined' && !publicAuthPaths.includes(window.location.pathname)) {
-          console.log('[axiosInstance] Received 401 from Auth-Check. Signing out and redirecting to signin.');
+        const publicAuthPaths = [
+          '/auth/signin',
+          '/auth/register',
+          '/auth/error',
+        ];
+        if (
+          typeof window !== 'undefined' &&
+          !publicAuthPaths.includes(window.location.pathname)
+        ) {
+          console.log(
+            '[axiosInstance] Received 401 from Auth-Check. Signing out and redirecting to signin.',
+          );
           await signOut({ redirect: false });
-          window.location.href = '/auth/signin?sessionExpired=true&reason=api_401';
+          window.location.href =
+            '/auth/signin?sessionExpired=true&reason=api_401';
         }
       }
       // Sonst: Kein Logout, sondern Fehler normal weitergeben
     }
     // If it's another error, just pass it through
     return Promise.reject(error);
-  }
+  },
 );
 
-export default axiosInstance; 
+export default axiosInstance;

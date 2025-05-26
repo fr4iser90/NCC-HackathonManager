@@ -1,87 +1,75 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, FormEvent, useEffect } from 'react';
+import { signIn } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function SignUpPage() {
+export default function SignInForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams?.get('callbackUrl') || '/';
+  const error = searchParams?.get('error') || null;
+
   const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [pageError, setPageError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [pageError, setPageError] = useState<string | null>(error);
+
+  useEffect(() => {
+    if (error) {
+      setPageError(decodeURIComponent(error));
+    }
+  }, [error]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
     setPageError(null);
-    setSuccess(false);
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/users/register`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            password,
-            username,
-            full_name: fullName,
-          }),
-        },
+
+    const result = await signIn('credentials', {
+      redirect: false,
+      email: email,
+      password: password,
+    });
+
+    setIsLoading(false);
+
+    if (result?.error) {
+      setPageError(
+        result.error === 'CredentialsSignin'
+          ? 'Invalid email or password.'
+          : result.error,
       );
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || 'Registration failed');
-      }
-      setSuccess(true);
-      setTimeout(() => router.push('/auth/signin?registered=true'), 1200);
-    } catch (err: unknown) {
-      if (
-        err &&
-        typeof err === 'object' &&
-        'message' in err &&
-        typeof (err as { message?: string }).message === 'string'
-      ) {
-        setPageError((err as { message: string }).message);
-      } else {
-        setPageError('Registration failed');
-      }
-    } finally {
-      setIsLoading(false);
+    } else if (result?.ok) {
+      router.push(callbackUrl);
+    } else {
+      setPageError('An unexpected error occurred during sign in.');
     }
   };
+
+  if (!searchParams) return null;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen py-2 bg-slate-50">
       <div className="w-full max-w-md p-8 space-y-8 bg-white shadow-xl rounded-xl">
         <div className="text-center">
-          <h1 className="text-4xl font-extrabold text-slate-800">Sign Up</h1>
+          <h1 className="text-4xl font-extrabold text-slate-800">Sign In</h1>
           <p className="mt-2 text-slate-600">
-            Create your Hackathon Platform account.
+            Access your Hackathon Platform account.
           </p>
         </div>
+
         {pageError && (
           <div
             className="p-4 text-sm text-red-700 bg-red-100 border border-red-400 rounded-md"
             role="alert"
           >
-            <p className="font-semibold">Registration Error:</p>
+            <p className="font-semibold">Authentication Error:</p>
             <p>{pageError}</p>
           </div>
         )}
-        {success && (
-          <div
-            className="p-4 text-sm text-green-700 bg-green-100 border border-green-400 rounded-md"
-            role="alert"
-          >
-            <p className="font-semibold">Registration successful!</p>
-            <p>Redirecting to sign in...</p>
-          </div>
-        )}
+
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
@@ -102,39 +90,6 @@ export default function SignUpPage() {
               />
             </div>
             <div>
-              <label htmlFor="username" className="sr-only">
-                Username
-              </label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                autoComplete="username"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-3 border border-slate-300 placeholder-slate-500 text-slate-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            <div>
-              <label htmlFor="full-name" className="sr-only">
-                Full Name
-              </label>
-              <input
-                id="full-name"
-                name="fullName"
-                type="text"
-                autoComplete="name"
-                className="appearance-none rounded-none relative block w-full px-3 py-3 border border-slate-300 placeholder-slate-500 text-slate-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Full Name (optional)"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            <div>
               <label htmlFor="password" className="sr-only">
                 Password
               </label>
@@ -142,7 +97,7 @@ export default function SignUpPage() {
                 id="password"
                 name="password"
                 type="password"
-                autoComplete="new-password"
+                autoComplete="current-password"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-3 border border-slate-300 placeholder-slate-500 text-slate-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Password"
@@ -152,6 +107,7 @@ export default function SignUpPage() {
               />
             </div>
           </div>
+
           <div>
             <button
               type="submit"
@@ -180,19 +136,20 @@ export default function SignUpPage() {
                   ></path>
                 </svg>
               ) : (
-                'Sign Up'
+                'Sign In'
               )}
             </button>
           </div>
         </form>
         <p className="mt-6 text-center text-sm text-slate-600">
-          Already have an account?{' '}
+          No account yet?{' '}
           <Link
-            href="/auth/signin"
+            href="/auth/signup"
             className="font-medium text-indigo-600 hover:text-indigo-500"
           >
-            Sign In
-          </Link>
+            Sign Up
+          </Link>{' '}
+          (Not implemented)
         </p>
       </div>
     </div>

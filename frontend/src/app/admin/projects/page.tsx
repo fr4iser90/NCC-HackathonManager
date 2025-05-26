@@ -4,23 +4,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { fetchProjects, createProject, deleteProject } from '@/lib/services/projectService';
+import { fetchProjects, deleteProject } from '@/lib/services/projectService';
 
 // NOTE: If you see JSX linter errors about 'JSX.IntrinsicElements', ensure your environment has the correct React/TypeScript types installed (e.g., @types/react). The code is correct for a Next.js/React project.
 
-// Assuming TeamRead and ProjectStatus might be needed from their respective schema definitions
-// For simplicity, defining inline or using basic types if not complex
-interface Team {
-    id: string;
-    name: string;
+interface Project {
+  id: string;
+  name: string;
+  status: string;
+  // ... other fields as needed
 }
 
-interface Project {
-    id: string;
-    name: string;
-    status: string;
-    // ... other fields as needed
-}
+type UserWithRoleAndAccessToken = { role?: string; accessToken?: string };
 
 export default function AdminManageProjectsPage() {
   const { data: session, status: sessionStatus } = useSession();
@@ -32,15 +27,29 @@ export default function AdminManageProjectsPage() {
   const router = useRouter();
 
   const fetchProjectsHandler = useCallback(async () => {
-    if (sessionStatus === 'authenticated' && (session?.user as any)?.role === 'admin') {
+    if (
+      sessionStatus === 'authenticated' &&
+      (session?.user as UserWithRoleAndAccessToken)?.role === 'admin'
+    ) {
       setIsLoading(true);
       setError(null);
       try {
-        const token = (session?.user as any)?.accessToken;
+        const token = (session?.user as UserWithRoleAndAccessToken)
+          ?.accessToken;
+        if (!token) throw new Error('Token not available');
         const data = await fetchProjects(token);
         setProjects(data);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch projects.');
+      } catch (err: unknown) {
+        if (
+          err &&
+          typeof err === 'object' &&
+          'message' in err &&
+          typeof (err as { message?: string }).message === 'string'
+        ) {
+          setError((err as { message: string }).message);
+        } else {
+          setError('Failed to fetch projects.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -49,10 +58,12 @@ export default function AdminManageProjectsPage() {
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') {
-      if ((session?.user as any)?.role === 'admin') {
+      if ((session?.user as UserWithRoleAndAccessToken)?.role === 'admin') {
         fetchProjectsHandler();
       } else {
-        setError("Access Denied: You do not have permission to view this page.");
+        setError(
+          'Access Denied: You do not have permission to view this page.',
+        );
         setIsLoading(false);
       }
     } else if (sessionStatus === 'unauthenticated') {
@@ -60,18 +71,36 @@ export default function AdminManageProjectsPage() {
     }
   }, [sessionStatus, session, router, fetchProjectsHandler]);
 
-  const handleDeleteProject = async (projectId: string, projectName: string) => {
-    if (window.confirm(`Are you sure you want to delete project "${projectName}"? This action cannot be undone.`)) {
+  const handleDeleteProject = async (
+    projectId: string,
+    projectName: string,
+  ) => {
+    if (
+      window.confirm(
+        `Are you sure you want to delete project "${projectName}"? This action cannot be undone.`,
+      )
+    ) {
       setIsLoadingDelete(projectId);
       setError(null);
       setSuccessMessage(null);
       try {
-        const token = (session?.user as any)?.accessToken;
+        const token = (session?.user as UserWithRoleAndAccessToken)
+          ?.accessToken;
+        if (!token) throw new Error('Token not available');
         await deleteProject(token, projectId);
         setSuccessMessage(`Project "${projectName}" deleted successfully.`);
         fetchProjectsHandler();
-      } catch (err: any) {
-        setError(err.message || 'Failed to delete project.');
+      } catch (err: unknown) {
+        if (
+          err &&
+          typeof err === 'object' &&
+          'message' in err &&
+          typeof (err as { message?: string }).message === 'string'
+        ) {
+          setError((err as { message: string }).message);
+        } else {
+          setError('Failed to delete project.');
+        }
       } finally {
         setIsLoadingDelete(null);
       }
@@ -79,21 +108,36 @@ export default function AdminManageProjectsPage() {
   };
 
   if (sessionStatus === 'loading' || isLoading) {
-    return <div className="container mx-auto p-4 text-center">Loading projects...</div>;
+    return (
+      <div className="container mx-auto p-4 text-center">
+        Loading projects...
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="container mx-auto p-4 text-center text-red-500">Error: {error}</div>;
+    return (
+      <div className="container mx-auto p-4 text-center text-red-500">
+        Error: {error}
+      </div>
+    );
   }
-  
-  if (!session || (session.user as any)?.role !== 'admin') {
-      return <div className="container mx-auto p-4 text-center">Access Denied.</div>;
+
+  if (
+    !session ||
+    (session.user as UserWithRoleAndAccessToken)?.role !== 'admin'
+  ) {
+    return (
+      <div className="container mx-auto p-4 text-center">Access Denied.</div>
+    );
   }
 
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Manage Projects</h1>
-      {successMessage && <div className="text-green-600 mb-2">{successMessage}</div>}
+      {successMessage && (
+        <div className="text-green-600 mb-2">{successMessage}</div>
+      )}
       <table className="min-w-full bg-white border border-gray-200">
         <thead>
           <tr>
@@ -115,7 +159,10 @@ export default function AdminManageProjectsPage() {
                 >
                   {isLoadingDelete === project.id ? 'Deleting...' : 'Delete'}
                 </button>
-                <Link href={`/admin/projects/edit/${project.id}`} className="bg-blue-500 text-white px-3 py-1 rounded">
+                <Link
+                  href={`/admin/projects/edit/${project.id}`}
+                  className="bg-blue-500 text-white px-3 py-1 rounded"
+                >
                   Edit
                 </Link>
               </td>
@@ -125,4 +172,4 @@ export default function AdminManageProjectsPage() {
       </table>
     </div>
   );
-} 
+}

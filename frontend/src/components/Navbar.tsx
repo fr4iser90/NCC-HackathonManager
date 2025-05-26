@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 
+type UserWithRole = { role?: string };
+
 export default function Navbar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
   if (!pathname) return null;
-  const userRole = (session?.user as any)?.role;
+  const userRole = (session?.user as UserWithRole)?.role;
 
   const navLinks = [
     { href: '/hackathons', label: 'Hackathons', show: true },
@@ -19,26 +21,35 @@ export default function Navbar() {
     { href: '/sponsors', label: 'Sponsors', show: true },
     { href: '/faq', label: 'FAQ', show: true },
     { href: '/contact', label: 'Contact', show: true },
-    { href: '/judging', label: 'Judging', show: userRole === 'judge' || userRole === 'admin' },
+    {
+      href: '/judging',
+      label: 'Judging',
+      show: userRole === 'judge' || userRole === 'admin',
+    },
     { href: '/admin', label: 'Admin', show: userRole === 'admin' },
   ];
 
   return (
     <nav className="bg-slate-800 text-white p-4 shadow-md">
       <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-2">
-        <Link href="/" className="text-xl font-bold hover:text-slate-300 transition-colors">
+        <Link
+          href="/"
+          className="text-xl font-bold hover:text-slate-300 transition-colors"
+        >
           HackathonPlatform
         </Link>
         <div className="flex flex-wrap items-center gap-2 md:gap-4">
-          {navLinks.filter(l => l.show).map(link => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${pathname.startsWith(link.href) ? 'bg-slate-700 text-white' : 'hover:bg-slate-700 hover:text-white text-slate-300'}`}
-            >
-              {link.label}
-            </Link>
-          ))}
+          {navLinks
+            .filter((l) => l.show)
+            .map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${pathname.startsWith(link.href) ? 'bg-slate-700 text-white' : 'hover:bg-slate-700 hover:text-white text-slate-300'}`}
+              >
+                {link.label}
+              </Link>
+            ))}
         </div>
         <div className="flex items-center space-x-4 mt-2 md:mt-0">
           {status === 'loading' && <p className="text-sm">Loading...</p>}
@@ -52,7 +63,9 @@ export default function Navbar() {
           )}
           {status === 'authenticated' && session?.user && (
             <>
-              <span className="text-sm hidden md:inline">Welcome, {session.user.name || session.user.email}</span>
+              <span className="text-sm hidden md:inline">
+                Welcome, {session.user.name || session.user.email}
+              </span>
               <button
                 onClick={() => signOut()}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md transition-colors text-sm font-medium"
@@ -65,4 +78,4 @@ export default function Navbar() {
       </div>
     </nav>
   );
-} 
+}

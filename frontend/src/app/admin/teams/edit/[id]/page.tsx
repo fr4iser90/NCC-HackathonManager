@@ -11,10 +11,13 @@ interface TeamUpdateData {
   description?: string | null;
 }
 
-interface Team extends TeamUpdateData { // For state holding fetched team data
-    id: string;
-    // Add other fields if needed from TeamRead, like created_at, etc.
+interface Team extends TeamUpdateData {
+  // For state holding fetched team data
+  id: string;
+  // Add other fields if needed from TeamRead, like created_at, etc.
 }
+
+type UserWithRoleAndAccessToken = { role?: string; accessToken?: string };
 
 export default function EditTeamPage() {
   const { data: session, status: sessionStatus } = useSession();
@@ -23,32 +26,74 @@ export default function EditTeamPage() {
   const teamId = params?.id as string;
 
   const [team, setTeam] = useState<Team | null>(null); // Full team data for reference
-  const [formData, setFormData] = useState<TeamUpdateData>({ name: '', description: '' });
+  const [formData, setFormData] = useState<TeamUpdateData>({
+    name: '',
+    description: '',
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const fetchTeam = useCallback(async () => {
-    if (sessionStatus === 'authenticated' && teamId && (session?.user as any)?.role === 'admin') {
+    if (
+      sessionStatus === 'authenticated' &&
+      teamId &&
+      (session?.user as UserWithRoleAndAccessToken)?.role === 'admin'
+    ) {
       setIsLoading(true);
       setError(null);
       setSuccessMessage(null);
       try {
-        const token = (session?.user as any)?.accessToken;
-        if (!token) throw new Error("Token not available");
+        const token = (session?.user as UserWithRoleAndAccessToken)
+          ?.accessToken;
+        if (!token) throw new Error('Token not available');
 
         const response = await axiosInstance.get(`/teams/${teamId}`, {
-          headers: { 'Authorization': `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
         setTeam(response.data); // Store full fetched team data
-        setFormData({ // Initialize form with fetched data
+        setFormData({
+          // Initialize form with fetched data
           name: response.data.name,
           description: response.data.description || '',
         });
-      } catch (err: any) {
-        console.error("Error fetching team:", err);
-        if (err.response?.status !== 401) {
-            setError(err.response?.data?.detail || err.message || 'Failed to fetch team details.');
+      } catch (err: unknown) {
+        console.error('Error fetching team:', err);
+        if (
+          err &&
+          typeof err === 'object' &&
+          'response' in err &&
+          typeof (
+            err as {
+              response?: { status?: number; data?: { detail?: string } };
+            }
+          ).response === 'object'
+        ) {
+          const response = (
+            err as {
+              response?: { status?: number; data?: { detail?: string } };
+            }
+          ).response;
+          if (response?.status !== 401) {
+            setError(
+              response?.data?.detail ||
+                (err &&
+                typeof err === 'object' &&
+                'message' in err &&
+                typeof (err as { message?: string }).message === 'string'
+                  ? (err as { message: string }).message
+                  : 'Failed to fetch team details.'),
+            );
+          }
+        } else {
+          setError(
+            err &&
+              typeof err === 'object' &&
+              'message' in err &&
+              typeof (err as { message?: string }).message === 'string'
+              ? (err as { message: string }).message
+              : 'Failed to fetch team details.',
+          );
         }
       } finally {
         setIsLoading(false);
@@ -58,15 +103,15 @@ export default function EditTeamPage() {
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') {
-      if ((session?.user as any)?.role === 'admin') {
+      if ((session?.user as UserWithRoleAndAccessToken)?.role === 'admin') {
         if (teamId) {
           fetchTeam();
         } else {
-          setError("Team ID is missing.");
+          setError('Team ID is missing.');
           setIsLoading(false);
         }
       } else {
-        setError("Access Denied: You do not have admin privileges.");
+        setError('Access Denied: You do not have admin privileges.');
         setIsLoading(false);
       }
     } else if (sessionStatus === 'unauthenticated') {
@@ -74,9 +119,11 @@ export default function EditTeamPage() {
     }
   }, [sessionStatus, session, teamId, router, fetchTeam]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -84,36 +131,70 @@ export default function EditTeamPage() {
     setError(null);
     setSuccessMessage(null);
 
-    if (!session || (session?.user as any)?.role !== 'admin' || !team) {
-      setError("Permission denied or team data not loaded.");
+    if (
+      !session ||
+      (session?.user as UserWithRoleAndAccessToken)?.role !== 'admin' ||
+      !team
+    ) {
+      setError('Permission denied or team data not loaded.');
       return;
     }
-    
+
     setIsLoading(true);
 
     try {
-      const token = (session?.user as any)?.accessToken;
-      if (!token) throw new Error("Token not available");
+      const token = (session?.user as UserWithRoleAndAccessToken)?.accessToken;
+      if (!token) throw new Error('Token not available');
 
       const payload: TeamUpdateData = {};
       if (formData.name !== team.name) payload.name = formData.name;
-      if (formData.description !== (team.description || '')) payload.description = formData.description;
+      if (formData.description !== (team.description || ''))
+        payload.description = formData.description;
 
       if (Object.keys(payload).length === 0) {
-        setSuccessMessage("No changes detected.");
+        setSuccessMessage('No changes detected.');
         setIsLoading(false);
         return;
       }
 
       await axiosInstance.put(`/teams/${teamId}`, payload, {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       setSuccessMessage('Team updated successfully!');
       fetchTeam();
-    } catch (err: any) {
-      console.error("Error updating team:", err);
-      if (err.response?.status !== 401) {
-        setError(err.response?.data?.detail || err.message || 'Failed to update team.');
+    } catch (err: unknown) {
+      console.error('Error updating team:', err);
+      if (
+        err &&
+        typeof err === 'object' &&
+        'response' in err &&
+        typeof (
+          err as { response?: { status?: number; data?: { detail?: string } } }
+        ).response === 'object'
+      ) {
+        const response = (
+          err as { response?: { status?: number; data?: { detail?: string } } }
+        ).response;
+        if (response?.status !== 401) {
+          setError(
+            response?.data?.detail ||
+              (err &&
+              typeof err === 'object' &&
+              'message' in err &&
+              typeof (err as { message?: string }).message === 'string'
+                ? (err as { message: string }).message
+                : 'Failed to update team.'),
+          );
+        }
+      } else {
+        setError(
+          err &&
+            typeof err === 'object' &&
+            'message' in err &&
+            typeof (err as { message?: string }).message === 'string'
+            ? (err as { message: string }).message
+            : 'Failed to update team.',
+        );
       }
     } finally {
       setIsLoading(false);
@@ -121,32 +202,57 @@ export default function EditTeamPage() {
   };
 
   if (sessionStatus === 'loading' || (isLoading && !error && !successMessage)) {
-    return <div className="container mx-auto p-4 text-center">Loading team data...</div>;
+    return (
+      <div className="container mx-auto p-4 text-center">
+        Loading team data...
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="container mx-auto p-4 text-center text-red-500">Error: {error}</div>;
+    return (
+      <div className="container mx-auto p-4 text-center text-red-500">
+        Error: {error}
+      </div>
+    );
   }
 
-  if (!team && !isLoading) { // If not loading and team is still null
-    return <div className="container mx-auto p-4 text-center">Team not found or access denied.</div>;
+  if (!team && !isLoading) {
+    // If not loading and team is still null
+    return (
+      <div className="container mx-auto p-4 text-center">
+        Team not found or access denied.
+      </div>
+    );
   }
 
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
-         <h1 className="text-2xl font-bold">Edit Team: {team?.name || 'Loading...'}</h1>
-         <Link href="/admin/teams" className="text-blue-500 hover:underline">
-            &larr; Back to Team List
-         </Link>
+        <h1 className="text-2xl font-bold">
+          Edit Team: {team?.name || 'Loading...'}
+        </h1>
+        <Link href="/admin/teams" className="text-blue-500 hover:underline">
+          &larr; Back to Team List
+        </Link>
       </div>
-      
-      {successMessage && <p className="text-green-500 text-sm mt-2 mb-4">{successMessage}</p>}
+
+      {successMessage && (
+        <p className="text-green-500 text-sm mt-2 mb-4">{successMessage}</p>
+      )}
 
       {team && (
-        <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 shadow-md rounded-lg">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-6 bg-white p-8 shadow-md rounded-lg"
+        >
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">Team Name</label>
+            <label
+              htmlFor="name"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Team Name
+            </label>
             <input
               type="text"
               name="name"
@@ -158,7 +264,12 @@ export default function EditTeamPage() {
             />
           </div>
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+            <label
+              htmlFor="description"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Description
+            </label>
             <textarea
               name="description"
               id="description"
@@ -181,4 +292,4 @@ export default function EditTeamPage() {
       )}
     </div>
   );
-} 
+}

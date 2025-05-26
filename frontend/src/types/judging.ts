@@ -31,4 +31,4 @@ export interface ScoreCreate {
 export interface ScoreUpdate {
   score?: number;
   comment?: string;
-} 
+}

@@ -108,28 +108,48 @@ export function ProjectList({ projects, onDelete }: ProjectListProps) {
   return (
     <div className="bg-white shadow sm:rounded-lg">
       <div className="px-4 py-5 sm:p-6">
-        <h3 className="text-lg font-medium leading-6 text-gray-900">Projects</h3>
+        <h3 className="text-lg font-medium leading-6 text-gray-900">
+          Projects
+        </h3>
         <div className="mt-5">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Name
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Status
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Storage
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     URL
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Docker Info
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Actions
                   </th>
                 </tr>
@@ -138,18 +158,28 @@ export function ProjectList({ projects, onDelete }: ProjectListProps) {
                 {projects.map((project) => (
                   <tr key={project.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{project.name}</div>
-                      <div className="text-sm text-gray-500">{project.description}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {project.name}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {project.description}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(project.status)} text-white`}>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(project.status)} text-white`}
+                      >
                         {project.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <span className="mr-2">{getStorageTypeIcon(project.storage_type)}</span>
-                        <span className="text-sm text-gray-900">{project.storage_type}</span>
+                        <span className="mr-2">
+                          {getStorageTypeIcon(project.storage_type)}
+                        </span>
+                        <span className="text-sm text-gray-900">
+                          {project.storage_type}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -168,8 +198,12 @@ export function ProjectList({ projects, onDelete }: ProjectListProps) {
                       {project.docker_image && (
                         <div className="text-sm text-gray-900">
                           <div>Image: {project.docker_image}</div>
-                          {project.docker_tag && <div>Tag: {project.docker_tag}</div>}
-                          {project.docker_registry && <div>Registry: {project.docker_registry}</div>}
+                          {project.docker_tag && (
+                            <div>Tag: {project.docker_tag}</div>
+                          )}
+                          {project.docker_registry && (
+                            <div>Registry: {project.docker_registry}</div>
+                          )}
                         </div>
                       )}
                     </td>
@@ -206,4 +240,4 @@ export function ProjectList({ projects, onDelete }: ProjectListProps) {
       </div>
     </div>
   );
-} 
+}

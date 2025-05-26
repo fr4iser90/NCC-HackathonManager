@@ -10,12 +10,31 @@ const projectSchema = z.object({
   description: z.string().optional(),
   hackathon_id: z.string().uuid(),
   project_template_id: z.string().uuid().optional(),
-  status: z.enum(['draft', 'active', 'completed', 'archived', 'failed', 'building', 'built', 'deploying', 'deployed']),
+  status: z.enum([
+    'draft',
+    'active',
+    'completed',
+    'archived',
+    'failed',
+    'building',
+    'built',
+    'deploying',
+    'deployed',
+  ]),
   storage_type: z.enum([
-    'github', 'gitlab', 'bitbucket', 'local',
-    'server', 'docker', 'kubernetes', 'cloud',
-    'archive', 'docker_archive', 'backup',
-    'hybrid', 'docker_hybrid'
+    'github',
+    'gitlab',
+    'bitbucket',
+    'local',
+    'server',
+    'docker',
+    'kubernetes',
+    'cloud',
+    'archive',
+    'docker_archive',
+    'backup',
+    'hybrid',
+    'docker_hybrid',
   ]),
   github_url: z.string().url().optional(),
   gitlab_url: z.string().url().optional(),
@@ -41,7 +60,12 @@ interface ProjectFormProps {
   templates?: Array<{ id: string; name: string }>;
 }
 
-export function ProjectForm({ onSubmit, initialData, hackathons, templates }: ProjectFormProps) {
+export function ProjectForm({
+  onSubmit,
+  initialData,
+  hackathons,
+  templates,
+}: ProjectFormProps) {
   const form = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
@@ -51,14 +75,18 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
     },
   });
 
-  const [selectedStorageType, setSelectedStorageType] = useState(initialData?.storage_type || 'github');
+  const [selectedStorageType, setSelectedStorageType] = useState(
+    initialData?.storage_type || 'github',
+  );
 
   const renderStorageFields = () => {
     switch (selectedStorageType) {
       case 'github':
         return (
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700">GitHub URL</label>
+            <label className="block text-sm font-medium text-gray-700">
+              GitHub URL
+            </label>
             <input
               type="url"
               {...form.register('github_url')}
@@ -70,7 +98,9 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
       case 'gitlab':
         return (
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700">GitLab URL</label>
+            <label className="block text-sm font-medium text-gray-700">
+              GitLab URL
+            </label>
             <input
               type="url"
               {...form.register('gitlab_url')}
@@ -84,7 +114,9 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
         return (
           <>
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700">Docker URL</label>
+              <label className="block text-sm font-medium text-gray-700">
+                Docker URL
+              </label>
               <input
                 type="url"
                 {...form.register('docker_url')}
@@ -93,7 +125,9 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
               />
             </div>
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700">Docker Image</label>
+              <label className="block text-sm font-medium text-gray-700">
+                Docker Image
+              </label>
               <input
                 type="text"
                 {...form.register('docker_image')}
@@ -102,7 +136,9 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
               />
             </div>
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700">Docker Tag</label>
+              <label className="block text-sm font-medium text-gray-700">
+                Docker Tag
+              </label>
               <input
                 type="text"
                 {...form.register('docker_tag')}
@@ -111,7 +147,9 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
               />
             </div>
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700">Docker Registry</label>
+              <label className="block text-sm font-medium text-gray-700">
+                Docker Registry
+              </label>
               <input
                 type="text"
                 {...form.register('docker_registry')}
@@ -124,7 +162,9 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
       case 'kubernetes':
         return (
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700">Kubernetes URL</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Kubernetes URL
+            </label>
             <input
               type="url"
               {...form.register('kubernetes_url')}
@@ -136,7 +176,9 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
       case 'cloud':
         return (
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700">Cloud URL</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Cloud URL
+            </label>
             <input
               type="url"
               {...form.register('cloud_url')}
@@ -149,7 +191,9 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
       case 'docker_archive':
         return (
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700">Archive URL</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Archive URL
+            </label>
             <input
               type="url"
               {...form.register('archive_url')}
@@ -171,7 +215,9 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
         </h3>
         <form onSubmit={form.handleSubmit(onSubmit)} className="mt-5 space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Project Name</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Project Name
+            </label>
             <input
               type="text"
               {...form.register('name')}
@@ -180,7 +226,9 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Description</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
             <input
               type="text"
               {...form.register('description')}
@@ -189,15 +237,24 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Hackathon</label>
-            <Listbox value={form.watch('hackathon_id')} onChange={(value) => form.setValue('hackathon_id', value)}>
+            <label className="block text-sm font-medium text-gray-700">
+              Hackathon
+            </label>
+            <Listbox
+              value={form.watch('hackathon_id')}
+              onChange={(value) => form.setValue('hackathon_id', value)}
+            >
               <div className="relative mt-1">
                 <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left border focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
                   <span className="block truncate">
-                    {hackathons.find(h => h.id === form.watch('hackathon_id'))?.name || 'Select a hackathon'}
+                    {hackathons.find((h) => h.id === form.watch('hackathon_id'))
+                      ?.name || 'Select a hackathon'}
                   </span>
                   <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                    <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                    <ChevronUpDownIcon
+                      className="h-5 w-5 text-gray-400"
+                      aria-hidden="true"
+                    />
                   </span>
                 </Listbox.Button>
                 <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
@@ -207,18 +264,25 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
                       value={hackathon.id}
                       className={({ active }) =>
                         `relative cursor-default select-none py-2 pl-10 pr-4 ${
-                          active ? 'bg-indigo-100 text-indigo-900' : 'text-gray-900'
+                          active
+                            ? 'bg-indigo-100 text-indigo-900'
+                            : 'text-gray-900'
                         }`
                       }
                     >
                       {({ selected }) => (
                         <>
-                          <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                          <span
+                            className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}
+                          >
                             {hackathon.name}
                           </span>
                           {selected ? (
                             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-indigo-600">
-                              <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                              <CheckIcon
+                                className="h-5 w-5"
+                                aria-hidden="true"
+                              />
                             </span>
                           ) : null}
                         </>
@@ -232,15 +296,27 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
 
           {templates && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">Project Template</label>
-              <Listbox value={form.watch('project_template_id')} onChange={(value) => form.setValue('project_template_id', value)}>
+              <label className="block text-sm font-medium text-gray-700">
+                Project Template
+              </label>
+              <Listbox
+                value={form.watch('project_template_id')}
+                onChange={(value) =>
+                  form.setValue('project_template_id', value)
+                }
+              >
                 <div className="relative mt-1">
                   <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left border focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
                     <span className="block truncate">
-                      {templates.find(t => t.id === form.watch('project_template_id'))?.name || 'Select a template'}
+                      {templates.find(
+                        (t) => t.id === form.watch('project_template_id'),
+                      )?.name || 'Select a template'}
                     </span>
                     <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                      <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                      <ChevronUpDownIcon
+                        className="h-5 w-5 text-gray-400"
+                        aria-hidden="true"
+                      />
                     </span>
                   </Listbox.Button>
                   <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
@@ -250,18 +326,25 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
                         value={template.id}
                         className={({ active }) =>
                           `relative cursor-default select-none py-2 pl-10 pr-4 ${
-                            active ? 'bg-indigo-100 text-indigo-900' : 'text-gray-900'
+                            active
+                              ? 'bg-indigo-100 text-indigo-900'
+                              : 'text-gray-900'
                           }`
                         }
                       >
                         {({ selected }) => (
                           <>
-                            <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                            <span
+                              className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}
+                            >
                               {template.name}
                             </span>
                             {selected ? (
                               <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-indigo-600">
-                                <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                                <CheckIcon
+                                  className="h-5 w-5"
+                                  aria-hidden="true"
+                                />
                               </span>
                             ) : null}
                           </>
@@ -275,34 +358,59 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Status</label>
-            <Listbox value={form.watch('status')} onChange={(value) => form.setValue('status', value)}>
+            <label className="block text-sm font-medium text-gray-700">
+              Status
+            </label>
+            <Listbox
+              value={form.watch('status')}
+              onChange={(value) => form.setValue('status', value)}
+            >
               <div className="relative mt-1">
                 <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left border focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
                   <span className="block truncate">{form.watch('status')}</span>
                   <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                    <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                    <ChevronUpDownIcon
+                      className="h-5 w-5 text-gray-400"
+                      aria-hidden="true"
+                    />
                   </span>
                 </Listbox.Button>
                 <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                  {['draft', 'active', 'completed', 'archived', 'failed', 'building', 'built', 'deploying', 'deployed'].map((status) => (
+                  {[
+                    'draft',
+                    'active',
+                    'completed',
+                    'archived',
+                    'failed',
+                    'building',
+                    'built',
+                    'deploying',
+                    'deployed',
+                  ].map((status) => (
                     <Listbox.Option
                       key={status}
                       value={status}
                       className={({ active }) =>
                         `relative cursor-default select-none py-2 pl-10 pr-4 ${
-                          active ? 'bg-indigo-100 text-indigo-900' : 'text-gray-900'
+                          active
+                            ? 'bg-indigo-100 text-indigo-900'
+                            : 'text-gray-900'
                         }`
                       }
                     >
                       {({ selected }) => (
                         <>
-                          <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                          <span
+                            className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}
+                          >
                             {status}
                           </span>
                           {selected ? (
                             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-indigo-600">
-                              <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                              <CheckIcon
+                                className="h-5 w-5"
+                                aria-hidden="true"
+                              />
                             </span>
                           ) : null}
                         </>
@@ -315,7 +423,9 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Storage Type</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Storage Type
+            </label>
             <Listbox
               value={form.watch('storage_type')}
               onChange={(value) => {
@@ -325,35 +435,56 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
             >
               <div className="relative mt-1">
                 <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left border focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
-                  <span className="block truncate">{form.watch('storage_type')}</span>
+                  <span className="block truncate">
+                    {form.watch('storage_type')}
+                  </span>
                   <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                    <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                    <ChevronUpDownIcon
+                      className="h-5 w-5 text-gray-400"
+                      aria-hidden="true"
+                    />
                   </span>
                 </Listbox.Button>
                 <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
                   {[
-                    'github', 'gitlab', 'bitbucket', 'local',
-                    'server', 'docker', 'kubernetes', 'cloud',
-                    'archive', 'docker_archive', 'backup',
-                    'hybrid', 'docker_hybrid'
+                    'github',
+                    'gitlab',
+                    'bitbucket',
+                    'local',
+                    'server',
+                    'docker',
+                    'kubernetes',
+                    'cloud',
+                    'archive',
+                    'docker_archive',
+                    'backup',
+                    'hybrid',
+                    'docker_hybrid',
                   ].map((type) => (
                     <Listbox.Option
                       key={type}
                       value={type}
                       className={({ active }) =>
                         `relative cursor-default select-none py-2 pl-10 pr-4 ${
-                          active ? 'bg-indigo-100 text-indigo-900' : 'text-gray-900'
+                          active
+                            ? 'bg-indigo-100 text-indigo-900'
+                            : 'text-gray-900'
                         }`
                       }
                     >
                       {({ selected }) => (
                         <>
-                          <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                          <span
+                            className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}
+                          >
                             {type}
                           </span>
                           {selected ? (
                             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-indigo-600">
-                              <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                              <CheckIcon
+                                className="h-5 w-5"
+                                aria-hidden="true"
+                              />
                             </span>
                           ) : null}
                         </>
@@ -379,4 +510,4 @@ export function ProjectForm({ onSubmit, initialData, hackathons, templates }: Pr
       </div>
     </div>
   );
-} 
+}

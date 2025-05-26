@@ -16,9 +16,9 @@ export type Hackathon = {
   name: string;
   description?: string | null;
   start_date: string; // ISO date string
-  end_date: string;   // ISO date string
+  end_date: string; // ISO date string
   status: string; // e.g., "UPCOMING", "ACTIVE", "COMPLETED", "ARCHIVED"
-  mode: string;   // e.g., "SOLO_PRIMARY", "TEAM_RECOMMENDED", "SOLO_ONLY", "TEAM_ONLY"
+  mode: string; // e.g., "SOLO_PRIMARY", "TEAM_RECOMMENDED", "SOLO_ONLY", "TEAM_ONLY"
   location?: string | null;
   organizer_id?: string | null;
   // organizer?: UserRead; // If you decide to send full organizer object
@@ -36,7 +36,7 @@ export type Hackathon = {
   contact_email?: string | null;
   allow_individuals?: boolean;
   allow_multiple_projects_per_team?: boolean;
-  custom_fields?: Record<string, any> | null;
+  custom_fields?: Record<string, unknown> | null;
   created_at: string; // ISO date string
   updated_at: string; // ISO date string
   registrations: HackathonRegistration[]; // Added to match backend

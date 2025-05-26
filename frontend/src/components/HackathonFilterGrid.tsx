@@ -1,25 +1,36 @@
-"use client";
-import { useState } from "react";
-import HackathonCard from "./HackathonCard";
-import type { Hackathon } from "@/types/hackathon";
+'use client';
+import { useState } from 'react';
+import HackathonCard from './HackathonCard';
+import type { Hackathon } from '@/types/hackathon';
 
-export default function HackathonFilterGrid({ hackathons }: { hackathons: Hackathon[] }) {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+export default function HackathonFilterGrid({
+  hackathons,
+}: {
+  hackathons: Hackathon[];
+}) {
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
 
   const filtered = hackathons.filter((h) => {
     const matchesSearch =
       h.name.toLowerCase().includes(search.toLowerCase()) ||
-      (h.tags && h.tags.some((tag) => tag.toLowerCase().includes(search.toLowerCase())));
+      (h.tags &&
+        h.tags.some((tag) => tag.toLowerCase().includes(search.toLowerCase())));
     const matchesStatus = statusFilter ? h.status === statusFilter : true;
-    const matchesCategory = categoryFilter ? h.category === categoryFilter : true;
+    const matchesCategory = categoryFilter
+      ? h.category === categoryFilter
+      : true;
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
   const uniqueStatuses = Array.from(new Set(hackathons.map((h) => h.status)));
   const uniqueCategories = Array.from(
-    new Set(hackathons.map((h) => h.category).filter((c): c is string => typeof c === "string" && !!c))
+    new Set(
+      hackathons
+        .map((h) => h.category)
+        .filter((c): c is string => typeof c === 'string' && !!c),
+    ),
   );
 
   return (

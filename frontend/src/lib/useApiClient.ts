@@ -1,22 +1,28 @@
 // src/lib/useApiClient.ts
-import { useSession } from "next-auth/react";
-import { useCallback } from "react"; // Import useCallback
+import { useSession } from 'next-auth/react';
+import { useCallback } from 'react'; // Import useCallback
+
+type UserWithAccessToken = { accessToken: string };
 
 export function useApiClient() {
   const { data: session } = useSession();
 
-  const apiFetch = useCallback(async (input: RequestInfo, init: RequestInit = {}) => {
-    // Ensure session and user are checked before accessing accessToken
-    const token = session?.user && (session.user as any).accessToken 
-                  ? (session.user as any).accessToken 
-                  : null;
-                  
-    const headers = {
-      ...(init.headers || {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-    return fetch(input, { ...init, headers });
-  }, [session]); // Dependency array for useCallback includes session
+  const apiFetch = useCallback(
+    async (input: RequestInfo, init: RequestInit = {}) => {
+      // Ensure session and user are checked before accessing accessToken
+      const token =
+        session?.user && (session.user as UserWithAccessToken).accessToken
+          ? (session.user as UserWithAccessToken).accessToken
+          : null;
+
+      const headers = {
+        ...(init.headers || {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+      return fetch(input, { ...init, headers });
+    },
+    [session],
+  ); // Dependency array for useCallback includes session
 
   return apiFetch;
 }

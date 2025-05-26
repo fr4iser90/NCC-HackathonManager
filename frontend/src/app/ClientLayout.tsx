@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import AuthProvider from '@/components/AuthProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import SessionManager from '@/components/SessionManager';
@@ -12,10 +12,8 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <SessionManager />
         <Navbar />
-        <main className="flex-grow container mx-auto p-4">
-          {children}
-        </main>
+        <main className="flex-grow container mx-auto p-4">{children}</main>
       </QueryClientProvider>
     </AuthProvider>
   );
-} 
+}
