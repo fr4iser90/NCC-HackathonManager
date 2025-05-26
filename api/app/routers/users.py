@@ -17,6 +17,8 @@ from app.static import avatar_url, avatar_path
 from app.models.hackathon_registration import HackathonRegistration # Added import
 from app.logger import get_logger
 from app.services.user_service import register_user, login_user, update_profile, upload_avatar_file, get_my_teams, get_my_projects
+from app.middleware import require_roles, require_admin, require_organizer
+from fastapi import Body
 
 router = APIRouter()
 logger = get_logger("users_router")
@@ -52,7 +54,7 @@ def update_own_profile(
     user = update_profile(db, user_in, current_user)
     return UserRead.from_orm(user)
 
-@router.get("/", response_model=List[UserRead], dependencies=[Depends(get_admin_user)]) # New endpoint for listing users
+@router.get("/", response_model=List[UserRead], dependencies=[Depends(require_admin())])
 def list_users(db: Session = Depends(get_db)):
     """
     Retrieve all users. Only accessible by admin users.
@@ -60,7 +62,7 @@ def list_users(db: Session = Depends(get_db)):
     users = db.query(User).all()
     return [UserRead.from_orm(u) for u in users]
 
-@router.get("/{user_id}", response_model=UserRead, dependencies=[Depends(get_admin_user)])
+@router.get("/{user_id}", response_model=UserRead, dependencies=[Depends(require_admin())])
 def read_user_by_id(user_id: uuid.UUID, db: Session = Depends(get_db)):
     """
     Retrieve a specific user by their ID. Only accessible by admin users.
@@ -70,20 +72,23 @@ def read_user_by_id(user_id: uuid.UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return UserRead.from_orm(user)
 
-@router.put("/{user_id}", response_model=UserRead)
+@router.put("/{user_id}", response_model=UserRead, dependencies=[Depends(require_admin())])
 def update_user_profile(
     user_id: uuid.UUID, 
     user_in: UserUpdate,
-    db: Session = Depends(get_db),
-    target_user: User = Depends(get_current_user_or_admin_for_profile_update) 
+    db: Session = Depends(get_db)
 ):
     """
     Update a user's profile.
     A user can update their own profile. An admin can update any profile.
     """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     update_data = user_in.model_dump(exclude_unset=True)
     
-    if "username" in update_data and update_data["username"] != target_user.username:
+    if "username" in update_data and update_data["username"] != user.username:
         existing_user = db.query(User).filter(User.username == update_data["username"]).first()
         if existing_user:
             raise HTTPException(
@@ -92,29 +97,22 @@ def update_user_profile(
             )
 
     for field, value in update_data.items():
-        setattr(target_user, field, value)
+        setattr(user, field, value)
     
-    db.add(target_user)
+    db.add(user)
     db.commit()
-    db.refresh(target_user)
-    return UserRead.from_orm(target_user)
+    db.refresh(user)
+    return UserRead.from_orm(user)
 
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(get_admin_user)])
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin())])
 def delete_user_by_admin(
     user_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    admin_user: User = Depends(get_admin_user) # We need the current admin user to check for self-deletion
+    db: Session = Depends(get_db)
 ):
     """
     Delete a specific user by their ID. Only accessible by admin users.
     An admin cannot delete themselves.
     """
-    if admin_user.id == user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin users cannot delete their own account."
-        )
-
     user_to_delete = db.query(User).filter(User.id == user_id).first()
     if user_to_delete is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -166,35 +164,87 @@ def get_my_projects_endpoint(db: Session = Depends(get_db), current_user: User =
 
 # --- User Role Management Endpoints (Admin only) ---
 
-from fastapi import Body
-from app.models.user import UserRoleAssociation
+@router.get("/roles", response_model=List[str], dependencies=[Depends(require_admin())])
+def list_available_roles():
+    """List all available roles in the system."""
+    return [role.value for role in UserRole]
 
-@router.post("/{user_id}/roles", dependencies=[Depends(get_admin_user)])
+@router.post("/{user_id}/roles", dependencies=[Depends(require_admin())])
 def assign_role_to_user(
     user_id: uuid.UUID,
     role: str = Body(..., embed=True),
     db: Session = Depends(get_db)
 ):
+    """Assign a role to a user. Only admins can assign roles."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Validate role
+    try:
+        role_enum = UserRole(role)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid role. Available roles: {[r.value for r in UserRole]}"
+        )
+    
     # Check if role already assigned
     existing = db.query(UserRoleAssociation).filter_by(user_id=user_id, role=role).first()
     if existing:
         return {"detail": f"Role '{role}' already assigned to user."}
+    
+    # Add role
     db.add(UserRoleAssociation(user_id=user_id, role=role))
     db.commit()
     return {"detail": f"Role '{role}' assigned to user."}
 
-@router.delete("/{user_id}/roles", dependencies=[Depends(get_admin_user)])
+@router.delete("/{user_id}/roles", dependencies=[Depends(require_admin())])
 def remove_role_from_user(
     user_id: uuid.UUID,
     role: str = Body(..., embed=True),
     db: Session = Depends(get_db)
 ):
+    """Remove a role from a user. Only admins can remove roles."""
+    # Validate role
+    try:
+        role_enum = UserRole(role)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid role. Available roles: {[r.value for r in UserRole]}"
+        )
+    
+    # Check if user exists
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if role is assigned
     assoc = db.query(UserRoleAssociation).filter_by(user_id=user_id, role=role).first()
     if not assoc:
         raise HTTPException(status_code=404, detail=f"Role '{role}' not assigned to user.")
+    
+    # Prevent removing last admin role
+    if role == UserRole.ADMIN.value:
+        admin_count = db.query(UserRoleAssociation).filter_by(role=UserRole.ADMIN.value).count()
+        if admin_count <= 1:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot remove the last admin role in the system."
+            )
+    
     db.delete(assoc)
     db.commit()
     return {"detail": f"Role '{role}' removed from user."}
+
+@router.get("/{user_id}/roles", response_model=List[str], dependencies=[Depends(require_admin())])
+def get_user_roles(
+    user_id: uuid.UUID,
+    db: Session = Depends(get_db)
+):
+    """Get all roles assigned to a user."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return [r.role for r in user.roles_association]

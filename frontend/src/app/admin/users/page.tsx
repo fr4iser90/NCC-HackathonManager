@@ -13,7 +13,7 @@ interface User {
   email: string;
   username: string;
   full_name: string | null;
-  role: string;
+  roles: string[];  // Changed from role to roles array
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -187,41 +187,43 @@ export default function AdminManageUsersPage() {
           <table className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400">
             <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
               <tr>
-                <th scope="col" className="px-6 py-3">
-                  Email
-                </th>
-                <th scope="col" className="px-6 py-3">
-                  Username
-                </th>
-                <th scope="col" className="px-6 py-3">
-                  Full Name
-                </th>
-                <th scope="col" className="px-6 py-3">
-                  Role
-                </th>
-                <th scope="col" className="px-6 py-3">
-                  Active
-                </th>
-                <th scope="col" className="px-6 py-3">
-                  Joined
-                </th>
-                <th scope="col" className="px-6 py-3 text-center">
-                  Actions
-                </th>
+                <th scope="col" className="px-6 py-3">Email</th>
+                <th scope="col" className="px-6 py-3">Username</th>
+                <th scope="col" className="px-6 py-3">Full Name</th>
+                <th scope="col" className="px-6 py-3">Roles</th>
+                <th scope="col" className="px-6 py-3">Active</th>
+                <th scope="col" className="px-6 py-3">Joined</th>
+                <th scope="col" className="px-6 py-3 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr
-                  key={user.id}
-                  className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                >
+                <tr key={user.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                   <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                     {user.email}
                   </td>
                   <td className="px-6 py-4">{user.username}</td>
                   <td className="px-6 py-4">{user.full_name || 'N/A'}</td>
-                  <td className="px-6 py-4">{user.role}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1">
+                      {user.roles.map((role) => (
+                        <span
+                          key={role}
+                          className="px-2 py-1 text-xs font-medium rounded-full"
+                          style={{
+                            backgroundColor: role === 'admin' ? '#EF4444' : 
+                                           role === 'organizer' ? '#3B82F6' :
+                                           role === 'judge' ? '#10B981' :
+                                           role === 'mentor' ? '#8B5CF6' :
+                                           '#6B7280',
+                            color: 'white'
+                          }}
+                        >
+                          {role.charAt(0).toUpperCase() + role.slice(1)}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
                   <td className="px-6 py-4">{user.is_active ? 'Yes' : 'No'}</td>
                   <td className="px-6 py-4">
                     {new Date(user.created_at).toLocaleDateString()}

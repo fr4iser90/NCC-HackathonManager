@@ -10,7 +10,7 @@ interface User {
   email: string;
   username: string;
   full_name: string | null;
-  role: string;
+  roles: string[];  // Changed from role to roles array
   is_active: boolean;
 }
 
@@ -18,9 +18,18 @@ interface User {
 interface UserUpdateData {
   username?: string;
   full_name?: string | null;
-  role?: string;
+  roles?: string[];  // Changed from role to roles array
   is_active?: boolean;
 }
+
+// Role descriptions for the UI
+const ROLE_DESCRIPTIONS = {
+  admin: "Full system access",
+  organizer: "Can manage hackathons and participants",
+  judge: "Can evaluate projects and assign scores",
+  mentor: "Can provide guidance to participants",
+  participant: "Regular user who can join hackathons"
+};
 
 type UserWithRoleAndAccessToken = { role?: string; accessToken?: string };
 
@@ -34,7 +43,7 @@ export default function EditUserPage() {
   const [formData, setFormData] = useState<UserUpdateData>({
     username: '',
     full_name: '',
-    role: 'participant', // Default role
+    roles: [],
     is_active: true,
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -67,7 +76,7 @@ export default function EditUserPage() {
           setFormData({
             username: response.data.username,
             full_name: response.data.full_name || '',
-            role: response.data.role,
+            roles: response.data.roles,
             is_active: response.data.is_active,
           });
         } catch (err: unknown) {
@@ -157,7 +166,7 @@ export default function EditUserPage() {
         payload.username = formData.username;
       if (formData.full_name !== user.full_name)
         payload.full_name = formData.full_name;
-      if (formData.role !== user.role) payload.role = formData.role;
+      if (formData.roles !== user.roles) payload.roles = formData.roles;
       if (formData.is_active !== user.is_active)
         payload.is_active = formData.is_active;
 
@@ -288,24 +297,39 @@ export default function EditUserPage() {
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
           />
         </div>
-        <div>
-          <label
-            htmlFor="role"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Role
-          </label>
-          <select
-            name="role"
-            id="role"
-            value={formData.role}
-            onChange={handleChange}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          >
-            <option value="participant">Participant</option>
-            <option value="admin">Admin</option>
-            {/* Add other roles as needed */}
-          </select>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Roles
+            </label>
+            <div className="space-y-2">
+              {Object.entries(ROLE_DESCRIPTIONS).map(([role, description]) => (
+                <div key={role} className="flex items-start">
+                  <div className="flex items-center h-5">
+                    <input
+                      id={`role-${role}`}
+                      name="roles"
+                      type="checkbox"
+                      checked={formData.roles?.includes(role)}
+                      onChange={(e) => {
+                        const newRoles = e.target.checked
+                          ? [...(formData.roles || []), role]
+                          : (formData.roles || []).filter(r => r !== role);
+                        setFormData({ ...formData, roles: newRoles });
+                      }}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div className="ml-3 text-sm">
+                    <label htmlFor={`role-${role}`} className="font-medium text-gray-700">
+                      {role.charAt(0).toUpperCase() + role.slice(1)}
+                    </label>
+                    <p className="text-gray-500">{description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="flex items-center">
           <input

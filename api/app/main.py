@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 import time
 from app.logger import get_logger
+from app.middleware import require_roles, require_admin, require_organizer, require_judge, require_mentor, require_participant
 
 # Import app components
 from app.database import get_db
@@ -81,7 +82,7 @@ def health_check():
     logger.info("Health check endpoint accessed")
     return {"status": "healthy"}
 
-@app.get("/logs/error")
+@app.get("/logs/error", dependencies=[Depends(require_admin())])
 def get_error_log():
     log_path = os.path.join(os.path.dirname(__file__), "../logs/error.log")
     try:
