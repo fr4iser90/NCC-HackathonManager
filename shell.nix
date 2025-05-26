@@ -84,25 +84,25 @@ pkgs.mkShell {
     # Start/Stop Production/Dev Backend (API + DB)
     start-backend-dev() {
       echo "Starting production/dev API and DB containers..."
-      docker compose -f docker-compose.yml up -d api db
+      docker compose -f docker-compose.yml up -d hackathon-api hackathon-db
     }
     stop-backend-dev() {
       echo "Stopping production/dev API and DB containers..."
-      docker compose -f docker-compose.yml stop api db
-      docker compose -f docker-compose.yml rm -f api db
-      docker volume rm ncc-hackathonmanager_postgres_data || true
+      docker compose -f docker-compose.yml stop hackathon-api hackathon-db
+      docker compose -f docker-compose.yml rm -f hackathon-api hackathon-db
+      docker volume rm hackathon-db-data || true
     }
 
     # Start/Stop Test Backend (Test-API + Test-DB)
     start-backend-test() {
       echo "Starting test API and test DB containers..."
-      docker compose -f docker-compose.override.test.yml up -d api test-db
+      docker compose -f docker-compose.override.test.yml up -d hackathon-api test-db
     }
     stop-backend-test() {
       echo "Stopping test API and test DB containers..."
-      docker compose -f docker-compose.override.test.yml stop api test-db
-      docker compose -f docker-compose.override.test.yml rm -f api test-db
-      docker volume rm ncc-hackathonmanager_test_postgres_data || true
+      docker compose -f docker-compose.override.test.yml stop hackathon-api test-db
+      docker compose -f docker-compose.override.test.yml rm -f hackathon-api test-db
+      docker volume rm hackathon-db-data || true
     }
 
     # Override pytest to clean before and after
@@ -174,7 +174,7 @@ pkgs.mkShell {
 
     # Check if Docker containers are built and running
     check_docker_containers() {
-      if ! docker compose -f  docker-compose.yml ps --services --filter "status=running" | grep -q "api"; then
+      if ! docker compose -f  docker-compose.yml ps --services --filter "status=running" | grep -q "hackathon-api"; then
         echo "Docker containers not running. Building and starting..."
         if ! start-backend; then
           echo "Failed to start backend properly. Please check the logs."
@@ -247,17 +247,17 @@ pkgs.mkShell {
     
     start-frontend-tmux() {
       echo "Starting frontend development server in tmux session..."
-      # Create a new tmux session named 'frontend' if it doesn't exist
-      if ! tmux has-session -t frontend 2>/dev/null; then
-        tmux new-session -d -s frontend
+      # Create a new tmux session named 'hackathon-frontend' if it doesn't exist
+      if ! tmux has-session -t hackathon-frontend 2>/dev/null; then
+        tmux new-session -d -s hackathon-frontend
       fi
       
       # Send commands to the tmux session
-      tmux send-keys -t frontend "cd $(pwd)/ frontend" C-m
-      tmux send-keys -t frontend "npm run dev" C-m
+      tmux send-keys -t hackathon-frontend "cd $(pwd)/ frontend" C-m
+      tmux send-keys -t hackathon-frontend "npm run dev" C-m
       
-      echo "Frontend server started in tmux session 'frontend'"
-      echo "To attach to the session: tmux attach -t frontend"
+      echo "Frontend server started in tmux session 'hackathon-frontend'"
+      echo "To attach to the session: tmux attach -t hackathon-frontend"
       echo "To detach from session: press Ctrl+B then D"
     }
 

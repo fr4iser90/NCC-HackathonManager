@@ -1,5 +1,5 @@
 services:
-  db:
+  hackathon-db:
     build:
       context: ./database
       dockerfile: Dockerfile
@@ -8,12 +8,12 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - hackathon-db-data:/var/lib/postgresql/data
     env_file:
       - .env # Will load DB credentials from .env in the project root
     restart: unless-stopped
 
-  api:
+  hackathon-api:
     build:
       context: ./api
       dockerfile: Dockerfile
@@ -22,7 +22,7 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      db:
+      hackathon-db:
         condition: service_healthy
     env_file:
       - .env # Will load API and INITIAL_ADMIN credentials from .env
@@ -31,7 +31,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock # Mount Docker socket for Docker-outside-of-Docker (DooD)
     restart: unless-stopped
     
-  frontend:
+  hackathon-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -40,15 +40,21 @@ services:
     ports:
       - "3030:3000" # Exposing frontend on host port 3000
     depends_on:
-      - api
+      - hackathon-api
     env_file:
       - .env
     volumes:
       - frontend_logs:/app/logs # Mount volume for logs
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://hackathon-api:8000/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
-  postgres_data:
+  hackathon-db-data:
     driver: local
   api_logs:
     driver: local
