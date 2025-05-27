@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import axiosInstance from '../../../lib/axiosInstance';
+import axiosInstance from '@/lib/axiosInstance';
 
 interface TeamMember {
   user_id: string;

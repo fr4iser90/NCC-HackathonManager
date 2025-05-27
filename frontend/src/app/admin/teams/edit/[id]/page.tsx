@@ -4,7 +4,7 @@ import React, { useState, useEffect, FormEvent, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import axiosInstance from '../../../../../lib/axiosInstance';
+import axiosInstance from '@/lib/axiosInstance';
 
 interface TeamUpdateData {
   name?: string;

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback
 import { useSession } from 'next-auth/react';
-import axiosInstance from '../../../lib/axiosInstance'; // MODIFIED: Corrected import path
+import axiosInstance from '@/lib/axiosInstance'; // MODIFIED: Corrected import path
 import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation'; // Added for potential redirects

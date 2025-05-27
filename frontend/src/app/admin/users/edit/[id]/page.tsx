@@ -1,29 +1,33 @@
 'use client';
 
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { useParams, useRouter } from 'next/navigation'; // For accessing route params and navigation
-import axios from 'axios';
+import { useParams, useRouter } from 'next/navigation';
+import axiosInstance from '@/lib/axiosInstance'; // MODIFIED: Use axiosInstance with path alias
 
 interface User {
   id: string;
   email: string;
   username: string;
   full_name: string | null;
-  roles: string[];  // Changed from role to roles array
+  roles: string[];
   is_active: boolean;
 }
 
-// Define a type for the updatable fields
 interface UserUpdateData {
   username?: string;
   full_name?: string | null;
-  roles?: string[];  // Changed from role to roles array
+  // roles field is no longer sent in the PUT request for user update
   is_active?: boolean;
 }
 
-// Role descriptions for the UI
-const ROLE_DESCRIPTIONS = {
+interface AvailableRole {
+  name: string;
+  description?: string; // Assuming backend might provide descriptions, or we use a default
+}
+
+// Role descriptions for the UI (can be a fallback or merged with fetched data)
+const ROLE_UI_DESCRIPTIONS: { [key: string]: string } = {
   admin: "Full system access",
   organizer: "Can manage hackathons and participants",
   judge: "Can evaluate projects and assign scores",
@@ -35,88 +39,67 @@ type UserWithRoleAndAccessToken = { role?: string; accessToken?: string };
 
 export default function EditUserPage() {
   const { data: session, status: sessionStatus } = useSession();
-  const params = useParams(); // { id: '...' }
-  const router = useRouter(); // For navigation
+  const params = useParams();
+  const router = useRouter();
   const userId = params?.id as string;
 
   const [user, setUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState<UserUpdateData>({
+  const [initialRoles, setInitialRoles] = useState<string[]>([]);
+  const [formData, setFormData] = useState<{
+    username: string;
+    full_name: string | null;
+    roles: string[];
+    is_active: boolean;
+  }>({
     username: '',
     full_name: '',
     roles: [],
     is_active: true,
   });
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  useEffect(() => {
+  const fetchUserData = useCallback(async () => {
     if (
       sessionStatus === 'authenticated' &&
       userId &&
       (session?.user as UserWithRoleAndAccessToken)?.role === 'admin'
     ) {
-      const fetchUser = async () => {
-        setIsLoading(true);
-        setError(null);
-        setSuccessMessage(null);
-        try {
-          const token = (session?.user as UserWithRoleAndAccessToken)
-            ?.accessToken;
-          if (!apiBaseUrl) throw new Error('API base URL is not configured.');
-          if (!token) throw new Error('Access token is not available.');
+      setIsLoading(true);
+      setError(null);
+      setSuccessMessage(null);
+      try {
+        // axiosInstance should handle token if configured, otherwise pass manually
+        const token = (session?.user as UserWithRoleAndAccessToken)?.accessToken;
 
-          const response = await axios.get(`${apiBaseUrl}/users/${userId}`, {
+        const userResponse = await axiosInstance.get(`/users/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setUser(userResponse.data);
+        setInitialRoles(userResponse.data.roles || []);
+        setFormData({
+          username: userResponse.data.username,
+          full_name: userResponse.data.full_name || '',
+          roles: userResponse.data.roles || [],
+          is_active: userResponse.data.is_active,
+        });
+
+        const rolesResponse = await axiosInstance.get('/users/roles', {
             headers: { Authorization: `Bearer ${token}` },
-          });
-          setUser(response.data);
-          // Initialize form data with fetched user data
-          setFormData({
-            username: response.data.username,
-            full_name: response.data.full_name || '',
-            roles: response.data.roles,
-            is_active: response.data.is_active,
-          });
-        } catch (err: unknown) {
-          console.error('Error fetching user:', err);
-          if (
-            err &&
-            typeof err === 'object' &&
-            'response' in err &&
-            typeof (err as { response?: { data?: { detail?: string } } })
-              .response === 'object'
-          ) {
-            const response = (
-              err as { response?: { data?: { detail?: string } } }
-            ).response;
-            setError(
-              response?.data?.detail ||
-                (err &&
-                typeof err === 'object' &&
-                'message' in err &&
-                typeof (err as { message?: string }).message === 'string'
-                  ? (err as { message: string }).message
-                  : 'Failed to fetch user details.'),
-            );
-          } else {
-            setError(
-              err &&
-                typeof err === 'object' &&
-                'message' in err &&
-                typeof (err as { message?: string }).message === 'string'
-                ? (err as { message: string }).message
-                : 'Failed to fetch user details.',
-            );
-          }
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchUser();
+        });
+        setAvailableRoles(rolesResponse.data || []);
+
+      } catch (err: any) {
+        console.error('Error fetching data:', err);
+        setError(err.response?.data?.detail || err.message || 'Failed to fetch user details or roles.');
+      } finally {
+        setIsLoading(false);
+      }
     } else if (sessionStatus === 'loading') {
-      // Wait for session to load
+      // Wait
     } else if (!userId) {
       setError('User ID is missing.');
       setIsLoading(false);
@@ -124,24 +107,40 @@ export default function EditUserPage() {
       setError('Access Denied or Session expired.');
       setIsLoading(false);
     }
-  }, [sessionStatus, userId, session, apiBaseUrl]);
+  }, [sessionStatus, userId, session]);
+
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value, type } = e.target;
 
-    if (type === 'checkbox') {
+    if (type === 'checkbox' && name === 'is_active') { // Specific handling for is_active
       const { checked } = e.target as HTMLInputElement;
-      setFormData((prev) => ({ ...prev, [name]: checked }));
-    } else {
+      setFormData((prev) => ({ ...prev, is_active: checked }));
+    } else if (name === 'roles') { // This case should not happen with current checkbox setup
+        // Role checkboxes are handled by handleRoleChange
+    }
+    else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
+  const handleRoleChange = (role: string, isChecked: boolean) => {
+    setFormData((prev) => {
+      const newRoles = isChecked
+        ? [...prev.roles, role]
+        : prev.roles.filter((r) => r !== role);
+      return { ...prev, roles: newRoles };
+    });
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSaving(true);
     setError(null);
     setSuccessMessage(null);
 
@@ -151,75 +150,62 @@ export default function EditUserPage() {
       !user
     ) {
       setError('Permission denied or user data not loaded.');
-      setIsLoading(false);
+      setIsSaving(false);
       return;
     }
 
-    try {
-      const token = (session?.user as UserWithRoleAndAccessToken)?.accessToken;
-      if (!apiBaseUrl) throw new Error('API base URL is not configured.');
-      if (!token) throw new Error('Access token is not available.');
-
-      // Construct the payload, only send fields that have changed or are part of UserUpdateData
-      const payload: UserUpdateData = {};
-      if (formData.username !== user.username)
-        payload.username = formData.username;
-      if (formData.full_name !== user.full_name)
-        payload.full_name = formData.full_name;
-      if (formData.roles !== user.roles) payload.roles = formData.roles;
-      if (formData.is_active !== user.is_active)
-        payload.is_active = formData.is_active;
-
-      // Do not send empty payload
-      if (Object.keys(payload).length === 0) {
-        setSuccessMessage('No changes detected.');
-        setIsLoading(false);
+    const token = (session?.user as UserWithRoleAndAccessToken)?.accessToken;
+    if (!token) {
+        setError('Access token not available.');
+        setIsSaving(false);
         return;
+    }
+
+    try {
+      // 1. Update basic user info (username, full_name, is_active)
+      const profileUpdatePayload: UserUpdateData = {};
+      if (formData.username !== user.username)
+        profileUpdatePayload.username = formData.username;
+      if (formData.full_name !== user.full_name)
+        profileUpdatePayload.full_name = formData.full_name;
+      if (formData.is_active !== user.is_active)
+        profileUpdatePayload.is_active = formData.is_active;
+      
+      if (Object.keys(profileUpdatePayload).length > 0) {
+        await axiosInstance.put(`/users/${userId}`, profileUpdatePayload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
       }
 
-      await axios.put(`${apiBaseUrl}/users/${userId}`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSuccessMessage('User updated successfully!');
-      // Optionally, refresh user data or navigate away
-      // router.push('/admin');
-    } catch (err: unknown) {
-      console.error('Error updating user:', err);
-      if (
-        err &&
-        typeof err === 'object' &&
-        'response' in err &&
-        typeof (err as { response?: { data?: { detail?: string } } })
-          .response === 'object'
-      ) {
-        const response = (err as { response?: { data?: { detail?: string } } })
-          .response;
-        setError(
-          response?.data?.detail ||
-            (err &&
-            typeof err === 'object' &&
-            'message' in err &&
-            typeof (err as { message?: string }).message === 'string'
-              ? (err as { message: string }).message
-              : 'Failed to update user.'),
-        );
-      } else {
-        setError(
-          err &&
-            typeof err === 'object' &&
-            'message' in err &&
-            typeof (err as { message?: string }).message === 'string'
-            ? (err as { message: string }).message
-            : 'Failed to update user.',
-        );
+      // 2. Update roles
+      const rolesToAdd = formData.roles.filter(r => !initialRoles.includes(r));
+      const rolesToRemove = initialRoles.filter(r => !formData.roles.includes(r));
+
+      for (const role of rolesToAdd) {
+        await axiosInstance.post(`/users/${userId}/roles`, { role }, { // Backend expects { "role": "rolename" }
+          headers: { Authorization: `Bearer ${token}` },
+        });
       }
+      for (const role of rolesToRemove) {
+        // For DELETE, data is often in the body for FastAPI if using Pydantic model
+        await axiosInstance.delete(`/users/${userId}/roles`, {
+          headers: { Authorization: `Bearer ${token}` },
+          data: { role }, // Backend expects { "role": "rolename" }
+        });
+      }
+      
+      setSuccessMessage('User updated successfully!');
+      fetchUserData(); // Refresh data to show updated state and reset initialRoles
+
+    } catch (err: any) {
+      console.error('Error updating user:', err);
+      setError(err.response?.data?.detail || err.message || 'Failed to update user.');
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
   if (sessionStatus === 'loading' || (isLoading && !error)) {
-    // Show loading if session is loading OR if fetching data and no error yet
     return (
       <div className="container mx-auto p-4 text-center">
         Loading user data...
@@ -303,20 +289,15 @@ export default function EditUserPage() {
               Roles
             </label>
             <div className="space-y-2">
-              {Object.entries(ROLE_DESCRIPTIONS).map(([role, description]) => (
+              {availableRoles.length > 0 ? availableRoles.map((role) => (
                 <div key={role} className="flex items-start">
                   <div className="flex items-center h-5">
                     <input
                       id={`role-${role}`}
-                      name="roles"
+                      name="roles" // Name is "roles" to group them, but individual changes are handled
                       type="checkbox"
-                      checked={formData.roles?.includes(role)}
-                      onChange={(e) => {
-                        const newRoles = e.target.checked
-                          ? [...(formData.roles || []), role]
-                          : (formData.roles || []).filter(r => r !== role);
-                        setFormData({ ...formData, roles: newRoles });
-                      }}
+                      checked={formData.roles.includes(role)}
+                      onChange={(e) => handleRoleChange(role, e.target.checked)}
                       className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                     />
                   </div>
@@ -324,20 +305,20 @@ export default function EditUserPage() {
                     <label htmlFor={`role-${role}`} className="font-medium text-gray-700">
                       {role.charAt(0).toUpperCase() + role.slice(1)}
                     </label>
-                    <p className="text-gray-500">{description}</p>
+                    <p className="text-gray-500">{ROLE_UI_DESCRIPTIONS[role] || 'Standard role'}</p>
                   </div>
                 </div>
-              ))}
+              )) : <p>Loading roles...</p>}
             </div>
           </div>
         </div>
         <div className="flex items-center">
           <input
             id="is_active"
-            name="is_active"
+            name="is_active" // Corrected name to match state and handleChange
             type="checkbox"
             checked={formData.is_active}
-            onChange={handleChange}
+            onChange={handleChange} // General handleChange can handle this now
             className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
           />
           <label
@@ -350,10 +331,10 @@ export default function EditUserPage() {
         <div>
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isSaving || isLoading}
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
           >
-            {isLoading ? 'Saving...' : 'Save Changes'}
+            {isSaving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
         {successMessage && (
