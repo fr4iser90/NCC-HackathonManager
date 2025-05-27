@@ -111,7 +111,10 @@ const authOptions: NextAuthOptions = {
                   name:
                     profileResponse.data.full_name ||
                     profileResponse.data.email,
-                  role: profileResponse.data.role,
+                  // Rolle aus roles-Liste extrahieren (z.B. erstes Element)
+                  role: Array.isArray(profileResponse.data.roles) && profileResponse.data.roles.length > 0
+                    ? profileResponse.data.roles[0]
+                    : undefined,
                 };
                 console.log(
                   '[NextAuth Authorize] User profile constructed:',
