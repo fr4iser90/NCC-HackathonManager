@@ -30,6 +30,13 @@
         "singleInstance": true
       },
       {
+        "name": "$(server) Rebuild Front-/Backend",
+        "tooltip": "Rebuild and restart front-/backend containers",
+        "color": "lightblue",
+        "command": "nix-shell --run 'rebuild-all'",
+        "singleInstance": true
+      },
+      {
         "name": "$(beaker) Pytest Minimal Log",
         "tooltip": "Run pytest with minimal logging to test_report.txt",
         "color": "cyan",

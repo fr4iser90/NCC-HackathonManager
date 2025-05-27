@@ -35,7 +35,7 @@ export default function HostMonitoring() {
         const token = (session?.user as UserWithRoleAndAccessToken)?.accessToken;
         if (!token) throw new Error('Access token is not available');
 
-        const response = await axiosInstance.get('/system-metrics', {
+        const response = await axiosInstance.get('/admin/system-metrics', {
           headers: { Authorization: `Bearer ${token}` },
         });
         setMetrics(response.data);
