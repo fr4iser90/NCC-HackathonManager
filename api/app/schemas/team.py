@@ -34,6 +34,10 @@ class TeamUpdate(TeamBase):
     is_open: Optional[bool] = None
     status: Optional[TeamStatus] = None
 
+class TeamMemberCreate(BaseModel):
+    user_id: uuid.UUID
+    role: TeamMemberRole = TeamMemberRole.member
+
 class TeamMemberRead(BaseModel):
     user_id: uuid.UUID
     role: TeamMemberRole

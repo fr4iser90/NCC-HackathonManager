@@ -235,12 +235,21 @@ async def submit_project_version_endpoint(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Check if user is a team member
-    team_member = db.query(TeamMember).filter(
-        TeamMember.team_id == project.team_id,
-        TeamMember.user_id == current_user.id
-    ).first()
-    if not team_member:
+    # Authorization Check:
+    can_submit = False
+    if project.team_id:
+        # Project is part of a team
+        team_member_record = db.query(TeamMember).filter(
+            TeamMember.team_id == project.team_id,
+            TeamMember.user_id == current_user.id
+        ).first()
+        if team_member_record and team_member_record.role in [TeamMemberRole.owner, TeamMemberRole.admin, TeamMemberRole.member]:
+            can_submit = True
+    elif project.owner_id == current_user.id:
+        # Project is a solo project, and current user is the owner
+        can_submit = True
+    
+    if not can_submit:
         raise HTTPException(status_code=403, detail="Not authorized to submit versions for this project")
 
     hackathon = db.query(Hackathon).filter(Hackathon.id == project.hackathon_id).first()
