@@ -293,6 +293,7 @@ pkgs.mkShell {
       npm install
       cd -
       echo "Frontend dependencies have been completely reinstalled!"
+      start-frontend-dev
     }
 
     # --- Improved Port Management Functions ---
