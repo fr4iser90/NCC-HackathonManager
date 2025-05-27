@@ -26,5 +26,5 @@ __all__ = [
     "HackathonRegistration",
     "Criterion",
     "Score",
-    "Submission"
+    "Submission",
 ]

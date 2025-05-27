@@ -4,6 +4,7 @@ import React from 'react'; // Removed useState, useEffect
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation'; // For potential redirect if not admin though middleware should handle
+import HostMonitoring from '@/components/admin/HostMonitoring';
 
 // No longer need User interface or fetch/delete logic here
 
@@ -93,6 +94,11 @@ export default function AdminPage() {
 
       {/* User Management Table and its logic have been moved to /admin/users/page.tsx */}
       {/* Success/Error messages specific to user table are also moved */}
+
+      {/* System Monitoring */}
+      <div className="mt-12">
+        <HostMonitoring />
+      </div>
     </div>
   );
 }

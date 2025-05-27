@@ -2,19 +2,30 @@ import argparse
 import sys
 from utils import get_logger, DockerHelper, ScriptError
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Manage Docker image storage and registry operations.")
+    parser = argparse.ArgumentParser(
+        description="Manage Docker image storage and registry operations."
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     push_parser = subparsers.add_parser("push", help="Push image to registry")
     push_parser.add_argument("--tag", required=True, help="Image tag to push")
-    push_parser.add_argument("--project-id", default="unknown", help="Project ID for logging")
-    push_parser.add_argument("--version-id", default="unknown", help="Version ID for logging")
+    push_parser.add_argument(
+        "--project-id", default="unknown", help="Project ID for logging"
+    )
+    push_parser.add_argument(
+        "--version-id", default="unknown", help="Version ID for logging"
+    )
 
     pull_parser = subparsers.add_parser("pull", help="Pull image from registry")
     pull_parser.add_argument("--tag", required=True, help="Image tag to pull")
-    pull_parser.add_argument("--project-id", default="unknown", help="Project ID for logging")
-    pull_parser.add_argument("--version-id", default="unknown", help="Version ID for logging")
+    pull_parser.add_argument(
+        "--project-id", default="unknown", help="Project ID for logging"
+    )
+    pull_parser.add_argument(
+        "--version-id", default="unknown", help="Version ID for logging"
+    )
 
     # Placeholders for future features
     subparsers.add_parser("list", help="List images in registry (not implemented)")
@@ -22,7 +33,9 @@ def main():
 
     args = parser.parse_args()
 
-    logger = get_logger(getattr(args, "project_id", "unknown"), getattr(args, "version_id", "unknown"))
+    logger = get_logger(
+        getattr(args, "project_id", "unknown"), getattr(args, "version_id", "unknown")
+    )
 
     if args.command == "push":
         logger.log_build_start("image_storage", args.tag, "push")
@@ -53,6 +66,7 @@ def main():
     elif args.command == "cleanup":
         print("Cleanup is not yet implemented.")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

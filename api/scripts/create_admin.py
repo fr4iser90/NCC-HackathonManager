@@ -2,17 +2,23 @@ import os
 import sys
 import uuid
 import logging
+
 # from getpass import getpass # No longer needed for non-interactive
 
 # Adjust path to allow imports from the 'app' directory
 # This assumes the script is run from /app/scripts/ inside the container
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.database import SessionLocal, engine, Base # Assuming Base might be needed if models are not yet created
+from app.database import (
+    SessionLocal,
+    engine,
+    Base,
+)  # Assuming Base might be needed if models are not yet created
 from app.models.user import User, UserRole, UserRoleAssociation
-from app.auth import get_password_hash # Use your existing password hashing
+from app.auth import get_password_hash  # Use your existing password hashing
 
 logger = logging.getLogger("create_admin")
+
 
 def ensure_admin_user():
     logger.info("Ensuring initial admin user...")
@@ -24,20 +30,33 @@ def ensure_admin_user():
     admin_github_id = os.getenv("ADMIN_GITHUB_ID")
 
     if not all([admin_email, admin_username, admin_password]):
-        logger.error("Error: ADMIN_EMAIL, ADMIN_USERNAME, and ADMIN_PASSWORD environment variables must be set.")
-        sys.exit(1) # Exit with error code if critical env vars are missing
+        logger.error(
+            "Error: ADMIN_EMAIL, ADMIN_USERNAME, and ADMIN_PASSWORD environment variables must be set."
+        )
+        sys.exit(1)  # Exit with error code if critical env vars are missing
 
     db = SessionLocal()
     try:
         # Check if user exists by email or username
-        existing_user = db.query(User).filter((User.email == admin_email) | (User.username == admin_username)).first()
+        existing_user = (
+            db.query(User)
+            .filter((User.email == admin_email) | (User.username == admin_username))
+            .first()
+        )
 
         if existing_user:
-            logger.info(f"Admin user with email '{admin_email}' or username '{admin_username}' already exists.")
+            logger.info(
+                f"Admin user with email '{admin_email}' or username '{admin_username}' already exists."
+            )
             # Prüfe, ob Rolle schon gesetzt ist
-            has_admin_role = any(r.role == UserRole.ADMIN for r in getattr(existing_user, 'roles_association', []))
+            has_admin_role = any(
+                r.role == UserRole.ADMIN
+                for r in getattr(existing_user, "roles_association", [])
+            )
             if not has_admin_role:
-                db.add(UserRoleAssociation(user_id=existing_user.id, role=UserRole.ADMIN))
+                db.add(
+                    UserRoleAssociation(user_id=existing_user.id, role=UserRole.ADMIN)
+                )
                 db.commit()
                 logger.info("Admin role added to existing user.")
             # Optional: github_id updaten wie gehabt
@@ -46,10 +65,12 @@ def ensure_admin_user():
                 existing_user.github_id = admin_github_id
                 db.commit()
                 logger.info("GitHub ID updated.")
-            return # Exit if user exists
+            return  # Exit if user exists
 
         # If user does not exist, create new one
-        logger.info(f"Creating new admin user: Email='{admin_email}', Username='{admin_username}'")
+        logger.info(
+            f"Creating new admin user: Email='{admin_email}', Username='{admin_username}'"
+        )
 
         admin_user = User(
             email=admin_email,
@@ -58,7 +79,7 @@ def ensure_admin_user():
             full_name=admin_full_name if admin_full_name else None,
             github_id=admin_github_id,
             avatar_url=None,
-            is_active=True
+            is_active=True,
         )
         db.add(admin_user)
         db.commit()
@@ -67,23 +88,26 @@ def ensure_admin_user():
         admin_role = UserRoleAssociation(user_id=admin_user.id, role=UserRole.ADMIN)
         db.add(admin_role)
         db.commit()
-        logger.info(f"Admin user '{admin_email}' / '{admin_username}' created successfully!")
+        logger.info(
+            f"Admin user '{admin_email}' / '{admin_username}' created successfully!"
+        )
 
     except Exception as e:
         logger.error(f"An error occurred: {e}")
         db.rollback()
-        sys.exit(1) # Exit with error code on failure
+        sys.exit(1)  # Exit with error code on failure
     finally:
         db.close()
 
+
 if __name__ == "__main__":
-    # Optional: Create tables if they don't exist. 
+    # Optional: Create tables if they don't exist.
     # This is often handled by Alembic migrations or at application startup.
-    # If your User model (and others) are defined using Base.metadata, 
+    # If your User model (and others) are defined using Base.metadata,
     # you might want to ensure tables are created before trying to add data.
     # For example:
     # print("Ensuring database tables are created (if not already by Alembic/app startup)...")
-    # Base.metadata.create_all(bind=engine) 
+    # Base.metadata.create_all(bind=engine)
     # print("Table check/creation complete.")
 
-    ensure_admin_user() 
+    ensure_admin_user()

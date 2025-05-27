@@ -5,6 +5,7 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
 from app.models.user import UserRole
 
+
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
@@ -12,6 +13,7 @@ class UserCreate(BaseModel):
     full_name: str | None = None
     github_id: str | None = None
     roles: Optional[list[UserRole]] = None
+
 
 class UserRead(BaseModel):
     id: uuid.UUID
@@ -33,6 +35,7 @@ class UserRead(BaseModel):
         data["roles"] = user.roles
         return cls(**data)
 
+
 class UserUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     full_name: Optional[str] = Field(None, max_length=100)
@@ -42,4 +45,4 @@ class UserUpdate(BaseModel):
     current_password: Optional[str] = None
     roles: Optional[list[UserRole]] = None
     # email: Optional[EmailStr] = None # Add if email updates are allowed
-    # password: Optional[str] = Field(None, min_length=8) # Add if password updates are allowed 
+    # password: Optional[str] = Field(None, min_length=8) # Add if password updates are allowed

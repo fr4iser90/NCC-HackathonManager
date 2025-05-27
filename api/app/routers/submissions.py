@@ -24,7 +24,7 @@ router = APIRouter(tags=["submissions"])
     "/projects/{project_id}/submissions/",
     response_model=SubmissionRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))]
+    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))],
 )
 def create_submission(
     project_id: UUID,
@@ -56,7 +56,7 @@ def create_submission(
 @router.get(
     "/projects/{project_id}/submissions/",
     response_model=List[SubmissionRead],
-    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))]
+    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))],
 )
 def list_submissions_for_project(
     project_id: UUID,
@@ -79,7 +79,7 @@ def list_submissions_for_project(
 @router.get(
     "/submissions/{submission_id}",
     response_model=SubmissionRead,
-    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))]
+    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))],
 )
 def get_submission(
     submission_id: UUID,
@@ -90,9 +90,7 @@ def get_submission(
     Get a specific submission by its ID.
     Accessible by the submission owner, any member of the project team, or an administrator.
     """
-    submission = (
-        db.query(Submission).filter(Submission.id == submission_id).first()
-    )
+    submission = db.query(Submission).filter(Submission.id == submission_id).first()
     if not submission:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -104,7 +102,7 @@ def get_submission(
 @router.put(
     "/submissions/{submission_id}",
     response_model=SubmissionRead,
-    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))]
+    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))],
 )
 def update_submission(
     submission_id: UUID,
@@ -116,9 +114,7 @@ def update_submission(
     Update an existing submission.
     Only accessible by the submission owner, the project's team owner, or an administrator.
     """
-    submission = (
-        db.query(Submission).filter(Submission.id == submission_id).first()
-    )
+    submission = db.query(Submission).filter(Submission.id == submission_id).first()
     if not submission:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -138,7 +134,7 @@ def update_submission(
 @router.delete(
     "/submissions/{submission_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))]
+    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))],
 )
 def delete_submission(
     submission_id: UUID,
@@ -149,9 +145,7 @@ def delete_submission(
     Delete a submission.
     Only accessible by the submission owner, the project's team owner, or an administrator.
     """
-    submission = (
-        db.query(Submission).filter(Submission.id == submission_id).first()
-    )
+    submission = db.query(Submission).filter(Submission.id == submission_id).first()
     if not submission:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -160,4 +154,4 @@ def delete_submission(
 
     db.delete(submission)
     db.commit()
-    return None 
+    return None

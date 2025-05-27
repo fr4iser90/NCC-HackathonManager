@@ -79,8 +79,8 @@ export default function SessionManager() {
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
       // Ping-URL: /ping am Backend, Fallback /api/ping für Dev
       const pingUrl = apiBaseUrl
-        ? apiBaseUrl.replace(/\/$/, '') + '/ping'
-        : '/api/ping';
+        ? apiBaseUrl.replace(/\/$/, '') + '/ping/'
+        : '/api/ping/';
       const accessToken = (session?.user as UserWithRoleAndAccessToken)
         ?.accessToken;
       const checkSession = async () => {

@@ -14,59 +14,49 @@
         "command": "nix-shell --run 'pytest'",
         "singleInstance": true // Reuse the same terminal
       },
-      // Button 2: Quick Deploy (Local)
+      // New buttons from shell.nix
       {
-        "name": "$(rocket) Quick Deploy", // $(rocket) icon
-        "tooltip": "Run: SimpleDevOpsToolkit --quick-deploy",
+        "name": "$(refresh) Rebuild Frontend",
+        "tooltip": "Remove node_modules and rebuild frontend",
+        "color": "lightseagreen",
+        "command": "nix-shell --run 'rebuild-frontend'",
+        "singleInstance": true
+      },
+      {
+        "name": "$(server) Rebuild Backend",
+        "tooltip": "Rebuild and restart backend containers",
+        "color": "lightblue",
+        "command": "nix-shell --run 'rebuild-backend'",
+        "singleInstance": true
+      },
+      {
+        "name": "$(beaker) Pytest Minimal Log",
+        "tooltip": "Run pytest with minimal logging to test_report.txt",
+        "color": "cyan",
+        "command": "nix-shell --run 'pytest-minimal-log'",
+        "singleInstance": true
+      },
+      {
+        "name": "$(tools) Lint Fix",
+        "tooltip": "Run black and pylint auto-fix",
         "color": "lightgreen",
-        "command": "SimpleDevOpsToolkit --quick-deploy",
+        "command": "nix-shell --run 'lint-fix'",
         "singleInstance": true
       },
-      // Button 3: Quick Deploy (Remote)
       {
-        "name": "$(cloud-upload) Remote Deploy", // $(cloud-upload) icon
-        "tooltip": "Run: SimpleDevOpsToolkit --remote --quick-deploy",
+        "name": "$(shield) Security Scan",
+        "tooltip": "Run Trivy security scan",
         "color": "orange",
-        "command": "SimpleDevOpsToolkit --remote --quick-deploy",
-        "singleInstance": true
-      },
-      // Updated log buttons
-      {
-        "name": "$(output) Logs: Bot", // Renamed from Main
-        "tooltip": "View last 50 lines for foundrycord-bot",
-        "color": "lightblue",
-        "command": "SimpleDevOpsToolkit --logs=foundrycord-bot --lines=50", // Use actual name
-        "singleInstance": true
-      },
-      { // Added Web Logs button
-        "name": "$(browser) Logs: Web", // $(browser) icon
-        "tooltip": "View last 50 lines for foundrycord-web",
-        "color": "lightseagreen", // Different color
-        "command": "SimpleDevOpsToolkit --logs=foundrycord-web --lines=50",
+        "command": "nix-shell --run 'trivy'",
         "singleInstance": true
       },
       {
-        "name": "$(database) Logs: DB", // $(database) icon
-        "tooltip": "View last 50 lines for foundrycord-db",
-        "color": "lightcoral",
-        "command": "SimpleDevOpsToolkit --logs=foundrycord-db --lines=50", // Use actual name
+        "name": "$(trash) Clean All",
+        "tooltip": "Clean all caches and artifacts",
+        "color": "tomato",
+        "command": "nix-shell --run 'close-kill-clean-all'",
         "singleInstance": true
-      },
-      {
-        "name": "$(output) Follow: Bot", // Renamed from Main
-        "tooltip": "Follow logs for foundrycord-bot",
-        "color": "lightblue",
-        "command": "SimpleDevOpsToolkit --logs=foundrycord-bot --follow", // Use actual name
-        "singleInstance": true // Important: follow needs its own terminal
-      },
-      {
-        "name": "$(stop) Safe Down+Vols", // $(stop) icon
-        "tooltip": "Run: SimpleDevOpsToolkit --safe-down-volumes (Stops containers, removes volumes)",
-        "color": "tomato", // A warning-like color
-        "command": "SimpleDevOpsToolkit --safe-down-volumes",
-        "singleInstance": true 
       }
-      // Optionally add Follow: Web button here if needed
     ]
   }
 

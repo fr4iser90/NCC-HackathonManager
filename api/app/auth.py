@@ -17,17 +17,22 @@ from passlib.context import CryptContext
 # Only use NEXTAUTH_SECRET, fail if not set
 NEXTAUTH_SECRET = os.getenv("NEXTAUTH_SECRET")
 if not NEXTAUTH_SECRET:
-    raise RuntimeError("NEXTAUTH_SECRET must be set in the backend environment for authentication to work.")
+    raise RuntimeError(
+        "NEXTAUTH_SECRET must be set in the backend environment for authentication to work."
+    )
 
 ALGORITHM = "HS256"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
+
 def get_password_hash(password):
     return pwd_context.hash(password)
+
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -39,12 +44,17 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, NEXTAUTH_SECRET, algorithm=ALGORITHM)
     return encoded_jwt
 
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
+
 
 class TokenData(BaseModel):
     user_id: Optional[str] = None
 
-def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+
+def get_current_user(
+    db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)
+):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -65,266 +75,338 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
         raise credentials_exception
     return user
 
+
 def get_current_user_or_admin_for_profile_update(
     user_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> User:
     target_user = db.query(User).filter(User.id == user_id).first()
     if not target_user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-    is_admin = any(r.role == "admin" for r in getattr(current_user, 'roles_association', []))
+    is_admin = any(
+        r.role == "admin" for r in getattr(current_user, "roles_association", [])
+    )
     if current_user.id == target_user.id or is_admin:
         return target_user
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="Not authorized to update this user's profile"
+        detail="Not authorized to update this user's profile",
     )
 
+
 # --- Team Authorization Dependencies ---
+
 
 def get_team_owner_or_admin(
     team_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> Union[TeamMember, None]:
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Team not found"
+        )
 
-    membership = db.query(TeamMember).filter(
-        TeamMember.team_id == team_id,
-        TeamMember.user_id == current_user.id
-    ).first()
+    membership = (
+        db.query(TeamMember)
+        .filter(TeamMember.team_id == team_id, TeamMember.user_id == current_user.id)
+        .first()
+    )
 
-    is_admin = any(r.role == "admin" for r in getattr(current_user, 'roles_association', []))
+    is_admin = any(
+        r.role == "admin" for r in getattr(current_user, "roles_association", [])
+    )
     if is_admin:
         return membership
 
     if not membership or membership.role != TeamMemberRole.owner:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User is not the team owner or an administrator."
+            detail="User is not the team owner or an administrator.",
         )
     return membership
+
 
 def get_team_member_or_admin(
     team_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> Union[TeamMember, None]:
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Team not found"
+        )
 
-    membership = db.query(TeamMember).filter(
-        TeamMember.team_id == team_id,
-        TeamMember.user_id == current_user.id
-    ).first()
+    membership = (
+        db.query(TeamMember)
+        .filter(TeamMember.team_id == team_id, TeamMember.user_id == current_user.id)
+        .first()
+    )
 
-    is_admin = any(r.role == "admin" for r in getattr(current_user, 'roles_association', []))
+    is_admin = any(
+        r.role == "admin" for r in getattr(current_user, "roles_association", [])
+    )
     if is_admin:
         return membership
 
     if not membership:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User is not a member of this team or an administrator."
+            detail="User is not a member of this team or an administrator.",
         )
     return membership
+
 
 def ensure_is_team_member(
     team_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> TeamMember:
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Team not found"
+        )
 
-    membership = db.query(TeamMember).filter(
-        TeamMember.team_id == team_id,
-        TeamMember.user_id == current_user.id
-    ).first()
+    membership = (
+        db.query(TeamMember)
+        .filter(TeamMember.team_id == team_id, TeamMember.user_id == current_user.id)
+        .first()
+    )
 
     if not membership:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User is not a member of this team."
+            detail="User is not a member of this team.",
         )
     return membership
+
 
 def get_team_owner_admin_or_self_for_member_removal(
     team_id: uuid.UUID,
     user_id_to_remove: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> TeamMember:
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Team not found"
+        )
 
-    membership_to_remove = db.query(TeamMember).filter(
-        TeamMember.team_id == team_id,
-        TeamMember.user_id == user_id_to_remove
-    ).first()
+    membership_to_remove = (
+        db.query(TeamMember)
+        .filter(TeamMember.team_id == team_id, TeamMember.user_id == user_id_to_remove)
+        .first()
+    )
 
     if not membership_to_remove:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member to remove not found in this team.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member to remove not found in this team.",
+        )
 
     if current_user.id == user_id_to_remove:
         if membership_to_remove.role == TeamMemberRole.owner:
-            owner_count = db.query(TeamMember).filter(
-                TeamMember.team_id == team_id,
-                TeamMember.role == TeamMemberRole.owner
-            ).count()
+            owner_count = (
+                db.query(TeamMember)
+                .filter(
+                    TeamMember.team_id == team_id,
+                    TeamMember.role == TeamMemberRole.owner,
+                )
+                .count()
+            )
             if owner_count <= 1:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, 
-                    detail="Sole owner cannot remove themselves via this endpoint. Use leave team or delete team."
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Sole owner cannot remove themselves via this endpoint. Use leave team or delete team.",
                 )
         return membership_to_remove
 
-    if any(r.role == "admin" for r in getattr(current_user, 'roles_association', [])):
+    if any(r.role == "admin" for r in getattr(current_user, "roles_association", [])):
         return membership_to_remove
 
-    current_user_membership = db.query(TeamMember).filter(
-        TeamMember.team_id == team_id,
-        TeamMember.user_id == current_user.id
-    ).first()
+    current_user_membership = (
+        db.query(TeamMember)
+        .filter(TeamMember.team_id == team_id, TeamMember.user_id == current_user.id)
+        .first()
+    )
 
     if current_user_membership and current_user_membership.role == TeamMemberRole.owner:
         return membership_to_remove
-    
+
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="Not authorized to remove this team member."
+        detail="Not authorized to remove this team member.",
     )
 
+
 # --- Project Authorization Dependencies ---
+
 
 def get_project_team_member_or_admin(
     project_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> User:
     project = db.query(Project).filter(Project.id == project_id).first()
-    print(f"[DEBUG] get_project_team_member_or_admin: project_id={project_id}, user_id={current_user.id if current_user else None}")
+    print(
+        f"[DEBUG] get_project_team_member_or_admin: project_id={project_id}, user_id={current_user.id if current_user else None}"
+    )
     if not project:
         print(f"[DEBUG] Project not found for id {project_id}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
 
     print(f"[DEBUG] Project.team_id={project.team_id}")
-    if any(r.role == "admin" for r in getattr(current_user, 'roles_association', [])):
+    if any(r.role == "admin" for r in getattr(current_user, "roles_association", [])):
         print(f"[DEBUG] User is admin")
         return current_user
 
-    membership = db.query(TeamMember).filter(
-        TeamMember.team_id == project.team_id,
-        TeamMember.user_id == current_user.id
-    ).first()
+    membership = (
+        db.query(TeamMember)
+        .filter(
+            TeamMember.team_id == project.team_id, TeamMember.user_id == current_user.id
+        )
+        .first()
+    )
     print(f"[DEBUG] Membership found: {membership}")
     if not membership:
-        print(f"[DEBUG] User is not a member of the project's team or an administrator.")
+        print(
+            f"[DEBUG] User is not a member of the project's team or an administrator."
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User is not a member of the project's team or an administrator."
+            detail="User is not a member of the project's team or an administrator.",
         )
     return current_user
+
 
 def get_project_team_owner_or_admin(
     project_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> Union[TeamMember, None]:
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
 
-    if any(r.role == "admin" for r in getattr(current_user, 'roles_association', [])):
-        membership = db.query(TeamMember).filter(
-            TeamMember.team_id == project.team_id,
-            TeamMember.user_id == current_user.id,
-        ).first()
+    if any(r.role == "admin" for r in getattr(current_user, "roles_association", [])):
+        membership = (
+            db.query(TeamMember)
+            .filter(
+                TeamMember.team_id == project.team_id,
+                TeamMember.user_id == current_user.id,
+            )
+            .first()
+        )
         return membership
 
-    membership = db.query(TeamMember).filter(
-        TeamMember.team_id == project.team_id,
-        TeamMember.user_id == current_user.id,
-        TeamMember.role == TeamMemberRole.owner
-    ).first()
+    membership = (
+        db.query(TeamMember)
+        .filter(
+            TeamMember.team_id == project.team_id,
+            TeamMember.user_id == current_user.id,
+            TeamMember.role == TeamMemberRole.owner,
+        )
+        .first()
+    )
 
     if not membership:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User is not an owner of the project's team or an administrator."
+            detail="User is not an owner of the project's team or an administrator.",
         )
-    return membership 
+    return membership
+
 
 def get_submission_owner_project_team_member_or_admin(
     submission_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> Submission:
     submission = db.query(Submission).filter(Submission.id == submission_id).first()
     if not submission:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
+        )
 
     if submission.user_id == current_user.id:
         return submission
 
-    if any(r.role == "admin" for r in getattr(current_user, 'roles_association', [])):
+    if any(r.role == "admin" for r in getattr(current_user, "roles_association", [])):
         return submission
 
     project = db.query(Project).filter(Project.id == submission.project_id).first()
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project associated with submission not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project associated with submission not found",
+        )
 
-    team_membership = db.query(TeamMember).filter(
-        TeamMember.team_id == project.team_id,
-        TeamMember.user_id == current_user.id
-    ).first()
+    team_membership = (
+        db.query(TeamMember)
+        .filter(
+            TeamMember.team_id == project.team_id, TeamMember.user_id == current_user.id
+        )
+        .first()
+    )
 
     if team_membership:
         return submission
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="User is not the submitter, a member of the project's team, or an administrator."
+        detail="User is not the submitter, a member of the project's team, or an administrator.",
     )
+
 
 def get_submission_owner_project_team_owner_or_admin(
     submission_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> Submission:
     submission = db.query(Submission).filter(Submission.id == submission_id).first()
     if not submission:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
+        )
 
     if submission.user_id == current_user.id:
         return submission
 
-    if any(r.role == "admin" for r in getattr(current_user, 'roles_association', [])):
+    if any(r.role == "admin" for r in getattr(current_user, "roles_association", [])):
         return submission
 
     project = db.query(Project).filter(Project.id == submission.project_id).first()
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project associated with submission not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project associated with submission not found",
+        )
 
-    team_ownership = db.query(TeamMember).filter(
-        TeamMember.team_id == project.team_id,
-        TeamMember.user_id == current_user.id,
-        TeamMember.role == TeamMemberRole.owner
-    ).first()
+    team_ownership = (
+        db.query(TeamMember)
+        .filter(
+            TeamMember.team_id == project.team_id,
+            TeamMember.user_id == current_user.id,
+            TeamMember.role == TeamMemberRole.owner,
+        )
+        .first()
+    )
 
     if team_ownership:
         return submission
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="User is not the submitter, an owner of the project's team, or an administrator."
+        detail="User is not the submitter, an owner of the project's team, or an administrator.",
     )

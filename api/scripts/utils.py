@@ -3,22 +3,34 @@ import sys
 from typing import Optional, Tuple, List
 from app.logger import BuildLogger
 
+
 class ScriptError(Exception):
     """Custom exception for script errors."""
+
     pass
+
 
 def get_logger(project_id: str = "unknown", version_id: str = "unknown") -> BuildLogger:
     """Return a BuildLogger instance for consistent logging."""
     return BuildLogger(project_id, version_id)
 
+
 class DockerHelper:
     """Helper class for common Docker operations."""
 
     @staticmethod
-    def run_command(cmd: List[str], cwd: Optional[str] = None, timeout: int = 120) -> Tuple[int, str]:
+    def run_command(
+        cmd: List[str], cwd: Optional[str] = None, timeout: int = 120
+    ) -> Tuple[int, str]:
         """Run a shell command and return (exit_code, output)."""
         try:
-            proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            proc = subprocess.Popen(
+                cmd,
+                cwd=cwd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
             out, _ = proc.communicate(timeout=timeout)
             return proc.returncode, out
         except subprocess.TimeoutExpired:
@@ -28,14 +40,18 @@ class DockerHelper:
             return 2, f"Command failed: {e}"
 
     @staticmethod
-    def build_image(path: str, tag: str, logger: Optional[BuildLogger] = None) -> Tuple[int, str]:
+    def build_image(
+        path: str, tag: str, logger: Optional[BuildLogger] = None
+    ) -> Tuple[int, str]:
         cmd = ["docker", "build", "-t", tag, path]
         if logger:
             logger.log_debug(f"Running: {' '.join(cmd)}")
         return DockerHelper.run_command(cmd, cwd=path)
 
     @staticmethod
-    def tag_image(source: str, target: str, logger: Optional[BuildLogger] = None) -> Tuple[int, str]:
+    def tag_image(
+        source: str, target: str, logger: Optional[BuildLogger] = None
+    ) -> Tuple[int, str]:
         cmd = ["docker", "tag", source, target]
         if logger:
             logger.log_debug(f"Running: {' '.join(cmd)}")

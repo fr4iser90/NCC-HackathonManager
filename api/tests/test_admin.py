@@ -1,11 +1,19 @@
 import pytest
 import uuid
 
+
 @pytest.fixture
 def admin_token(client, admin_user_data):
-    response = client.post("/users/login", data={"email": admin_user_data["email"], "password": admin_user_data["password"]})
+    response = client.post(
+        "/users/login",
+        data={
+            "email": admin_user_data["email"],
+            "password": admin_user_data["password"],
+        },
+    )
     assert response.status_code == 200, f"Login failed: {response.text}"
     return response.json()["access_token"]
+
 
 def test_admin_full_crud_and_security(client, admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
@@ -27,7 +35,7 @@ def test_admin_full_crud_and_security(client, admin_token):
         "end_date": "2030-01-02T00:00:00Z",
         "status": "upcoming",
         "location": "",
-        "organizer_id": admin_id
+        "organizer_id": admin_id,
     }
     r = client.post("/hackathons/", headers=headers, json=hackathon_data)
     assert r.status_code == 201, f"Create hackathon failed: {r.text}"
@@ -39,7 +47,11 @@ def test_admin_full_crud_and_security(client, admin_token):
     assert r.status_code in (200, 204), f"Update hackathon failed: {r.text}"
 
     # Admin kann Team anlegen und löschen
-    team_data = {"name": f"AdminTeam_{uuid.uuid4()}", "description": "desc", "hackathon_id": hackathon_id}
+    team_data = {
+        "name": f"AdminTeam_{uuid.uuid4()}",
+        "description": "desc",
+        "hackathon_id": hackathon_id,
+    }
     r = client.post("/teams/", headers=headers, json=team_data)
     assert r.status_code == 201, f"Create team failed: {r.text}"
     team_id = r.json()["id"]
@@ -52,7 +64,7 @@ def test_admin_full_crud_and_security(client, admin_token):
         "description": "desc",
         "hackathon_id": hackathon_id,
         "status": "active",
-        "storage_type": "github"
+        "storage_type": "github",
     }
     r = client.post("/projects/", headers=headers, json=project_data)
     assert r.status_code == 201, f"Create project failed: {r.text}"
@@ -61,7 +73,12 @@ def test_admin_full_crud_and_security(client, admin_token):
     assert r.status_code == 204, f"Delete project failed: {r.text}"
 
     # Admin kann Judging-Kriterien anlegen
-    criterion = {"name": "AdminKriterium", "description": "desc", "max_score": 10, "weight": 1.0}
+    criterion = {
+        "name": "AdminKriterium",
+        "description": "desc",
+        "max_score": 10,
+        "weight": 1.0,
+    }
     r = client.post("/judging/criteria/", headers=headers, json=criterion)
     assert r.status_code == 201, f"Create criterion failed: {r.text}"
 

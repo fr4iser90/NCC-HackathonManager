@@ -7,11 +7,18 @@ import logging
 logger = logging.getLogger("test_data")
 
 # Adjust path to allow imports from the 'app' directory
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.database import SessionLocal
 from app.models.user import User, UserRole, UserRoleAssociation
-from app.models.team import Team, TeamMember, TeamMemberRole, JoinRequest, JoinRequestStatus, TeamStatus
+from app.models.team import (
+    Team,
+    TeamMember,
+    TeamMemberRole,
+    JoinRequest,
+    JoinRequestStatus,
+    TeamStatus,
+)
 from app.models.team import TeamInvite, TeamInviteStatus
 from app.models.project import Project
 from app.models.judging import Criterion, Score
@@ -23,28 +30,72 @@ from app.models.hackathon_registration import HackathonRegistration
 
 # --- Judging Criteria ---
 CRITERIA = [
-    {"name": "Innovation", "description": "How innovative is the project?", "max_score": 10, "weight": 1.0},
-    {"name": "Technical Quality", "description": "How technically sound is the project?", "max_score": 10, "weight": 1.0},
+    {
+        "name": "Innovation",
+        "description": "How innovative is the project?",
+        "max_score": 10,
+        "weight": 1.0,
+    },
+    {
+        "name": "Technical Quality",
+        "description": "How technically sound is the project?",
+        "max_score": 10,
+        "weight": 1.0,
+    },
 ]
 
 # --- Testdaten ---
 USERS = [
-    {"email": "admin@example.com", "username": "admin", "role": UserRole.ADMIN, "password": "adminpass", "github_id": "admin-github"},
-    {"email": "judge@example.com", "username": "judge", "role": UserRole.JUDGE, "password": "judgepass", "github_id": "judge-github"},
-    {"email": "mentor@example.com", "username": "mentor", "role": UserRole.MENTOR, "password": "mentorpass", "github_id": "mentor-github"},
-    {"email": "user1@example.com", "username": "user1", "role": UserRole.PARTICIPANT, "password": "userpass1", "github_id": "user1-github"},
-    {"email": "user2@example.com", "username": "user2", "role": UserRole.PARTICIPANT, "password": "userpass2", "github_id": "user2-github"},
+    {
+        "email": "admin@example.com",
+        "username": "admin",
+        "role": UserRole.ADMIN,
+        "password": "adminpass",
+        "github_id": "admin-github",
+    },
+    {
+        "email": "judge@example.com",
+        "username": "judge",
+        "role": UserRole.JUDGE,
+        "password": "judgepass",
+        "github_id": "judge-github",
+    },
+    {
+        "email": "mentor@example.com",
+        "username": "mentor",
+        "role": UserRole.MENTOR,
+        "password": "mentorpass",
+        "github_id": "mentor-github",
+    },
+    {
+        "email": "user1@example.com",
+        "username": "user1",
+        "role": UserRole.PARTICIPANT,
+        "password": "userpass1",
+        "github_id": "user1-github",
+    },
+    {
+        "email": "user2@example.com",
+        "username": "user2",
+        "role": UserRole.PARTICIPANT,
+        "password": "userpass2",
+        "github_id": "user2-github",
+    },
 ]
 
 # Teams are now defined per hackathon
 TEAMS = {
     "Solo Hackathon": [
-        {"name": "Solo Team 1", "description": "A solo participant team", "is_open": True},
+        {
+            "name": "Solo Team 1",
+            "description": "A solo participant team",
+            "is_open": True,
+        },
     ],
     "Team Hackathon": [
         {"name": "Open Team", "description": "A public team", "is_open": True},
         {"name": "Closed Team", "description": "A private team", "is_open": False},
-    ]
+    ],
 }
 
 HACKATHONS = [
@@ -75,7 +126,7 @@ HACKATHONS = [
         "voting_start": datetime(2025, 5, 4, 10, 0),
         "voting_end": datetime(2025, 5, 11, 18, 0),
         "anonymous_votes": True,
-        "allow_multiple_votes": False
+        "allow_multiple_votes": False,
     },
     {
         "name": "Team Hackathon",
@@ -94,7 +145,7 @@ HACKATHONS = [
         "voting_start": datetime(2025, 6, 4, 10, 0),
         "voting_end": datetime(2025, 6, 11, 18, 0),
         "anonymous_votes": False,
-        "allow_multiple_votes": False
+        "allow_multiple_votes": False,
     },
     {
         "name": "Hackathon Completed",
@@ -108,7 +159,7 @@ HACKATHONS = [
         "voting_start": datetime(2025, 9, 4, 10, 0),
         "voting_end": datetime(2025, 9, 11, 18, 0),
         "anonymous_votes": True,
-        "allow_multiple_votes": True
+        "allow_multiple_votes": True,
     },
     {
         "name": "Hackathon Archived",
@@ -122,7 +173,7 @@ HACKATHONS = [
         "voting_start": datetime(2025, 12, 4, 10, 0),
         "voting_end": datetime(2025, 12, 11, 18, 0),
         "anonymous_votes": True,
-        "allow_multiple_votes": True
+        "allow_multiple_votes": True,
     },
 ]
 
@@ -130,6 +181,7 @@ PROJECTS = [
     {"name": "Test Project 1", "description": "Demo project 1", "status": "ACTIVE"},
     {"name": "Test Project 2", "description": "Demo project 2", "status": "DRAFT"},
 ]
+
 
 def main():
     db = SessionLocal()
@@ -146,14 +198,18 @@ def main():
                     full_name=u.get("full_name"),
                     github_id=u.get("github_id"),
                     avatar_url=u.get("avatar_url"),
-                    is_active=True
+                    is_active=True,
                 )
                 db.add(user)
                 db.commit()
                 db.refresh(user)
             # Rolle setzen, falls noch nicht vorhanden
             if u.get("role"):
-                has_role = db.query(UserRoleAssociation).filter_by(user_id=user.id, role=u["role"]).first()
+                has_role = (
+                    db.query(UserRoleAssociation)
+                    .filter_by(user_id=user.id, role=u["role"])
+                    .first()
+                )
                 if not has_role:
                     db.add(UserRoleAssociation(user_id=user.id, role=u["role"]))
                     db.commit()
@@ -186,7 +242,9 @@ def main():
                     prizes=h.get("prizes"),
                     contact_email=h.get("contact_email"),
                     allow_individuals=h.get("allow_individuals", True),
-                    allow_multiple_projects_per_team=h.get("allow_multiple_projects_per_team", False),
+                    allow_multiple_projects_per_team=h.get(
+                        "allow_multiple_projects_per_team", False
+                    ),
                     custom_fields=h.get("custom_fields"),
                     voting_type=h.get("voting_type", "judges_only"),
                     judging_criteria=h.get("judging_criteria"),
@@ -206,7 +264,11 @@ def main():
         for hackathon_name, teams in TEAMS.items():
             hackathon = hackathon_objs[hackathon_name]
             for t in teams:
-                team = db.query(Team).filter_by(name=t["name"], hackathon_id=hackathon.id).first()
+                team = (
+                    db.query(Team)
+                    .filter_by(name=t["name"], hackathon_id=hackathon.id)
+                    .first()
+                )
                 if not team:
                     team = Team(
                         id=uuid.uuid4(),
@@ -214,7 +276,7 @@ def main():
                         description=t["description"],
                         is_open=t["is_open"],
                         hackathon_id=hackathon.id,
-                        status=TeamStatus.active
+                        status=TeamStatus.active,
                     )
                     db.add(team)
                     db.commit()
@@ -227,14 +289,36 @@ def main():
         # Judge is owner of Closed Team in Team Hackathon
         # user1 is member in both teams in Team Hackathon
         members = [
-            (team_objs["Team Hackathon_Open Team"], user_objs["admin"], TeamMemberRole.owner),
-            (team_objs["Team Hackathon_Closed Team"], user_objs["judge"], TeamMemberRole.owner),
-            (team_objs["Team Hackathon_Open Team"], user_objs["user1"], TeamMemberRole.member),
-            (team_objs["Team Hackathon_Closed Team"], user_objs["user1"], TeamMemberRole.member),
-            (team_objs["Solo Hackathon_Solo Team 1"], user_objs["user1"], TeamMemberRole.owner),
+            (
+                team_objs["Team Hackathon_Open Team"],
+                user_objs["admin"],
+                TeamMemberRole.owner,
+            ),
+            (
+                team_objs["Team Hackathon_Closed Team"],
+                user_objs["judge"],
+                TeamMemberRole.owner,
+            ),
+            (
+                team_objs["Team Hackathon_Open Team"],
+                user_objs["user1"],
+                TeamMemberRole.member,
+            ),
+            (
+                team_objs["Team Hackathon_Closed Team"],
+                user_objs["user1"],
+                TeamMemberRole.member,
+            ),
+            (
+                team_objs["Solo Hackathon_Solo Team 1"],
+                user_objs["user1"],
+                TeamMemberRole.owner,
+            ),
         ]
         for team, user, role in members:
-            exists = db.query(TeamMember).filter_by(team_id=team.id, user_id=user.id).first()
+            exists = (
+                db.query(TeamMember).filter_by(team_id=team.id, user_id=user.id).first()
+            )
             if not exists:
                 db.add(TeamMember(team_id=team.id, user_id=user.id, role=role))
         db.commit()
@@ -245,8 +329,8 @@ def main():
         # Projects for different hackathons
         project_defs = [
             {
-                "name": "Docker Web App", 
-                "description": "Full stack web application in Docker", 
+                "name": "Docker Web App",
+                "description": "Full stack web application in Docker",
                 "status": ProjectStatus.ACTIVE,
                 "storage_type": ProjectStorageType.DOCKER_HYBRID,
                 "hackathon": hackathon_objs["Team Hackathon"],
@@ -256,11 +340,11 @@ def main():
                 "docker_url": "https://docker.hackathon.com/webapp1",
                 "docker_image": "hackathon/webapp1",
                 "docker_tag": "latest",
-                "docker_registry": "hackathon-registry.com"
+                "docker_registry": "hackathon-registry.com",
             },
             {
-                "name": "Kubernetes Microservice", 
-                "description": "Microservice running on K8s", 
+                "name": "Kubernetes Microservice",
+                "description": "Microservice running on K8s",
                 "status": ProjectStatus.DEPLOYED,
                 "storage_type": ProjectStorageType.KUBERNETES,
                 "hackathon": hackathon_objs["Team Hackathon"],
@@ -268,22 +352,22 @@ def main():
                 "owner_id": user_objs["judge"].id,
                 "kubernetes_url": "https://k8s.hackathon.com/microservice1",
                 "docker_image": "hackathon/microservice1",
-                "docker_tag": "v1.0.0"
+                "docker_tag": "v1.0.0",
             },
             {
-                "name": "Cloud Native App", 
-                "description": "Deployed to cloud", 
+                "name": "Cloud Native App",
+                "description": "Deployed to cloud",
                 "status": ProjectStatus.DEPLOYED,
                 "storage_type": ProjectStorageType.CLOUD,
                 "hackathon": hackathon_objs["Solo Hackathon"],
                 "user_id": user_objs["user1"].id,
                 "owner_id": user_objs["user1"].id,
                 "cloud_url": "https://app.hackathon.com",
-                "github_url": "https://github.com/hackathon/cloudapp1"
+                "github_url": "https://github.com/hackathon/cloudapp1",
             },
             {
-                "name": "Archived Docker Project", 
-                "description": "Docker image archived", 
+                "name": "Archived Docker Project",
+                "description": "Docker image archived",
                 "status": ProjectStatus.ARCHIVED,
                 "storage_type": ProjectStorageType.DOCKER_ARCHIVE,
                 "hackathon": hackathon_objs["Hackathon Completed"],
@@ -291,18 +375,18 @@ def main():
                 "owner_id": user_objs["admin"].id,
                 "docker_archive_url": "https://storage.hackathon.com/docker/archived1.tar",
                 "docker_image": "hackathon/archived1",
-                "docker_tag": "archive"
+                "docker_tag": "archive",
             },
             {
-                "name": "GitLab Project", 
-                "description": "Stored on GitLab", 
+                "name": "GitLab Project",
+                "description": "Stored on GitLab",
                 "status": ProjectStatus.ACTIVE,
                 "storage_type": ProjectStorageType.GITLAB,
                 "hackathon": hackathon_objs["Team Hackathon"],
                 "team_id": team_objs["Team Hackathon_Closed Team"].id,
                 "owner_id": user_objs["judge"].id,
-                "gitlab_url": "https://gitlab.com/hackathon/project1"
-            }
+                "gitlab_url": "https://gitlab.com/hackathon/project1",
+            },
         ]
 
         for p_def in project_defs:
@@ -327,7 +411,7 @@ def main():
                 backup_url=p_def.get("backup_url"),
                 docker_image=p_def.get("docker_image"),
                 docker_tag=p_def.get("docker_tag"),
-                docker_registry=p_def.get("docker_registry")
+                docker_registry=p_def.get("docker_registry"),
             )
             db.add(project)
             db.commit()
@@ -339,7 +423,7 @@ def main():
                 project_id=project.id,
                 user_id=p_def.get("user_id"),
                 team_id=p_def.get("team_id"),
-                status="registered"
+                status="registered",
             )
             db.add(registration)
             db.commit()
@@ -371,7 +455,13 @@ def main():
         judge = user_objs["judge"]
         project = project_objs["Docker Web App"]
         for crit in crit_objs.values():
-            score = db.query(Score).filter_by(judge_id=judge.id, project_id=project.id, criteria_id=crit.id).first()
+            score = (
+                db.query(Score)
+                .filter_by(
+                    judge_id=judge.id, project_id=project.id, criteria_id=crit.id
+                )
+                .first()
+            )
             if not score:
                 score = Score(
                     id=uuid.uuid4(),
@@ -390,6 +480,7 @@ def main():
         logger.info("Test data setup complete.")
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     main()

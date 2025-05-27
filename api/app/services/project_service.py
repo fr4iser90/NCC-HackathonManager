@@ -1,6 +1,7 @@
 """
 Service layer for project-related business logic.
 """
+
 from sqlalchemy.orm import Session
 from app.models.project import Project, ProjectVersion, ProjectTemplate
 from app.models.user import User
@@ -14,7 +15,10 @@ from app.logger import get_logger
 
 logger = get_logger("project_service")
 
-def create_project(db: Session, project_in: ProjectCreate, current_user: User) -> Project:
+
+def create_project(
+    db: Session, project_in: ProjectCreate, current_user: User
+) -> Project:
     """
     Create a new project instance and persist it to the database.
     """
@@ -39,14 +43,21 @@ def create_project(db: Session, project_in: ProjectCreate, current_user: User) -
         docker_tag=project_in.docker_tag,
         docker_registry=project_in.docker_registry,
         owner_id=current_user.id,
-        team_id=project_in.team_id
+        team_id=project_in.team_id,
     )
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
     return db_project
 
-def submit_project_version(db: Session, project_id: str, file: UploadFile, version_notes: Optional[str], current_user: User) -> ProjectVersion:
+
+def submit_project_version(
+    db: Session,
+    project_id: str,
+    file: UploadFile,
+    version_notes: Optional[str],
+    current_user: User,
+) -> ProjectVersion:
     """
     Handle the submission of a new project version, including file storage and build process.
     """
@@ -57,7 +68,7 @@ def submit_project_version(db: Session, project_id: str, file: UploadFile, versi
     project = db.query(Project).filter(Project.id == project_uuid).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if not file.filename.endswith('.zip'):
+    if not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="Only ZIP files are allowed")
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     filename = f"version_{timestamp}_{uuid.uuid4()}.zip"
@@ -70,11 +81,11 @@ def submit_project_version(db: Session, project_id: str, file: UploadFile, versi
     version = ProjectVersion(
         id=uuid.uuid4(),
         project_id=project_uuid,
-        version_number=len(project.versions) + 1 if hasattr(project, 'versions') else 1,
+        version_number=len(project.versions) + 1 if hasattr(project, "versions") else 1,
         file_path=filename,
         version_notes=version_notes,
         submitted_by=current_user.id,
-        status="pending"
+        status="pending",
     )
     db.add(version)
     db.commit()
@@ -82,27 +93,38 @@ def submit_project_version(db: Session, project_id: str, file: UploadFile, versi
     db.refresh(version)
     temp_dir = tempfile.mkdtemp()
     try:
-        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+        with zipfile.ZipFile(file_path, "r") as zip_ref:
             zip_ref.extractall(temp_dir)
         build_script = os.path.join(SCRIPTS_DIR, "build_image.py")
         # Use project name from ZIP filename (without .zip), username/email, and version number
         project_name = os.path.splitext(os.path.basename(file.filename))[0]
-        user_name = getattr(current_user, "username", None) or getattr(current_user, "email", None) or "unknown"
+        user_name = (
+            getattr(current_user, "username", None)
+            or getattr(current_user, "email", None)
+            or "unknown"
+        )
         version_str = str(version.version_number)
         process = subprocess.run(
             [
-                "python3", build_script,
-                "--project-path", temp_dir,
-                "--project-name", project_name,
-                "--user-name", user_name,
-                "--version", version_str
+                "python3",
+                build_script,
+                "--project-path",
+                temp_dir,
+                "--project-name",
+                project_name,
+                "--user-name",
+                user_name,
+                "--version",
+                version_str,
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
-            check=False
+            check=False,
         )
-        build_output = process.stdout if process.stdout else "No output from build process"
+        build_output = (
+            process.stdout if process.stdout else "No output from build process"
+        )
         if process.returncode == 0:
             version.status = "built"
             project.status = "built"
@@ -119,7 +141,9 @@ def submit_project_version(db: Session, project_id: str, file: UploadFile, versi
         db.commit()
         db.expire_all()
         db.refresh(version)
-        raise HTTPException(status_code=400, detail="Uploaded file is not a valid ZIP archive.")
+        raise HTTPException(
+            status_code=400, detail="Uploaded file is not a valid ZIP archive."
+        )
     except Exception as e:
         version.status = "failed"
         version.build_logs = f"Build failed: {str(e)}"

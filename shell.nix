@@ -460,10 +460,26 @@ pkgs.mkShell {
     kill-frontend-port() {
       local port=$(get-frontend-port)
       echo "Checking for processes using frontend port $port..."
+      
+      # First try: Kill by port
       kill_port_process "$port"
-      # If first attempt failed, try with force
+      
+      # Second try: Kill specific Next.js processes if port is still in use
       if is_port_in_use "$port"; then
-        echo "First attempt failed, trying force kill..."
+        echo "Port still in use, checking for Next.js processes..."
+        local next_pids=$(ps aux | grep -i "next dev" | grep -v grep | awk '{print $2}')
+        if [ -n "$next_pids" ]; then
+          echo "Found Next.js processes: $next_pids"
+          for pid in $next_pids; do
+            kill "$pid" 2>/dev/null
+          done
+          sleep 1
+        fi
+      fi
+      
+      # Final try: Force kill if still in use
+      if is_port_in_use "$port"; then
+        echo "Still in use, trying force kill..."
         kill_port_process "$port" "force"
       fi
     }
@@ -557,6 +573,15 @@ pkgs.mkShell {
 
     trivy() {
       nix-shell -p trivy --run "trivy fs --scanners vuln,secret,misconfig --exit-code 0 --format table --ignore-unfixed ."
+    }
+
+    lint-fix() {
+      echo "Running black auto-fix..."
+      black .
+      echo "Running pylint auto-fix..."
+      pylint --generate-rcfile > .pylintrc
+      pylint --disable=C0111,C0103,C0303,W0311,W0603,W0621,R0903,R0913,R0914,R0915 --output-format=colorized .
+      echo "Linting complete!"
     }
 
     close-kill-clean-all() {
