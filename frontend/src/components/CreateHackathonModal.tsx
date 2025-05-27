@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import axiosInstance from '../lib/axiosInstance';
 
@@ -19,11 +19,32 @@ export default function CreateHackathonModal({
 }: CreateHackathonModalProps) {
   const { data: session, status } = useSession();
 
+  // Get current date and set default times
+  const getDefaultDates = () => {
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setHours(18, 0, 0, 0);
+    
+    const endDate = new Date(startDate);
+    endDate.setHours(20, 0, 0, 0);
+    
+    const registrationDate = new Date(startDate);
+    registrationDate.setDate(registrationDate.getDate() - 1); // One day before start
+    
+    return {
+      start: startDate.toISOString().slice(0, 16),
+      end: endDate.toISOString().slice(0, 16),
+      registration: registrationDate.toISOString().slice(0, 16)
+    };
+  };
+
+  const defaultDates = getDefaultDates();
+
   // Basic fields
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(defaultDates.start);
+  const [endDate, setEndDate] = useState(defaultDates.end);
   const [mode, setMode] = useState<HackathonMode>('SOLO_ONLY');
   const [location, setLocation] = useState('');
   const [requirements, setRequirements] = useState('');
@@ -31,7 +52,7 @@ export default function CreateHackathonModal({
   const [tags, setTags] = useState('');
   const [maxTeamSize, setMaxTeamSize] = useState('');
   const [minTeamSize, setMinTeamSize] = useState('');
-  const [registrationDeadline, setRegistrationDeadline] = useState('');
+  const [registrationDeadline, setRegistrationDeadline] = useState(defaultDates.registration);
   const [isPublic, setIsPublic] = useState(true);
   const [bannerImageUrl, setBannerImageUrl] = useState('');
   const [rulesUrl, setRulesUrl] = useState('');
@@ -45,6 +66,21 @@ export default function CreateHackathonModal({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Update registration deadline and end date when start date changes
+  useEffect(() => {
+    const start = new Date(startDate);
+    
+    // Update registration deadline (1 day before start)
+    const registration = new Date(start);
+    registration.setDate(registration.getDate() - 1);
+    setRegistrationDeadline(registration.toISOString().slice(0, 16));
+    
+    // Update end date (2 hours after start)
+    const end = new Date(start);
+    end.setHours(end.getHours() + 2);
+    setEndDate(end.toISOString().slice(0, 16));
+  }, [startDate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -53,8 +89,18 @@ export default function CreateHackathonModal({
       setError('Please fill in all required fields.');
       return;
     }
-    if (new Date(startDate) >= new Date(endDate)) {
-      setError('Start date must be before end date.');
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const registration = new Date(registrationDeadline);
+
+    if (end <= start) {
+      setError('End date must be after start date.');
+      return;
+    }
+
+    if (registration >= start) {
+      setError('Registration deadline must be before start date.');
       return;
     }
 
