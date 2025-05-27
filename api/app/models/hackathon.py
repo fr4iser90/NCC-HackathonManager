@@ -69,7 +69,7 @@ class Hackathon(Base):
     mode: Mapped[HackathonMode] = mapped_column(
         SQLEnum(HackathonMode, name="hackathon_mode_enum", create_type=False),
         nullable=False,
-        default=HackathonMode.SOLO_PRIMARY,
+        default=HackathonMode.SOLO_ONLY,
     )
     requirements: Mapped[List[str]] = mapped_column(JSON, default=list)
     category: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)

@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 
-type HackathonStatus = 'upcoming' | 'active' | 'completed' | 'archived';
-type HackathonMode = 'SOLO_PRIMARY' | 'TEAM_RECOMMENDED' | 'SOLO_ONLY' | 'TEAM_ONLY';
+type HackathonMode = 'SOLO_ONLY' | 'TEAM_ONLY';
 
 interface CreateHackathonModalProps {
   isOpen: boolean;
@@ -21,8 +20,7 @@ export default function CreateHackathonModal({
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [status, setStatus] = useState<HackathonStatus>('upcoming');
-  const [mode, setMode] = useState<HackathonMode>('SOLO_PRIMARY');
+  const [mode, setMode] = useState<HackathonMode>('SOLO_ONLY');
   const [location, setLocation] = useState('');
   const [requirements, setRequirements] = useState('');
   const [category, setCategory] = useState('');
@@ -71,7 +69,7 @@ export default function CreateHackathonModal({
             description: description || null,
             start_date: startDate,
             end_date: endDate,
-            status,
+            status: "upcoming",
             mode,
             location: location || null,
             requirements: requirements
@@ -107,7 +105,17 @@ export default function CreateHackathonModal({
         onClose();
       }, 1500);
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      let msg = 'An error occurred';
+      if (typeof err?.message === 'string') {
+        msg = err.message;
+      } else if (typeof err === 'object' && err !== null) {
+        if (typeof err.detail === 'string') {
+          msg = err.detail;
+        } else if (Array.isArray(err.detail) && err.detail.length > 0 && typeof err.detail[0] === 'string') {
+          msg = err.detail[0];
+        }
+      }
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -190,25 +198,8 @@ export default function CreateHackathonModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="status">
-                Status
-              </label>
-              <select
-                id="status"
-                className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as HackathonStatus)}
-                disabled={isLoading}
-              >
-                <option value="upcoming">Upcoming</option>
-                <option value="active">Active</option>
-                <option value="completed">Completed</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
-            <div>
               <label className="block text-sm font-medium mb-1" htmlFor="mode">
-                Mode
+                Mode <span className="text-red-500">*</span>
               </label>
               <select
                 id="mode"
@@ -216,11 +207,10 @@ export default function CreateHackathonModal({
                 value={mode}
                 onChange={(e) => setMode(e.target.value as HackathonMode)}
                 disabled={isLoading}
+                required
               >
-                <option value="SOLO_PRIMARY">Solo Primary</option>
-                <option value="TEAM_RECOMMENDED">Team Recommended</option>
-                <option value="SOLO_ONLY">Solo Only</option>
-                <option value="TEAM_ONLY">Team Only</option>
+                <option value="SOLO_ONLY">Solo</option>
+                <option value="TEAM_ONLY">Team</option>
               </select>
             </div>
             <div>
@@ -249,34 +239,38 @@ export default function CreateHackathonModal({
                 disabled={isLoading}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="maxTeamSize">
-                Max Team Size
-              </label>
-              <input
-                id="maxTeamSize"
-                type="number"
-                min="1"
-                className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                value={maxTeamSize}
-                onChange={(e) => setMaxTeamSize(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="minTeamSize">
-                Min Team Size
-              </label>
-              <input
-                id="minTeamSize"
-                type="number"
-                min="1"
-                className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                value={minTeamSize}
-                onChange={(e) => setMinTeamSize(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
+            {mode === "TEAM_ONLY" && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-1" htmlFor="maxTeamSize">
+                    Max Team Size
+                  </label>
+                  <input
+                    id="maxTeamSize"
+                    type="number"
+                    min="1"
+                    className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                    value={maxTeamSize}
+                    onChange={(e) => setMaxTeamSize(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" htmlFor="minTeamSize">
+                    Min Team Size
+                  </label>
+                  <input
+                    id="minTeamSize"
+                    type="number"
+                    min="1"
+                    className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                    value={minTeamSize}
+                    onChange={(e) => setMinTeamSize(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+              </>
+            )}
             <div>
               <label className="block text-sm font-medium mb-1" htmlFor="tags">
                 Tags (comma separated)

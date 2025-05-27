@@ -228,7 +228,7 @@ def main():
                     start_date=h["start_date"],
                     end_date=h["end_date"],
                     status=HackathonStatus[h["status"]],
-                    mode=h.get("mode", "TEAM_RECOMMENDED"),
+                    mode=h.get("mode", "TEAM_ONLY"),
                     requirements=h.get("requirements", []),
                     category=h.get("category"),
                     tags=h.get("tags", []),

@@ -42,7 +42,7 @@ CREATE TABLE hackathons.hackathons (
     start_date TIMESTAMPTZ NOT NULL,
     end_date TIMESTAMPTZ NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'upcoming',
-    mode VARCHAR(32) NOT NULL DEFAULT 'TEAM_RECOMMENDED',
+    mode VARCHAR(32) NOT NULL DEFAULT 'SOLO_ONLY' CHECK (mode IN ('SOLO_ONLY', 'TEAM_ONLY')),
     requirements JSONB DEFAULT '[]'::jsonb,
     category VARCHAR(64),
     tags JSONB DEFAULT '[]'::jsonb,

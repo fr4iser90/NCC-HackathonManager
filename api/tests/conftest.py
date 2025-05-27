@@ -275,7 +275,7 @@ def test_hackathon(db_session: Session, unique_id: uuid.UUID) -> Hackathon:
         start_date=datetime.now(),
         end_date=datetime.now() + timedelta(days=7),
         status=HackathonStatus.ACTIVE,
-        mode=HackathonMode.TEAM_RECOMMENDED,
+        mode=HackathonMode.TEAM_ONLY,
         max_team_size=4,
         min_team_size=1,
         is_public=True,

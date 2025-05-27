@@ -10,8 +10,6 @@ from pydantic import BaseModel, Field, model_validator  # Added model_validator
 
 
 class HackathonMode(str, enum.Enum):
-    SOLO_PRIMARY = "SOLO_PRIMARY"  # Default: Solo is primary, teams allowed
-    TEAM_RECOMMENDED = "TEAM_RECOMMENDED"  # Teams are encouraged, solo allowed
     SOLO_ONLY = "SOLO_ONLY"  # Only individuals
     TEAM_ONLY = "TEAM_ONLY"  # Only teams (min_team_size > 1)
 
@@ -31,7 +29,7 @@ class HackathonBase(BaseModel):
     status: HackathonStatus = HackathonStatus.UPCOMING
     location: Optional[str] = Field(None, max_length=255)
     organizer_id: Optional[uuid.UUID] = None
-    mode: HackathonMode = HackathonMode.SOLO_PRIMARY  # Updated to use the enum
+    mode: HackathonMode = HackathonMode.SOLO_ONLY  # Only individuals by default
     requirements: List[str] = []
     category: Optional[str] = None
     tags: Optional[List[str]] = []

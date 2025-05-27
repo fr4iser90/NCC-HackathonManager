@@ -18,7 +18,7 @@ export type Hackathon = {
   start_date: string; // ISO date string
   end_date: string; // ISO date string
   status: string; // e.g., "UPCOMING", "ACTIVE", "COMPLETED", "ARCHIVED"
-  mode: string; // e.g., "SOLO_PRIMARY", "TEAM_RECOMMENDED", "SOLO_ONLY", "TEAM_ONLY"
+  mode: string; // e.g., "SOLO_ONLY", "TEAM_ONLY"
   location?: string | null;
   organizer_id?: string | null;
   // organizer?: UserRead; // If you decide to send full organizer object
