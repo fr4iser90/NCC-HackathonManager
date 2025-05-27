@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import axiosInstance from '../lib/axiosInstance';
 
 type HackathonMode = 'SOLO_ONLY' | 'TEAM_ONLY';
 
@@ -15,6 +17,8 @@ export default function CreateHackathonModal({
   onClose,
   onSuccess,
 }: CreateHackathonModalProps) {
+  const { data: session, status } = useSession();
+
   // Basic fields
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -54,50 +58,54 @@ export default function CreateHackathonModal({
       return;
     }
 
+    if (status !== 'authenticated') {
+      setError('You must be logged in to create a hackathon.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/hackathons/`,
+      const token = (session?.user as any)?.accessToken;
+      if (!token) throw new Error('No access token found.');
+
+      const payload = {
+        name,
+        description: description || null,
+        start_date: startDate,
+        end_date: endDate,
+        status: "upcoming",
+        mode,
+        location: location || null,
+        requirements: requirements
+          ? requirements.split('\n').map((r) => r.trim()).filter(Boolean)
+          : [],
+        category: category || null,
+        tags: tags
+          ? tags.split(',').map((t) => t.trim()).filter(Boolean)
+          : [],
+        max_team_size: mode === 'TEAM_ONLY' && maxTeamSize ? Number(maxTeamSize) : null,
+        min_team_size: mode === 'TEAM_ONLY' && minTeamSize ? Number(minTeamSize) : null,
+        registration_deadline: registrationDeadline || null,
+        is_public: isPublic,
+        banner_image_url: bannerImageUrl || null,
+        rules_url: rulesUrl || null,
+        sponsor: sponsor || null,
+        prizes: prizes || null,
+        contact_email: contactEmail || null,
+        allow_individuals: allowIndividuals,
+        allow_multiple_projects_per_team: allowMultipleProjects,
+        custom_fields: null,
+      };
+
+      await axiosInstance.post(
+        '/hackathons/',
+        payload,
         {
-          method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            name,
-            description: description || null,
-            start_date: startDate,
-            end_date: endDate,
-            status: "upcoming",
-            mode,
-            location: location || null,
-            requirements: requirements
-              ? requirements.split('\n').map((r) => r.trim()).filter(Boolean)
-              : [],
-            category: category || null,
-            tags: tags
-              ? tags.split(',').map((t) => t.trim()).filter(Boolean)
-              : [],
-            max_team_size: maxTeamSize ? Number(maxTeamSize) : null,
-            min_team_size: minTeamSize ? Number(minTeamSize) : null,
-            registration_deadline: registrationDeadline || null,
-            is_public: isPublic,
-            banner_image_url: bannerImageUrl || null,
-            rules_url: rulesUrl || null,
-            sponsor: sponsor || null,
-            prizes: prizes || null,
-            contact_email: contactEmail || null,
-            allow_individuals: allowIndividuals,
-            allow_multiple_projects_per_team: allowMultipleProjects,
-            custom_fields: null,
-          }),
         }
       );
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || 'Failed to create hackathon');
-      }
       setSuccess(true);
       if (onSuccess) onSuccess();
       setTimeout(() => {
@@ -106,14 +114,14 @@ export default function CreateHackathonModal({
       }, 1500);
     } catch (err: any) {
       let msg = 'An error occurred';
-      if (typeof err?.message === 'string') {
-        msg = err.message;
-      } else if (typeof err === 'object' && err !== null) {
-        if (typeof err.detail === 'string') {
-          msg = err.detail;
-        } else if (Array.isArray(err.detail) && err.detail.length > 0 && typeof err.detail[0] === 'string') {
-          msg = err.detail[0];
+      if (err?.response?.data?.detail) {
+        if (typeof err.response.data.detail === 'string') {
+          msg = err.response.data.detail;
+        } else if (Array.isArray(err.response.data.detail) && err.response.data.detail.length > 0) {
+          msg = JSON.stringify(err.response.data.detail);
         }
+      } else if (typeof err?.message === 'string') {
+        msg = err.message;
       }
       setError(msg);
     } finally {
