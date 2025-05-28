@@ -56,24 +56,26 @@ export default function HackathonCard({ hackathon }: { hackathon: Hackathon }) {
         setIsLoadingTeams(true);
         try {
           // Fetch user's teams if not already fetched
-          // This check could be optimized if userTeams is stable from a context
           let currentTeams = userTeams;
           if (currentTeams.length === 0 && session) {
             // Fetch only if logged in and teams not loaded
-            const teamsRes = await apiFetch(
-              `${process.env.NEXT_PUBLIC_API_BASE_URL}/users/me/teams`,
-            );
-            if (teamsRes.ok) {
+            try {
+              const teamsRes = await apiFetch(
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/users/me/teams`,
+              );
               const teamsData: UserTeam[] = await teamsRes.json();
               if (isMounted) {
                 setUserTeams(teamsData);
                 currentTeams = teamsData; // Use freshly fetched data
               }
-            } else {
-              console.error(
-                'Failed to fetch user teams for card status check:',
-                teamsRes.statusText,
-              );
+            } catch (error) {
+              console.error('Error fetching user teams for card:', error);
+              // If we get an auth error, clear the teams and let the session manager handle it
+              if (isMounted) {
+                setUserTeams([]);
+              }
+              // Don't throw the error - let the session manager handle auth issues
+              return;
             }
           }
 
@@ -84,7 +86,7 @@ export default function HackathonCard({ hackathon }: { hackathon: Hackathon }) {
             );
           }
         } catch (error) {
-          console.error('Error fetching user teams for card:', error);
+          console.error('Error in registration status check:', error);
         } finally {
           if (isMounted) setIsLoadingTeams(false);
         }
@@ -93,7 +95,6 @@ export default function HackathonCard({ hackathon }: { hackathon: Hackathon }) {
       if (isMounted) {
         setIsCurrentUserRegistered(!!foundReg);
         setUserProjectId(foundReg?.project_id || null);
-        // setCurrentRegistrationDetails(foundReg || null); // Modal can handle fetching its own details if needed
       }
     };
 

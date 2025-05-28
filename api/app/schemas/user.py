@@ -20,7 +20,7 @@ class UserRead(BaseModel):
     email: EmailStr
     username: str
     full_name: str | None = None
-    roles: list[UserRole]
+    roles: list[str] # MODIFIED: Changed from list[UserRole] to list[str]
     github_id: str | None = None
     avatar_url: str | None = None
     is_active: bool = True
@@ -28,12 +28,6 @@ class UserRead(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
-
-    @classmethod
-    def from_orm(cls, user):
-        data = super().from_orm(user).__dict__
-        data["roles"] = user.roles
-        return cls(**data)
 
 
 class UserUpdate(BaseModel):

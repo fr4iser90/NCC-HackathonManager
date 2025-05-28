@@ -35,15 +35,26 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS-Konfiguration
+# Initialize logger
+logger = get_logger("hackathon_api")
+
+# CORS configuration
+origins = [
+    "http://localhost:3000",  # Frontend development server
+    "http://hackathon-frontend:3000",  # Alternative localhost
+    "http://localhost:8000",  # Backend development server
+    "http://hackathon-api:8000",  # Alternative localhost
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In Produktion einschränken
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
-
 
 # Add request logging middleware
 @app.middleware("http")
@@ -86,9 +97,6 @@ app.include_router(submissions_router, prefix="/submissions", tags=["submissions
 app.include_router(ping_router, prefix="/ping", tags=["ping"])
 app.include_router(system_metrics.router, prefix="/admin", tags=["admin"])
 
-# Initialize logger
-logger = get_logger("hackathon_api")
-
 
 @app.get("/")
 def read_root():
@@ -102,7 +110,7 @@ def health_check():
     return {"status": "healthy"}
 
 
-@app.get("/logs/error", dependencies=[Depends(require_admin())])
+@app.get("/logs/error", dependencies=[Depends(require_admin)])
 def get_error_log():
     log_path = os.path.join(os.path.dirname(__file__), "../logs/error.log")
     try:

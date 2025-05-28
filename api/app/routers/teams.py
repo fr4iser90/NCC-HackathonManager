@@ -83,7 +83,7 @@ def list_my_join_requests(
     "/",
     response_model=TeamRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles([UserRole.PARTICIPANT]))],
+    dependencies=[require_roles([UserRole.PARTICIPANT])],
 )
 def create_team_endpoint(
     team_in: TeamCreate,

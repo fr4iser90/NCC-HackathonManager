@@ -1,6 +1,45 @@
-import NextAuth, { type NextAuthOptions } from 'next-auth';
+import NextAuth, { type NextAuthOptions, type DefaultSession } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import axios from 'axios'; // Added axios for API calls
+
+// Extend the built-in session types
+declare module 'next-auth' {
+  interface Session extends DefaultSession {
+    user: {
+      id?: string;
+      role?: string;
+      accessToken?: string;
+    } & DefaultSession['user']
+  }
+
+  interface User {
+    id: string;
+    email: string;
+    name: string;
+    role?: string;
+    accessToken: string;
+  }
+}
+
+// Define custom types for our user and session
+interface CustomUser {
+  id: string;
+  email: string;
+  name: string;
+  role?: string;
+  accessToken: string;
+}
+
+interface CustomSession {
+  user: {
+    id?: string;
+    email?: string | null;
+    name?: string | null;
+    image?: string | null;
+    role?: string;
+    accessToken?: string;
+  };
+}
 
 // (Removed unused verifyCredentials function)
 
@@ -256,37 +295,23 @@ const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
-      // Persist the access token to the JWT right after signin
-      if (account && user) {
-        // `user` is the object returned from authorize, `account` has provider info
-        type UserWithAccessTokenAndRole = {
-          accessToken?: string;
-          id?: string;
-          role?: string;
-        };
-        token.accessToken = (user as UserWithAccessTokenAndRole).accessToken;
-        token.id = (user as UserWithAccessTokenAndRole).id; // Ensure user id is in the token
-        token.role = (user as UserWithAccessTokenAndRole).role; // <<< ADDED ROLE TO TOKEN
-        // token.refreshToken = (user as UserWithAccessTokenAndRole).refreshToken; // If using refresh tokens
+    async jwt({ token, user }) {
+      if (user) {
+        token.accessToken = user.accessToken;
+        token.id = user.id;
+        token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
-      // Send properties to the client, like an access_token and user id from a provider.
-      type UserWithAccessTokenAndRole = {
-        accessToken?: string;
-        id?: string;
-        role?: string;
-      };
-      (session.user as UserWithAccessTokenAndRole).accessToken =
-        token.accessToken as string | undefined;
-      (session.user as UserWithAccessTokenAndRole).id = token.id as
-        | string
-        | undefined; // Add id to session user object
-      (session.user as UserWithAccessTokenAndRole).role = token.role as
-        | string
-        | undefined; // <<< ADDED ROLE TO SESSION USER
+      if (token) {
+        session.user = {
+          ...session.user,
+          accessToken: token.accessToken as string,
+          id: token.id as string,
+          role: token.role as string,
+        };
+      }
       return session;
     },
   },

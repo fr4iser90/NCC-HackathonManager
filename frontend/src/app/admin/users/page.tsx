@@ -50,27 +50,29 @@ export default function AdminManageUsersPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUsers(response.data);
-      } catch (err: unknown) {
+      } catch (err: any) { // Changed to any for easier error handling
         console.error('Error fetching users:', err);
-        // Type-safe Axios error handling
+        let errorMessage = 'Failed to fetch users.';
         if (axios.isAxiosError(err)) {
-          const status = err.response?.status;
-          if (status !== 401) {
-            setError(
-              err.response?.data?.detail ||
-                err.message ||
-                'Failed to fetch users.',
-            );
+          if (err.response?.data?.detail) {
+            if (typeof err.response.data.detail === 'string') {
+              errorMessage = err.response.data.detail;
+            } else {
+              // If detail is an object/array (like Pydantic validation errors)
+              errorMessage = `Error details: ${JSON.stringify(err.response.data.detail)}`;
+            }
+          } else if (err.message) {
+            errorMessage = err.message;
           }
+          // Do not set error for 401, as it might be handled by session status or redirect
+          if (err.response?.status !== 401) {
+            setError(errorMessage);
+          }
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+          setError(errorMessage);
         } else {
-          setError(
-            err &&
-              typeof err === 'object' &&
-              'message' in err &&
-              typeof (err as { message?: string }).message === 'string'
-              ? (err as { message: string }).message
-              : 'Failed to fetch users.',
-          );
+          setError(errorMessage);
         }
       } finally {
         setIsLoading(false);
@@ -111,27 +113,28 @@ export default function AdminManageUsersPage() {
         });
         setSuccessMessage(`User ${userEmail} deleted successfully.`);
         fetchUsers(); // Refresh the user list
-      } catch (err: unknown) {
+      } catch (err: any) { // Changed to any for easier error handling
         console.error('Error deleting user:', err);
-        // Type-safe Axios error handling
+        let errorMessage = 'Failed to delete user.';
         if (axios.isAxiosError(err)) {
-          const status = err.response?.status;
-          if (typeof status === 'number' && status !== 401) {
-            setError(
-              err.response?.data?.detail ||
-                err.message ||
-                'Failed to delete user.',
-            );
+          if (err.response?.data?.detail) {
+            if (typeof err.response.data.detail === 'string') {
+              errorMessage = err.response.data.detail;
+            } else {
+              errorMessage = `Error details: ${JSON.stringify(err.response.data.detail)}`;
+            }
+          } else if (err.message) {
+            errorMessage = err.message;
           }
+           // Do not set error for 401
+          if (err.response?.status !== 401) {
+            setError(errorMessage);
+          }
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+          setError(errorMessage);
         } else {
-          setError(
-            err &&
-              typeof err === 'object' &&
-              'message' in err &&
-              typeof (err as { message?: string }).message === 'string'
-              ? (err as { message: string }).message
-              : 'Failed to delete user.',
-          );
+          setError(errorMessage);
         }
       } finally {
         setIsLoadingDelete(null);

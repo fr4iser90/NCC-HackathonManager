@@ -59,7 +59,7 @@ export default function ProjectSubmitPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('description', description);
+      formData.append('version_notes', description);
 
       const res = await apiFetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/projects/${projectId}/submit_version`,
@@ -69,28 +69,19 @@ export default function ProjectSubmitPage() {
         },
       );
 
-      if (!res.ok) {
-        const errorData = await res
-          .json()
-          .catch(() => ({ detail: 'Submission failed' }));
-        throw new Error(errorData.detail || 'Submission failed');
-      }
-
       const data = await res.json();
       setStatus(data.status || 'success');
       setLogs(data.build_logs || data.logs || '');
       setSuccess('Submission successful!');
     } catch (err: unknown) {
       setStatus('error');
-      if (
-        err &&
-        typeof err === 'object' &&
-        'message' in err &&
-        typeof (err as { message?: string }).message === 'string'
-      ) {
-        setError((err as { message: string }).message);
+      console.error('Submission error:', err);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        setError(String(err.message));
       } else {
-        setError('Submission failed');
+        setError('An unexpected error occurred during submission');
       }
     } finally {
       setLoading(false);

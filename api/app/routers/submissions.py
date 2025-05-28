@@ -24,7 +24,7 @@ router = APIRouter(tags=["submissions"])
     "/projects/{project_id}/submissions/",
     response_model=SubmissionRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))],
+    dependencies=[require_roles([UserRole.PARTICIPANT, UserRole.ADMIN])],
 )
 def create_submission(
     project_id: UUID,
@@ -56,7 +56,7 @@ def create_submission(
 @router.get(
     "/projects/{project_id}/submissions/",
     response_model=List[SubmissionRead],
-    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))],
+    dependencies=[require_roles([UserRole.PARTICIPANT, UserRole.ADMIN])],
 )
 def list_submissions_for_project(
     project_id: UUID,
@@ -79,7 +79,7 @@ def list_submissions_for_project(
 @router.get(
     "/submissions/{submission_id}",
     response_model=SubmissionRead,
-    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))],
+    dependencies=[require_roles([UserRole.PARTICIPANT, UserRole.ADMIN])],
 )
 def get_submission(
     submission_id: UUID,
@@ -102,7 +102,7 @@ def get_submission(
 @router.put(
     "/submissions/{submission_id}",
     response_model=SubmissionRead,
-    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))],
+    dependencies=[require_roles([UserRole.PARTICIPANT, UserRole.ADMIN])],
 )
 def update_submission(
     submission_id: UUID,
@@ -134,7 +134,7 @@ def update_submission(
 @router.delete(
     "/submissions/{submission_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles([UserRole.PARTICIPANT, UserRole.ADMIN]))],
+    dependencies=[require_roles([UserRole.PARTICIPANT, UserRole.ADMIN])],
 )
 def delete_submission(
     submission_id: UUID,

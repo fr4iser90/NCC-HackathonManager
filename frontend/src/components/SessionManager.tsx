@@ -77,15 +77,15 @@ export default function SessionManager() {
     let interval: NodeJS.Timeout | undefined;
     if (status === 'authenticated') {
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-      // Ping-URL: /ping am Backend, Fallback /api/ping für Dev
-      const pingUrl = apiBaseUrl
-        ? apiBaseUrl.replace(/\/$/, '') + '/ping/'
-        : '/api/ping/';
+      // Use the session validation endpoint
+      const validateUrl = apiBaseUrl
+        ? apiBaseUrl.replace(/\/$/, '') + '/users/me/validate'
+        : '/api/users/me/validate';
       const accessToken = (session?.user as UserWithRoleAndAccessToken)
         ?.accessToken;
       const checkSession = async () => {
         try {
-          const res = await fetch(pingUrl, {
+          const res = await fetch(validateUrl, {
             headers: accessToken
               ? { Authorization: `Bearer ${accessToken}` }
               : {},

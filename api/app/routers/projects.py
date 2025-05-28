@@ -214,14 +214,16 @@ def list_project_templates(
     "/",
     response_model=ProjectRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles([UserRole.ADMIN, UserRole.ORGANIZER]))],
+    dependencies=[require_roles([UserRole.ADMIN, UserRole.ORGANIZER])],
 )
 def create_project_endpoint(
     project_in: ProjectCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Create a new project. Only accessible by admin or organizer users."""
+    """
+    Create a new project. Only accessible by admin or organizer users.
+    """
     return create_project(db, project_in, current_user)
 
 
@@ -296,14 +298,17 @@ def update_project(
 @router.delete(
     "/{project_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles([UserRole.ADMIN, UserRole.ORGANIZER]))],
+    dependencies=[require_roles([UserRole.ADMIN, UserRole.ORGANIZER])],
 )
 def delete_project(project_id: uuid.UUID, db: Session = Depends(get_db)):
-    """Delete a project. Only accessible by admin or organizer users."""
+    """
+    Delete a project. Only accessible by admin or organizer users.
+    """
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
     db.delete(project)
     db.commit()
     return

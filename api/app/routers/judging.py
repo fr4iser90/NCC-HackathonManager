@@ -36,7 +36,7 @@ router = APIRouter(tags=["judging"])
     "/criteria/",
     response_model=CriterionRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_admin())],
+    dependencies=[require_admin()],
 )
 def create_criterion_endpoint(
     criterion_in: CriterionCreate,
@@ -68,7 +68,7 @@ def get_criterion(criterion_id: uuid.UUID, db: Session = Depends(get_db)):
 @router.put(
     "/criteria/{criterion_id}",
     response_model=CriterionRead,
-    dependencies=[Depends(require_admin())],
+    dependencies=[require_admin()],
 )
 def update_criterion_endpoint(
     criterion_id: uuid.UUID,
@@ -83,7 +83,7 @@ def update_criterion_endpoint(
 @router.delete(
     "/criteria/{criterion_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_admin())],
+    dependencies=[require_admin()],
 )
 def delete_criterion_endpoint(
     criterion_id: uuid.UUID,
@@ -100,7 +100,7 @@ def delete_criterion_endpoint(
     "/scores/",
     response_model=ScoreRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles([UserRole.JUDGE, UserRole.ADMIN]))],
+    dependencies=[require_roles([UserRole.JUDGE, UserRole.ADMIN])],
 )
 def submit_score_endpoint(
     score_in: ScoreCreate,
@@ -114,7 +114,7 @@ def submit_score_endpoint(
 @router.put(
     "/scores/{score_id}",
     response_model=ScoreRead,
-    dependencies=[Depends(require_roles([UserRole.JUDGE, UserRole.ADMIN]))],
+    dependencies=[require_roles([UserRole.JUDGE, UserRole.ADMIN])],
 )
 def update_score_endpoint(
     score_id: uuid.UUID,
@@ -137,7 +137,7 @@ def list_scores_for_project_endpoint(
 @router.get(
     "/scores/judge/{judge_id}",
     response_model=List[ScoreRead],
-    dependencies=[Depends(require_roles([UserRole.JUDGE, UserRole.ADMIN]))],
+    dependencies=[require_roles([UserRole.JUDGE, UserRole.ADMIN])],
 )
 def list_scores_by_judge_endpoint(
     judge_id: uuid.UUID,
@@ -152,7 +152,7 @@ def list_scores_by_judge_endpoint(
 # e.g., /results/project/{project_id}
 
 
-@router.get("/check-judge", dependencies=[Depends(require_judge())])
+@router.get("/check-judge", dependencies=[require_judge()])
 def check_judge_rights(current_user: User = Depends(get_current_user)):
     """Check if the current user has judge rights. Only accessible by judges."""
     return {"detail": "User is a judge."}

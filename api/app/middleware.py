@@ -1,4 +1,4 @@
-from fastapi import Request, HTTPException, status
+from fastapi import Request, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import List, Optional, Callable
 from functools import wraps
@@ -18,52 +18,31 @@ def require_roles(required_roles: List[UserRole]):
     Decorator to require specific roles for accessing an endpoint.
     Usage: @require_roles([UserRole.ADMIN, UserRole.ORGANIZER])
     """
+    async def dependency(request: Request, db: Session = Depends(get_db)):
+        logger.info(f"require_roles: called for roles {required_roles}")
+        
+        try:
+            user = await get_current_user(request, db)
+        except Exception as e:
+            logger.error(f"Error in get_current_user: {e}", exc_info=True)
+            raise
 
-    def decorator(func: Callable):
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            logger.info(f"require_roles: called for roles {required_roles}")
-            # Get the request object from kwargs
-            request = kwargs.get("request")
-            if not request:
-                for arg in args:
-                    if isinstance(arg, Request):
-                        request = arg
-                        break
-
-            if not request:
-                logger.error("Request object not found in require_roles")
+        # Check if user has any of the required roles
+        try:
+            user_roles = [UserRole(role.role) for role in user.roles_association]
+            if not any(role in required_roles for role in user_roles):
+                logger.error(f"User lacks required roles: {user_roles} vs {required_roles}")
                 raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Request object not found",
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Required roles: {[role.value for role in required_roles]}",
                 )
+        except Exception as e:
+            logger.error(f"Error checking user roles: {e}", exc_info=True)
+            raise
 
-            # Get the current user
-            db = next(get_db())
-            try:
-                user = await get_current_user(request, db)
-            except Exception as e:
-                logger.error(f"Error in get_current_user: {e}", exc_info=True)
-                raise
+        return user
 
-            # Check if user has any of the required roles
-            try:
-                user_roles = [UserRole(role.role) for role in user.roles_association]
-                if not any(role in required_roles for role in user_roles):
-                    logger.error(f"User lacks required roles: {user_roles} vs {required_roles}")
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=f"Required roles: {[role.value for role in required_roles]}",
-                    )
-            except Exception as e:
-                logger.error(f"Error checking user roles: {e}", exc_info=True)
-                raise
-
-            return await func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
+    return Depends(dependency)
 
 
 # Role-specific middleware functions
@@ -105,4 +84,4 @@ def has_any_role(user_roles: List[UserRole], required_roles: List[UserRole]) -> 
 
 def has_all_roles(user_roles: List[UserRole], required_roles: List[UserRole]) -> bool:
     """Check if user has all of the required roles"""
-    return all(role in user_roles for role in required_roles)
+    return all(role in required_roles for role in user_roles)

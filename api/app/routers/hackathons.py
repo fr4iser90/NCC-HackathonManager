@@ -44,7 +44,7 @@ def get_current_active_admin_user(
     "/",
     response_model=HackathonRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_admin())],
+    dependencies=[require_admin()],
 )
 def create_hackathon(hackathon_in: HackathonCreate, db: Session = Depends(get_db)):
     """
@@ -117,7 +117,7 @@ def get_hackathon(hackathon_id: uuid.UUID, db: Session = Depends(get_db)):
 @router.put(
     "/{hackathon_id}",
     response_model=HackathonRead,
-    dependencies=[Depends(require_admin())],
+    dependencies=[require_admin()],
 )
 def update_hackathon(
     hackathon_id: uuid.UUID,
@@ -174,7 +174,7 @@ def update_hackathon(
 @router.delete(
     "/{hackathon_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_admin())],
+    dependencies=[require_admin()],
 )
 def delete_hackathon(hackathon_id: uuid.UUID, db: Session = Depends(get_db)):
     """
@@ -205,7 +205,7 @@ def delete_hackathon(hackathon_id: uuid.UUID, db: Session = Depends(get_db)):
 @router.delete(
     "/{hackathon_id}/registration",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles([UserRole.PARTICIPANT]))],
+    dependencies=[require_roles([UserRole.PARTICIPANT])],
 )
 def withdraw_registration(
     hackathon_id: uuid.UUID,
@@ -213,7 +213,7 @@ def withdraw_registration(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Withdraw the current user's registration (solo or team) for a hackathon, before the deadline.
+    Withdraw registration from a hackathon. Only accessible by participants.
     """
     db_hackathon = db.query(Hackathon).filter(Hackathon.id == hackathon_id).first()
     if not db_hackathon:
@@ -277,19 +277,16 @@ def withdraw_registration(
     "/{hackathon_id}/register",
     response_model=HackathonRegistrationRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles([UserRole.PARTICIPANT]))],
+    dependencies=[require_roles([UserRole.PARTICIPANT])],
 )
 def register_participant_for_hackathon(
     hackathon_id: uuid.UUID,
-    registration_in: ParticipantRegistrationCreate,  # Use the new schema for request body
+    registration_in: ParticipantRegistrationCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Register a participant (solo user or a team) for a specific hackathon.
-    - If registering a user: current_user must match user_id in request or be an admin.
-    - If registering a team: current_user must be an owner/admin of the team or be a platform admin.
-    A new project for the participant in this hackathon will be created.
+    Register a participant for a hackathon. Only accessible by participants.
     """
     db_hackathon = db.query(Hackathon).filter(Hackathon.id == hackathon_id).first()
     if not db_hackathon:

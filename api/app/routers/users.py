@@ -79,17 +79,17 @@ def update_own_profile(
     return UserRead.from_orm(user)
 
 
-@router.get("/", response_model=List[UserRead], dependencies=[Depends(require_admin())])
+@router.get("/", response_model=List[UserRead], dependencies=[require_admin()])
 def list_users(db: Session = Depends(get_db)):
     """
     Retrieve all users. Only accessible by admin users.
     """
     users = db.query(User).all()
-    return [UserRead.from_orm(u) for u in users]
+    return users
 
 
 @router.get(
-    "/{user_id}", response_model=UserRead, dependencies=[Depends(require_admin())]
+    "/{user_id}", response_model=UserRead, dependencies=[require_admin()]
 )
 def read_user_by_id(user_id: uuid.UUID, db: Session = Depends(get_db)):
     """
@@ -102,7 +102,7 @@ def read_user_by_id(user_id: uuid.UUID, db: Session = Depends(get_db)):
 
 
 @router.put(
-    "/{user_id}", response_model=UserRead, dependencies=[Depends(require_admin())]
+    "/{user_id}", response_model=UserRead, dependencies=[require_admin()]
 )
 def update_user_profile(
     user_id: uuid.UUID, user_in: UserUpdate, db: Session = Depends(get_db)
@@ -139,7 +139,7 @@ def update_user_profile(
 @router.delete(
     "/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_admin())],
+    dependencies=[require_admin()],
 )
 def delete_user_by_admin(user_id: uuid.UUID, db: Session = Depends(get_db)):
     """
@@ -209,13 +209,13 @@ def get_my_projects_endpoint(
 # --- User Role Management Endpoints (Admin only) ---
 
 
-@router.get("/roles", response_model=List[str], dependencies=[Depends(require_admin())])
+@router.get("/roles", response_model=List[str], dependencies=[require_admin()])
 def list_available_roles():
     """List all available roles in the system."""
     return [role.value for role in UserRole]
 
 
-@router.post("/{user_id}/roles", dependencies=[Depends(require_admin())])
+@router.post("/{user_id}/roles", dependencies=[require_admin()])
 def assign_role_to_user(
     user_id: uuid.UUID, role: str = Body(..., embed=True), db: Session = Depends(get_db)
 ):
@@ -233,20 +233,22 @@ def assign_role_to_user(
             detail=f"Invalid role. Available roles: {[r.value for r in UserRole]}",
         )
 
-    # Check if role already assigned
-    existing = (
-        db.query(UserRoleAssociation).filter_by(user_id=user_id, role=role).first()
-    )
-    if existing:
-        return {"detail": f"Role '{role}' already assigned to user."}
+    # Check if user already has this role
+    if any(r.role == role_enum for r in user.roles_association):
+        raise HTTPException(
+            status_code=400, detail=f"User already has role: {role_enum.value}"
+        )
 
-    # Add role
-    db.add(UserRoleAssociation(user_id=user_id, role=role))
+    # Add the role
+    user.roles_association.append(UserRole(role=role_enum))
+    db.add(user)
     db.commit()
-    return {"detail": f"Role '{role}' assigned to user."}
+    db.refresh(user)
+
+    return {"detail": f"Role {role_enum.value} assigned to user"}
 
 
-@router.delete("/{user_id}/roles", dependencies=[Depends(require_admin())])
+@router.delete("/{user_id}/roles", dependencies=[require_admin()])
 def remove_role_from_user(
     user_id: uuid.UUID, role: str = Body(..., embed=True), db: Session = Depends(get_db)
 ):
@@ -265,37 +267,35 @@ def remove_role_from_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Check if role is assigned
-    assoc = db.query(UserRoleAssociation).filter_by(user_id=user_id, role=role).first()
-    if not assoc:
+    # Check if user has this role
+    if not any(r.role == role_enum for r in user.roles_association):
         raise HTTPException(
-            status_code=404, detail=f"Role '{role}' not assigned to user."
+            status_code=400, detail=f"User does not have role: {role_enum.value}"
         )
 
-    # Prevent removing last admin role
-    if role == UserRole.ADMIN.value:
-        admin_count = (
-            db.query(UserRoleAssociation).filter_by(role=UserRole.ADMIN.value).count()
-        )
-        if admin_count <= 1:
-            raise HTTPException(
-                status_code=400,
-                detail="Cannot remove the last admin role in the system.",
-            )
-
-    db.delete(assoc)
+    # Remove the role
+    user.roles_association = [r for r in user.roles_association if r.role != role_enum]
+    db.add(user)
     db.commit()
-    return {"detail": f"Role '{role}' removed from user."}
+    db.refresh(user)
+
+    return {"detail": f"Role {role_enum.value} removed from user"}
 
 
 @router.get(
     "/{user_id}/roles",
     response_model=List[str],
-    dependencies=[Depends(require_admin())],
+    dependencies=[require_admin()],
 )
 def get_user_roles(user_id: uuid.UUID, db: Session = Depends(get_db)):
     """Get all roles assigned to a user."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return [r.role for r in user.roles_association]
+    return [role.role.value for role in user.roles_association]
+
+
+@router.get("/me/validate", response_model=UserRead)
+def validate_session(current_user: User = Depends(get_current_user)):
+    """Validate the current user's session."""
+    return UserRead.from_orm(current_user)
